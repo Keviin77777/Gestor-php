@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Despesas - UltraGestor</title>
+    <link rel="stylesheet" href="/assets/css/dashboard.css">
+    <style>
+        .expenses-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        
+        .expenses-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .expenses-table {
+            background: var(--bg-primary);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        
+        .expenses-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .expenses-table th,
+        .expenses-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .expenses-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .category-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .category-infraestrutura { background: #dbeafe; color: #1e40af; }
+        .category-software { background: #f3e8ff; color: #7c3aed; }
+        .category-marketing { background: #fef3c7; color: #d97706; }
+        .category-servicos { background: #d1fae5; color: #059669; }
+        .category-operacional { background: #fee2e2; color: #dc2626; }
+        
+        .amount-positive {
+            color: #10b981;
+            font-weight: 600;
+        }
+        
+        .amount-negative {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: var(--bg-primary);
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="expenses-container">
+        <div class="expenses-header">
+            <h1>Gerenciar Despesas</h1>
+            <button class="btn-primary" onclick="openModal()">Nova Despesa</button>
+        </div>
+        
+        <div class="expenses-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Valor</th>
+                        <th>Método</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="expensesTableBody">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem;">
+                            Carregando despesas...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal para Nova/Editar Despesa -->
+    <div id="expenseModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Nova Despesa</h2>
+            <form id="expenseForm">
+                <div class="form-group">
+                    <label for="description">Descrição *</label>
+                    <input type="text" id="description" name="description" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category">Categoria</label>
+                    <select id="category" name="category">
+                        <option value="Infraestrutura">Infraestrutura</option>
+                        <option value="Software">Software</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Serviços">Serviços</option>
+                        <option value="Operacional">Operacional</option>
+                        <option value="Geral">Geral</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="amount">Valor *</label>
+                    <input type="number" id="amount" name="amount" step="0.01" min="0" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="expense_date">Data da Despesa *</label>
+                    <input type="date" id="expense_date" name="expense_date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="payment_method">Método de Pagamento</label>
+                    <select id="payment_method" name="payment_method">
+                        <option value="money">Dinheiro</option>
+                        <option value="credit_card">Cartão de Crédito</option>
+                        <option value="debit_card">Cartão de Débito</option>
+                        <option value="pix">PIX</option>
+                        <option value="bank_transfer">Transferência</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Observações</label>
+                    <textarea id="notes" name="notes" rows="3"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let expenses = [];
+        let editingId = null;
+
+        // Carregar despesas
+        async function loadExpenses() {
+            try {
+                const response = await fetch('/api-expenses.php');
+                const data = await response.json();
+                
+                if (data.success) {
+                    expenses = data.expenses;
+                    renderExpenses();
+                }
+            } catch (error) {
+                console.error('Erro ao carregar despesas:', error);
+            }
+        }
+
+        // Renderizar tabela
+        function renderExpenses() {
+            const tbody = document.getElementById('expensesTableBody');
+            
+            if (expenses.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem;">
+                            Nenhuma despesa cadastrada
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = expenses.map(expense => `
+                <tr>
+                    <td>${formatDate(expense.expense_date)}</td>
+                    <td>${expense.description}</td>
+                    <td>
+                        <span class="category-badge category-${expense.category.toLowerCase().replace('ç', 'c').replace('ã', 'a')}">
+                            ${expense.category}
+                        </span>
+                    </td>
+                    <td class="amount-negative">-R$ ${parseFloat(expense.amount).toFixed(2)}</td>
+                    <td>${formatPaymentMethod(expense.payment_method)}</td>
+                    <td>
+                        <button onclick="editExpense(${expense.id})" style="margin-right: 0.5rem;">Editar</button>
+                        <button onclick="deleteExpense(${expense.id})" style="color: #ef4444;">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Abrir modal
+        function openModal(id = null) {
+            editingId = id;
+            const modal = document.getElementById('expenseModal');
+            const title = document.getElementById('modalTitle');
+            const form = document.getElementById('expenseForm');
+            
+            if (id) {
+                title.textContent = 'Editar Despesa';
+                const expense = expenses.find(e => e.id == id);
+                if (expense) {
+                    form.description.value = expense.description;
+                    form.category.value = expense.category;
+                    form.amount.value = expense.amount;
+                    form.expense_date.value = expense.expense_date;
+                    form.payment_method.value = expense.payment_method;
+                    form.notes.value = expense.notes || '';
+                }
+            } else {
+                title.textContent = 'Nova Despesa';
+                form.reset();
+                form.expense_date.value = new Date().toISOString().split('T')[0];
+            }
+            
+            modal.style.display = 'block';
+        }
+
+        // Fechar modal
+        function closeModal() {
+            document.getElementById('expenseModal').style.display = 'none';
+            editingId = null;
+        }
+
+        // Salvar despesa
+        document.getElementById('expenseForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const url = editingId ? `/api-expenses.php?id=${editingId}` : '/api-expenses.php';
+                const method = editingId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    closeModal();
+                    loadExpenses();
+                    alert(result.message);
+                } else {
+                    alert('Erro: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Erro ao salvar despesa:', error);
+                alert('Erro ao salvar despesa');
+            }
+        });
+
+        // Editar despesa
+        function editExpense(id) {
+            openModal(id);
+        }
+
+        // Excluir despesa
+        async function deleteExpense(id) {
+            if (!confirm('Tem certeza que deseja excluir esta despesa?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api-expenses.php?id=${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadExpenses();
+                    alert(result.message);
+                } else {
+                    alert('Erro: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Erro ao excluir despesa:', error);
+                alert('Erro ao excluir despesa');
+            }
+        }
+
+        // Utilitários
+        function formatDate(dateString) {
+            return new Date(dateString + 'T00:00:00').toLocaleDateString('pt-BR');
+        }
+
+        function formatPaymentMethod(method) {
+            const methods = {
+                'money': 'Dinheiro',
+                'credit_card': 'Cartão de Crédito',
+                'debit_card': 'Cartão de Débito',
+                'pix': 'PIX',
+                'bank_transfer': 'Transferência'
+            };
+            return methods[method] || method;
+        }
+
+        // Fechar modal ao clicar fora
+        window.onclick = function(event) {
+            const modal = document.getElementById('expenseModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Carregar despesas ao iniciar
+        loadExpenses();
+    </script>
+</body>
+</html>

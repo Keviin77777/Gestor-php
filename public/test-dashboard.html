@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .card { background: #f0f0f0; padding: 20px; margin: 10px; border-radius: 8px; }
+        .stat-value { font-size: 2rem; font-weight: bold; color: #333; }
+        canvas { border: 1px solid #ccc; margin: 20px 0; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Teste Dashboard</h1>
+    
+    <div class="card">
+        <div>Total de Clientes</div>
+        <div class="stat-value" id="totalClients">0</div>
+    </div>
+    
+    <div class="card">
+        <div>Receita do Mês</div>
+        <div class="stat-value" id="monthRevenue">R$ 0,00</div>
+    </div>
+    
+    <button id="themeToggle">Alternar Tema</button>
+    <button onclick="testFunction()">Testar Função</button>
+    
+    <canvas id="revenueChart" width="800" height="300"></canvas>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Vencimento</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="expiringClientsTable">
+            <tr>
+                <td colspan="3">Carregando...</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div id="userName">Nome do usuário</div>
+    <div id="userEmail">email@teste.com</div>
+    <div id="userAvatar">U</div>
+    
+    <script>
+        // Simular dados do usuário no localStorage
+        localStorage.setItem('user', JSON.stringify({
+            name: 'João Silva',
+            email: 'joao@teste.com'
+        }));
+        
+        function testFunction() {
+            console.log('Função de teste chamada!');
+            alert('JavaScript funcionando!');
+        }
+    </script>
+    
+    <script src="/assets/js/dashboard.js"></script>
+    
+    <script>
+        // Forçar inicialização
+        setTimeout(() => {
+            console.log('Forçando inicialização...');
+            if (typeof initializeDashboard === 'function') {
+                initializeDashboard();
+            } else {
+                console.error('Função initializeDashboard não encontrada!');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

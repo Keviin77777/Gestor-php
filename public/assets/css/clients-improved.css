@@ -1,0 +1,404 @@
+/**
+ * Melhorias Profissionais para Tabela de Clientes
+ * Design mais limpo, cores reduzidas, profissional
+ */
+
+/* Header da tabela - tons neutros */
+.professional-table thead {
+    background: var(--bg-secondary) !important;
+    border-bottom: 2px solid var(--border) !important;
+}
+
+.professional-table th {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.05em !important;
+    padding: 1rem 1.25rem !important;
+    border-bottom: none !important;
+}
+
+.professional-table th:first-child {
+    border-left: none !important;
+}
+
+/* Linhas da tabela - hover sutil */
+.professional-table tbody tr {
+    border-left: 3px solid transparent !important;
+    transition: all 0.2s ease !important;
+}
+
+.professional-table tbody tr:hover {
+    background: var(--bg-secondary) !important;
+    border-left-color: var(--primary) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.professional-table td {
+    padding: 1rem 1.25rem !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+/* Badge de dias - tons profissionais */
+.pro-days-badge {
+    font-size: 0.7rem !important;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    width: fit-content !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    border: none !important;
+}
+
+.pro-days-badge.expires-soon {
+    background: #ef4444 !important;
+    color: white !important;
+}
+
+.pro-days-badge.expires-warning {
+    background: #f59e0b !important;
+    color: white !important;
+}
+
+.pro-days-badge.expires-ok {
+    background: #10b981 !important;
+    color: white !important;
+}
+
+/* Badge de servidor - neutro */
+.pro-server-badge {
+    display: inline-block !important;
+    padding: 0.4rem 0.9rem !important;
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-radius: 6px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* Campos de input - neutros */
+.col-iptv-user,
+.pro-mac {
+    font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace !important;
+    font-size: 0.8rem !important;
+    background: var(--bg-secondary) !important;
+    border-radius: 6px !important;
+    padding: 0.5rem !important;
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* Toggle de notificações - simplificado */
+.pro-notification-toggle {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 60px !important;
+    height: 28px !important;
+    border-radius: 6px !important;
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    transition: all 0.2s ease !important;
+    box-shadow: none !important;
+}
+
+.pro-notification-toggle.enabled {
+    background: #10b981 !important;
+    color: white !important;
+}
+
+.pro-notification-toggle.disabled {
+    background: #ef4444 !important;
+    color: white !important;
+}
+
+/* Badge de plano - neutro e profissional */
+.pro-plan-badge {
+    display: inline-block !important;
+    padding: 0.4rem 0.9rem !important;
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-radius: 6px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    border: 1px solid var(--border) !important;
+    text-transform: capitalize !important;
+}
+
+/* Valor - destaque sutil */
+.pro-value {
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    background: var(--bg-secondary) !important;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--border) !important;
+    text-align: center !important;
+}
+
+/* Contador de telas - simplificado */
+.pro-screens {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 40px !important;
+    height: 40px !important;
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    font-size: 0.875rem !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* Botões de ação - consistente com outras páginas */
+.pro-btn-action {
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    padding: 0.625rem !important;
+    cursor: pointer !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.pro-btn-action::before {
+    display: none !important;
+}
+
+.pro-btn-action:hover {
+    background: var(--primary) !important;
+    color: white !important;
+    border-color: var(--primary) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+}
+
+.pro-btn-action.danger:hover {
+    background: #ef4444 !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Info do cliente - limpo */
+.pro-client-name {
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    font-size: 0.9rem !important;
+}
+
+.pro-client-username {
+    font-size: 0.75rem !important;
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+}
+
+.pro-whatsapp {
+    color: var(--text-primary) !important;
+}
+
+.pro-expiry-date {
+    font-size: 0.875rem !important;
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+}
+
+/* Dark theme compatibility */
+[data-theme="dark"] .professional-table thead {
+    background: #1e293b !important;
+}
+
+[data-theme="dark"] .professional-table th {
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .professional-table tbody tr:hover {
+    background: #1e293b !important;
+}
+
+.dark-theme .professional-table thead {
+    background: #1e293b !important;
+}
+
+.dark-theme .professional-table th {
+    color: #cbd5e1 !important;
+}
+
+.dark-theme .professional-table tbody tr:hover {
+    background: #1e293b !important;
+}
+
+/* Botões de WhatsApp */
+.pro-btn-action.whatsapp-enabled {
+    background: #25D366;
+    color: white;
+    border-color: #25D366;
+}
+
+.pro-btn-action.whatsapp-enabled:hover {
+    background: #1ea952;
+    border-color: #1ea952;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+}
+
+.pro-btn-action.whatsapp-disabled {
+    background: #f8f9fa;
+    color: #6c757d;
+    border-color: #dee2e6;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pro-btn-action.whatsapp-disabled:hover {
+    background: #f8f9fa;
+    color: #6c757d;
+    border-color: #dee2e6;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Modal WhatsApp */
+.whatsapp-client-info {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.client-avatar {
+    width: 50px;
+    height: 50px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    color: white;
+}
+
+.client-avatar svg {
+    width: 24px;
+    height: 24px;
+}
+
+.client-details {
+    flex: 1;
+}
+
+.client-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.client-phone {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.whatsapp-options {
+    margin-top: 1rem;
+}
+
+.option-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.tab-btn:hover {
+    color: var(--text-primary);
+}
+
+.tab-content {
+    min-height: 200px;
+}
+
+.template-preview {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.template-preview h4 {
+    margin: 0 0 0.75rem 0;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.message-preview {
+    background: #25D366;
+    color: white;
+    padding: 1rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    max-width: 300px;
+    position: relative;
+}
+
+.message-preview::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 20px;
+    width: 0;
+    height: 0;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-right: 8px solid #25D366;
+}
+
+/* Garantir que o modal WhatsApp seja visível */
+#whatsappModal {
+    display: none !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    z-index: 10000 !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#whatsappModal[style*="display: flex"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}

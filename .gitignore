@@ -1,0 +1,131 @@
+# 🚫 Arquivos e pastas ignorados pelo Git
+
+# ===========================================
+# ARQUIVOS SENSÍVEIS
+# ===========================================
+.env
+.env.local
+.env.production
+.env.development
+config/database.php
+config/secrets.php
+
+# ===========================================
+# LOGS E TEMPORÁRIOS
+# ===========================================
+logs/
+*.log
+tmp/
+temp/
+cache/
+
+# ===========================================
+# UPLOADS E MÍDIA
+# ===========================================
+uploads/
+media/
+storage/
+
+# ===========================================
+# WHATSAPP SESSIONS
+# ===========================================
+whatsapp-sessions/
+.wwebjs_auth/
+.wwebjs_cache/
+
+# ===========================================
+# NODE.JS
+# ===========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ===========================================
+# COMPOSER
+# ===========================================
+vendor/
+composer.lock
+
+# ===========================================
+# SISTEMA OPERACIONAL
+# ===========================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.nfs*
+
+# ===========================================
+# IDEs E EDITORES
+# ===========================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# PhpStorm
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ===========================================
+# BACKUPS E ARQUIVOS TEMPORÁRIOS
+# ===========================================
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
+*.temp
+
+# ===========================================
+# CERTIFICADOS E CHAVES
+# ===========================================
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ===========================================
+# ARQUIVOS DE DESENVOLVIMENTO
+# ===========================================
+test.php
+debug.php
+phpinfo.php
+*.test.php
+
+# ===========================================
+# ARQUIVOS ESPECÍFICOS DO PROJETO
+# ===========================================
+# Arquivos de configuração local
+config.local.php
+settings.local.php
+
+# Arquivos de PID
+*.pid
+
+# Arquivos de lock
+*.lock
