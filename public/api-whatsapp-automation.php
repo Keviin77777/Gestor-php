@@ -21,8 +21,11 @@ require_once __DIR__ . '/../app/helpers/whatsapp-automation.php';
 
 loadEnv(__DIR__ . '/../.env');
 
+require_once __DIR__ . '/../app/helpers/auth-helper.php';
+
 $method = $_SERVER['REQUEST_METHOD'];
-$resellerId = 'admin-001'; // Por enquanto fixo
+$user = getAuthenticatedUser();
+$resellerId = $user['id'];
 
 try {
     if ($method === 'GET') {

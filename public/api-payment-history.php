@@ -7,6 +7,7 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 // Carregar funções auxiliares
 require_once __DIR__ . '/../app/helpers/functions.php';
+require_once __DIR__ . '/../app/helpers/auth-helper.php';
 loadEnv(__DIR__ . '/../.env');
 
 // Carregar Database
@@ -56,7 +57,8 @@ try {
  * Buscar histórico de pagamentos de um cliente
  */
 function getClientPaymentHistory($clientId) {
-    $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+    $user = getAuthenticatedUser();
+    $resellerId = $user['id'];
     
     // Buscar faturas do cliente
     $invoices = Database::fetchAll(
@@ -167,7 +169,8 @@ function addPayment() {
         throw new Exception('Campos obrigatórios: client_id, value, due_date');
     }
     
-    $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+    $user = getAuthenticatedUser();
+    $resellerId = $user['id'];
     $invoiceId = 'inv-' . uniqid();
     
     // Verificar se o cliente existe
@@ -215,7 +218,8 @@ function addPayment() {
 function updatePayment() {
     $data = json_decode(file_get_contents('php://input'), true);
     $id = $_GET['id'] ?? null;
-    $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+    $user = getAuthenticatedUser();
+    $resellerId = $user['id'];
     
     if (!$id) {
         throw new Exception('ID da fatura é obrigatório');
@@ -325,7 +329,8 @@ function updatePayment() {
  */
 function deletePayment() {
     $id = $_GET['id'] ?? null;
-    $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+    $user = getAuthenticatedUser();
+    $resellerId = $user['id'];
     
     if (!$id) {
         throw new Exception('ID da fatura é obrigatório');

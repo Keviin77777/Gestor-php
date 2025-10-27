@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Clientes - UltraGestor</title>
     <link rel="stylesheet" href="/assets/css/dashboard.css">
     <link rel="stylesheet" href="/assets/css/clients-improved.css">
@@ -19,6 +19,9 @@
     </style>
 </head>
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -176,23 +179,43 @@
                 <h2 class="page-title">Clientes</h2>
             </div>
             <div class="header-right">
-                <div class="search-box">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <div class="search-box" id="searchBox">
+                    <input type="text" placeholder="Buscar clientes..." id="searchInput">
+                    <svg class="search-icon" id="searchIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"></circle>
                         <path d="m21 21-4.35-4.35"></path>
                     </svg>
-                    <input type="text" placeholder="Buscar clientes..." id="searchInput">
                 </div>
 
-                <button class="btn btn-primary" id="newClientBtn" onclick="openClientModal()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 0.5rem;">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                <button class="notification-btn" id="notificationBtn" type="button" aria-label="Notificações">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                     </svg>
-                    Novo Cliente
+                    <span class="notification-badge">3</span>
                 </button>
             </div>
         </header>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons-bar">
+            <button class="btn btn-primary" id="newClientBtn" onclick="openClientModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Novo Cliente
+            </button>
+            
+            <button class="btn btn-secondary" onclick="exportClients()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Exportar
+            </button>
+        </div>
 
         <!-- Filters -->
         <div class="filters-bar">
@@ -216,14 +239,6 @@
             
             <div class="filter-actions">
                 <button class="btn btn-secondary" onclick="clearFilters()">Limpar</button>
-                <button class="btn btn-secondary" onclick="exportClients()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 0.5rem;">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    Exportar
-                </button>
             </div>
         </div>
 
@@ -682,6 +697,7 @@
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/auth.js"></script>
     <script src="/assets/js/theme-global.js"></script>
+    <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/clients.js"></script>
 </body>
 </html>

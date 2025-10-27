@@ -13,7 +13,10 @@ require_once __DIR__ . '/../app/core/Database.php';
 
 loadEnv(__DIR__ . '/../.env');
 
-$resellerId = 'admin-001';
+require_once __DIR__ . '/../app/helpers/auth-helper.php';
+
+$user = getAuthenticatedUser();
+$resellerId = $user['id'];
 
 try {
     // Verificar sessão ativa

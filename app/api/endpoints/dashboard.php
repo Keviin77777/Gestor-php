@@ -7,14 +7,19 @@
  * Obter métricas do dashboard
  */
 function getMetrics() {
-    // Por enquanto, vamos usar o usuário admin diretamente para testar
-    $userId = 'admin-001';
-    $isAdmin = true;
+    // Verificar autenticação
+    $user = Auth::user();
+    if (!$user) {
+        Response::error('Não autorizado', 401);
+    }
+    
+    $userId = $user['id'];
+    $isAdmin = $user['role'] === 'admin';
     
     try {
-        // Se for admin, mostrar métricas globais, senão apenas do reseller
-        $whereClause = $isAdmin ? '' : 'WHERE reseller_id = :user_id';
-        $params = $isAdmin ? [] : ['user_id' => $userId];
+        // Cada usuário vê apenas seus próprios dados (incluindo admin)
+        $whereClause = 'WHERE reseller_id = ?';
+        $params = [$userId];
         
         // Total de clientes
         $totalClients = Database::fetch(
@@ -24,8 +29,8 @@ function getMetrics() {
         
         // Clientes ativos
         $activeClients = Database::fetch(
-            "SELECT COUNT(*) as total FROM clients $whereClause AND status = 'active'",
-            array_merge($params, ['status' => 'active'])
+            "SELECT COUNT(*) as total FROM clients WHERE reseller_id = ? AND status = 'active'",
+            [$userId]
         )['total'] ?? 0;
         
         // Crescimento de clientes (comparar com mês anterior)
@@ -52,13 +57,8 @@ function getMetrics() {
         
         // Receita do mês anterior
         $lastMonthRevenue = Database::fetch(
-            "SELECT COALESCE(SUM(final_value), 0) as total 
-             FROM invoices 
-             $whereClause 
-             AND status = 'paid' 
-             AND MONTH(payment_date) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) 
-             AND YEAR(payment_date) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))",
-            $params
+            "SELECT COALESCE(SUM(final_value), 0) as total FROM invoices WHERE reseller_id = ? AND status = 'paid' AND MONTH(payment_date) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(payment_date) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))",
+            [$userId]
         )['total'] ?? 1;
         
         $revenueGrowth = $lastMonthRevenue > 0 
@@ -111,12 +111,8 @@ function getMetrics() {
             $monthName = date('M', strtotime("-$i months"));
             
             $revenue = Database::fetch(
-                "SELECT COALESCE(SUM(final_value), 0) as total 
-                 FROM invoices 
-                 $whereClause 
-                 AND status = 'paid' 
-                 AND DATE_FORMAT(payment_date, '%Y-%m') = :month",
-                array_merge($params, ['month' => $month])
+                "SELECT COALESCE(SUM(final_value), 0) as total FROM invoices WHERE reseller_id = ? AND status = 'paid' AND DATE_FORMAT(payment_date, '%Y-%m') = ?",
+                [$userId, $month]
             )['total'] ?? 0;
             
             $revenueChartLabels[] = $monthName;

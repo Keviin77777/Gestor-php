@@ -4,68 +4,82 @@ header('Content-Type: application/json');
 
 // Carregar funções auxiliares
 require_once __DIR__ . '/../app/helpers/functions.php';
+require_once __DIR__ . '/../app/helpers/auth-helper.php';
 loadEnv(__DIR__ . '/../.env');
 
 // Carregar Database
 require_once __DIR__ . '/../app/core/Database.php';
 
 try {
+    // Obter usuário autenticado
+    $user = getAuthenticatedUser();
+    $resellerId = $user['id'];
+    
     // Testar conexão
-    $totalClients = Database::fetch("SELECT COUNT(*) as total FROM clients")['total'] ?? 0;
+    $totalClients = Database::fetch("SELECT COUNT(*) as total FROM clients WHERE reseller_id = ?", [$resellerId])['total'] ?? 0;
     
     // Receita do mês atual
     $monthRevenue = Database::fetch(
         "SELECT COALESCE(SUM(final_value), 0) as total 
          FROM invoices 
-         WHERE status = 'paid' 
+         WHERE reseller_id = ?
+         AND status = 'paid' 
          AND MONTH(payment_date) = MONTH(NOW()) 
-         AND YEAR(payment_date) = YEAR(NOW())"
+         AND YEAR(payment_date) = YEAR(NOW())",
+        [$resellerId]
     )['total'] ?? 0;
     
     // Valor de inadimplentes (faturas vencidas e não pagas)
     $inadimplentesValue = Database::fetch(
         "SELECT COALESCE(SUM(final_value), 0) as total 
          FROM invoices 
-         WHERE status = 'pending' 
-         AND due_date < NOW()"
+         WHERE reseller_id = ?
+         AND status = 'pending' 
+         AND due_date < NOW()",
+        [$resellerId]
     )['total'] ?? 0;
     
     // Contagem de clientes inadimplentes
     $inadimplentesCount = Database::fetch(
         "SELECT COUNT(DISTINCT client_id) as total 
          FROM invoices 
-         WHERE status = 'pending' 
-         AND due_date < NOW()"
+         WHERE reseller_id = ?
+         AND status = 'pending' 
+         AND due_date < NOW()",
+        [$resellerId]
     )['total'] ?? 0;
     
     // Faturas pendentes
-    $pendingInvoices = Database::fetch("SELECT COUNT(*) as total FROM invoices WHERE status = 'pending'")['total'] ?? 0;
+    $pendingInvoices = Database::fetch(
+        "SELECT COUNT(*) as total FROM invoices WHERE reseller_id = ? AND status = 'pending'",
+        [$resellerId]
+    )['total'] ?? 0;
     
     // Clientes a vencer nos próximos 7 dias
     $expiringClients = Database::fetch(
         "SELECT COUNT(*) as total 
          FROM clients 
-         WHERE status = 'active' 
-         AND renewal_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)"
+         WHERE reseller_id = ?
+         AND status = 'active' 
+         AND renewal_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)",
+        [$resellerId]
     )['total'] ?? 0;
     
     // Lista de clientes a vencer
     $expiringClientsList = Database::fetchAll(
         "SELECT name, renewal_date, status 
          FROM clients 
-         WHERE status = 'active' 
+         WHERE reseller_id = ?
+         AND status = 'active' 
          AND renewal_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
          ORDER BY renewal_date ASC 
-         LIMIT 5"
+         LIMIT 5",
+        [$resellerId]
     );
     
-    // Dados do gráfico (últimos 6 meses) - com dados simulados baseados nos clientes
+    // Dados do gráfico (últimos 6 meses) - APENAS dados reais
     $revenueChartData = [];
     $revenueChartLabels = [];
-    
-    // Valor médio por cliente para simulação
-    $avgClientValue = Database::fetch("SELECT AVG(value) as avg_value FROM clients")['avg_value'] ?? 35;
-    $clientCount = max(1, $totalClients); // Pelo menos 1 para evitar divisão por zero
     
     for ($i = 5; $i >= 0; $i--) {
         $month = date('Y-m', strtotime("-$i months"));
@@ -75,23 +89,17 @@ try {
         $revenue = Database::fetch(
             "SELECT COALESCE(SUM(final_value), 0) as total 
              FROM invoices 
-             WHERE status = 'paid' 
+             WHERE reseller_id = ?
+             AND status = 'paid' 
              AND DATE_FORMAT(payment_date, '%Y-%m') = ?",
-            [$month]
+            [$resellerId, $month]
         )['total'] ?? 0;
-        
-        // Se não há receitas reais, simular baseado nos clientes
-        if ($revenue == 0 && $totalClients > 0) {
-            // Simular crescimento mensal baseado nos clientes existentes
-            $growthFactor = 1 + (0.05 * (6 - $i)); // Crescimento de 5% por mês
-            $revenue = $avgClientValue * $clientCount * $growthFactor * 0.8; // 80% dos clientes pagam por mês
-        }
         
         $revenueChartLabels[] = $monthName;
         $revenueChartData[] = round((float)$revenue, 2);
     }
     
-    // Despesas reais do mês atual
+    // Despesas reais do mês atual (não há reseller_id na tabela expenses)
     $monthlyExpenses = Database::fetch(
         "SELECT COALESCE(SUM(amount), 0) as total 
          FROM expenses 
@@ -101,30 +109,23 @@ try {
     
     $monthlyBalance = $monthRevenue - $monthlyExpenses;
     
-    // Receita anual (soma dos últimos 12 meses)
+    // Receita anual (soma dos últimos 12 meses) - APENAS dados reais
     $annualRevenue = 0;
     for ($i = 11; $i >= 0; $i--) {
         $month = date('Y-m', strtotime("-$i months"));
         $revenue = Database::fetch(
             "SELECT COALESCE(SUM(final_value), 0) as total 
              FROM invoices 
-             WHERE status = 'paid' 
+             WHERE reseller_id = ?
+             AND status = 'paid' 
              AND DATE_FORMAT(payment_date, '%Y-%m') = ?",
-            [$month]
+            [$resellerId, $month]
         )['total'] ?? 0;
-        
-        // Se não há receitas reais, simular baseado nos clientes
-        if ($revenue == 0 && $totalClients > 0) {
-            $avgClientValue = Database::fetch("SELECT AVG(value) as avg_value FROM clients")['avg_value'] ?? 35;
-            $clientCount = max(1, $totalClients);
-            $growthFactor = 1 + (0.05 * (12 - $i));
-            $revenue = $avgClientValue * $clientCount * $growthFactor * 0.8;
-        }
         
         $annualRevenue += $revenue;
     }
     
-    // Despesas anuais reais (últimos 12 meses)
+    // Despesas anuais reais (últimos 12 meses) - não há reseller_id na tabela expenses
     $annualExpenses = Database::fetch(
         "SELECT COALESCE(SUM(amount), 0) as total 
          FROM expenses 
@@ -133,7 +134,7 @@ try {
     
     $annualBalance = $annualRevenue - $annualExpenses;
     
-    // Calcular crescimento mensal das despesas
+    // Calcular crescimento mensal das despesas (não há reseller_id na tabela expenses)
     $previousMonthExpenses = Database::fetch(
         "SELECT COALESCE(SUM(amount), 0) as total 
          FROM expenses 
@@ -146,9 +147,11 @@ try {
         $previousMonthBalance = Database::fetch(
             "SELECT COALESCE(SUM(final_value), 0) as total 
              FROM invoices 
-             WHERE status = 'paid' 
+             WHERE reseller_id = ?
+             AND status = 'paid' 
              AND MONTH(payment_date) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) 
-             AND YEAR(payment_date) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))"
+             AND YEAR(payment_date) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))",
+            [$resellerId]
         )['total'] ?? 0;
         $previousBalance = $previousMonthBalance - $previousMonthExpenses;
         if ($previousBalance != 0) {
@@ -156,7 +159,7 @@ try {
         }
     }
     
-    // Calcular crescimento anual
+    // Calcular crescimento anual (não há reseller_id na tabela expenses)
     $previousYearExpenses = Database::fetch(
         "SELECT COALESCE(SUM(amount), 0) as total 
          FROM expenses 
@@ -173,9 +176,10 @@ try {
             $revenue = Database::fetch(
                 "SELECT COALESCE(SUM(final_value), 0) as total 
                  FROM invoices 
-                 WHERE status = 'paid' 
+                 WHERE reseller_id = ?
+                 AND status = 'paid' 
                  AND DATE_FORMAT(payment_date, '%Y-%m') = ?",
-                [$month]
+                [$resellerId, $month]
             )['total'] ?? 0;
             $previousYearRevenue += $revenue;
         }

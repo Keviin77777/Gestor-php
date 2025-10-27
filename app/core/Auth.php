@@ -92,6 +92,17 @@ class Auth {
      * Obter usuário autenticado
      */
     public static function user(): ?array {
+        // Iniciar sessão se não estiver iniciada
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // Primeiro tentar sessão PHP
+        if (isset($_SESSION['user'])) {
+            return $_SESSION['user'];
+        }
+        
+        // Fallback para JWT se existir
         $token = Request::bearerToken();
         
         if (!$token) {
@@ -103,6 +114,9 @@ class Auth {
         if (!$payload) {
             return null;
         }
+        
+        // Salvar na sessão para próximas requisições
+        $_SESSION['user'] = $payload;
         
         return $payload;
     }
@@ -148,9 +162,23 @@ class Auth {
     }
     
     /**
+     * Login do usuário (salvar na sessão)
+     */
+    public static function login(array $user): void {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['user'] = $user;
+    }
+    
+    /**
      * Logout
      */
     public static function logout(): void {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        unset($_SESSION['user']);
         session_destroy();
     }
     

@@ -2,13 +2,16 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Parear WhatsApp - UltraGestor</title>
     <link rel="stylesheet" href="/assets/css/dashboard.css">
     <link rel="stylesheet" href="/assets/css/whatsapp.css">
 </head>
 <body>
     <div class="app-container">
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -171,6 +174,23 @@
                         <span></span>
                     </button>
                     <h2 class="page-title">Parear WhatsApp</h2>
+                </div>
+                <div class="header-right">
+                    <div class="search-box" id="searchBox">
+                        <input type="text" placeholder="Buscar..." id="searchInput">
+                        <svg class="search-icon" id="searchIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </div>
+                    
+                    <button class="notification-btn" id="notificationBtn" type="button" aria-label="Notificações">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span class="notification-badge">3</span>
+                    </button>
                 </div>
             </header>
 
@@ -457,6 +477,7 @@
 
     <script src="/assets/js/common.js"></script>
     <script src="/assets/js/loading-manager.js"></script>
+    <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/whatsapp-parear.js"></script>
 </body>
 </html>

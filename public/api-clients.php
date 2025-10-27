@@ -8,22 +8,32 @@ loadEnv(__DIR__ . '/../.env');
 
 // Carregar Database
 require_once __DIR__ . '/../app/core/Database.php';
+require_once __DIR__ . '/../app/core/Auth.php';
 
 // Carregar automação de faturas
 require_once __DIR__ . '/../app/helpers/invoice-automation.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Verificar autenticação
+$user = Auth::user();
+if (!$user) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'Não autorizado']);
+    exit;
+}
+
 try {
     switch ($method) {
         case 'GET':
-            // Buscar todos os clientes
+            // Buscar todos os clientes do reseller autenticado
             $clients = Database::fetchAll(
                 "SELECT id, name, email, phone, username, password, iptv_password, start_date, renewal_date, 
                         status, value, notes, server, mac, notifications, screens, plan, created_at
                  FROM clients 
-                 WHERE reseller_id = 'admin-001'
-                 ORDER BY created_at DESC"
+                 WHERE reseller_id = ?
+                 ORDER BY created_at DESC",
+                [$user['id']]
             );
             
             // Formatar dados para o frontend
@@ -78,7 +88,7 @@ try {
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     $clientId,
-                    'admin-001',
+                    $user['id'],
                     $data['name'],
                     $data['email'] ?? '',
                     $data['phone'] ?? '',

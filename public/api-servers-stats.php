@@ -7,6 +7,7 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 // Carregar funções auxiliares
 require_once __DIR__ . '/../app/helpers/functions.php';
+require_once __DIR__ . '/../app/helpers/auth-helper.php';
 loadEnv(__DIR__ . '/../.env');
 
 // Carregar Database
@@ -33,7 +34,8 @@ try {
  * Buscar estatísticas dos servidores
  */
 function getServersStats() {
-    $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+    $user = getAuthenticatedUser();
+    $resellerId = $user['id'];
     
     // Buscar todos os servidores com contagem de clientes e cálculo de despesas
     $serversQuery = "
@@ -58,11 +60,6 @@ function getServersStats() {
     ";
     
     $servers = Database::fetchAll($serversQuery, [$resellerId]);
-    
-    // Se não há servidores no banco, criar dados de exemplo
-    if (empty($servers)) {
-        $servers = generateSampleServersData();
-    }
     
     // Calcular estatísticas gerais
     $totalClients = array_sum(array_column($servers, 'client_count'));
@@ -119,64 +116,6 @@ function getServersStats() {
             'top_stats' => $topStats
         ]
     ]);
-}
-
-/**
- * Gerar dados de exemplo para servidores
- */
-function generateSampleServersData() {
-    return [
-        [
-            'id' => 'srv-001',
-            'name' => 'Servidor Principal',
-            'status' => 'active',
-            'cost' => 150.00,
-            'billing_type' => 'fixed',
-            'client_count' => 45,
-            'total_revenue' => 1575.00,
-            'total_cost' => 150.00
-        ],
-        [
-            'id' => 'srv-002', 
-            'name' => 'Servidor Backup',
-            'status' => 'active',
-            'cost' => 5.00,
-            'billing_type' => 'per_active',
-            'client_count' => 32,
-            'total_revenue' => 1120.00,
-            'total_cost' => 160.00 // 5.00 * 32 clientes
-        ],
-        [
-            'id' => 'srv-003',
-            'name' => 'Servidor Premium',
-            'status' => 'active',
-            'cost' => 200.00,
-            'billing_type' => 'fixed',
-            'client_count' => 28,
-            'total_revenue' => 1400.00,
-            'total_cost' => 200.00
-        ],
-        [
-            'id' => 'srv-004',
-            'name' => 'Servidor Regional',
-            'status' => 'active',
-            'cost' => 3.50,
-            'billing_type' => 'per_active',
-            'client_count' => 18,
-            'total_revenue' => 630.00,
-            'total_cost' => 63.00 // 3.50 * 18 clientes
-        ],
-        [
-            'id' => 'srv-005',
-            'name' => 'Servidor Teste',
-            'status' => 'inactive',
-            'cost' => 80.00,
-            'billing_type' => 'fixed',
-            'client_count' => 5,
-            'total_revenue' => 175.00,
-            'total_cost' => 80.00
-        ]
-    ];
 }
 
 /**

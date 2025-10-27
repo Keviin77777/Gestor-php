@@ -2,12 +2,15 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Dashboard - UltraGestor</title>
     <link rel="stylesheet" href="/assets/css/dashboard.css">
     <link rel="stylesheet" href="/assets/css/top-servers.css">
 </head>
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -157,7 +160,7 @@
         <!-- Header -->
         <header class="header">
             <div class="header-left">
-                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Menu">
                     <span></span>
                     <span></span>
                     <span></span>
@@ -165,16 +168,15 @@
                 <h2 class="page-title">Dashboard</h2>
             </div>
             <div class="header-right">
-                <div class="search-box">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <div class="search-box" id="searchBox">
+                    <input type="text" placeholder="Buscar..." id="searchInput">
+                    <svg class="search-icon" id="searchIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"></circle>
                         <path d="m21 21-4.35-4.35"></path>
                     </svg>
-                    <input type="text" placeholder="Buscar...">
                 </div>
-
                 
-                <button class="notification-btn">
+                <button class="notification-btn" id="notificationBtn" type="button" aria-label="Notificações">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
@@ -623,6 +625,33 @@
         </div>
     </main>
 
+    <!-- Garantir que sidebar está fechada antes de carregar qualquer script -->
+    <script>
+        (function() {
+            console.log('Forçando sidebar fechada imediatamente...');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            
+            if (sidebar) {
+                sidebar.classList.remove('active');
+                // Forçar inline para garantir que funciona no mobile
+                if (window.innerWidth <= 768) {
+                    sidebar.style.transform = 'translateX(-100%)';
+                }
+            }
+            if (sidebarOverlay) {
+                sidebarOverlay.classList.remove('active');
+            }
+            if (mobileMenuBtn) {
+                mobileMenuBtn.classList.remove('active');
+            }
+            if (document.body) {
+                document.body.classList.remove('sidebar-open');
+            }
+        })();
+    </script>
+    
     <script src="/assets/js/common.js"></script>
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/auth.js"></script>
@@ -630,14 +659,195 @@
     <script src="/assets/js/dashboard.js"></script>
     
     <script>
-        // Forçar inicialização se necessário
+        // Inicialização completa do dashboard mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard principal: Inicializando funcionalidades mobile...');
+            
+            // Mobile Menu Toggle
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            
+            function openSidebar() {
+                console.log('Abrindo sidebar mobile...');
+                if (sidebar) sidebar.classList.add('active');
+                if (sidebarOverlay) sidebarOverlay.classList.add('active');
+                if (mobileMenuBtn) mobileMenuBtn.classList.add('active');
+                document.body.classList.add('sidebar-open');
+            }
+            
+            function closeSidebar() {
+                console.log('Fechando sidebar mobile...');
+                if (sidebar) sidebar.classList.remove('active');
+                if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+                if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
+                document.body.classList.remove('sidebar-open');
+            }
+            
+            function toggleSidebar() {
+                if (sidebar && sidebar.classList.contains('active')) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
+            }
+            
+            // Event listeners para mobile menu
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Mobile menu button clicado');
+                    toggleSidebar();
+                });
+                
+                // Touch events para melhor responsividade
+                mobileMenuBtn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Mobile menu touch end');
+                    toggleSidebar();
+                });
+            }
+            
+            // Fechar sidebar ao clicar no overlay
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', closeSidebar);
+                sidebarOverlay.addEventListener('touchend', closeSidebar);
+            }
+            
+            // Fechar sidebar ao pressionar ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeSidebar();
+                }
+            });
+            
+            // Fechar sidebar ao clicar em links da navegação (mobile) - APENAS links que navegam
+            if (sidebar) {
+                // Apenas links diretos que realmente navegam (não têm submenu e têm href válido)
+                const directNavLinks = sidebar.querySelectorAll('a.nav-item:not(.has-submenu)[href]:not([href="#"])');
+                directNavLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                        if (window.innerWidth <= 768) {
+                            setTimeout(closeSidebar, 100);
+                        }
+                    });
+                });
+
+                // Links de submenu que realmente navegam
+                const submenuLinks = sidebar.querySelectorAll('a.submenu-item[href]:not([href="#"])');
+                submenuLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                        if (window.innerWidth <= 768) {
+                            setTimeout(closeSidebar, 100);
+                        }
+                    });
+                });
+            }
+            
+            // Search Box Mobile
+            const searchBox = document.getElementById('searchBox');
+            const searchIcon = document.getElementById('searchIcon');
+            const searchInput = document.getElementById('searchInput');
+            
+            function setupSearchBox() {
+                if (!searchIcon || !searchBox || !searchInput) return;
+                
+                console.log('Configurando search box mobile...');
+                
+                function performSearch() {
+                    if (searchInput.value.trim()) {
+                        console.log('Fazendo busca por:', searchInput.value);
+                        window.location.href = '/clients?search=' + encodeURIComponent(searchInput.value);
+                    } else {
+                        searchInput.focus();
+                    }
+                }
+                
+                searchIcon.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    performSearch();
+                });
+                
+                searchIcon.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    performSearch();
+                });
+                
+                // Eventos do input
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        performSearch();
+                    }
+                });
+                
+                searchInput.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            }
+            
+            setupSearchBox();
+            
+
+            
+            // Notification Button
+            const notificationBtn = document.getElementById('notificationBtn');
+            if (notificationBtn) {
+                notificationBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Notificações clicadas');
+                    
+                    // Implementar modal de notificações ou redirecionamento
+                    alert('Você tem 3 notificações pendentes!\n\n• Cliente João Silva vence hoje\n• Pagamento recebido: R$ 150,00\n• Novo cliente cadastrado');
+                });
+            }
+            
+            // Garantir que sidebar inicie fechada no mobile
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+            
+            // Redimensionamento da janela
+            window.addEventListener('resize', function() {
+                if (window.innerWidth <= 768) {
+                    // Mobile: garantir que sidebar esteja fechada
+                    closeSidebar();
+                    
+                    // Reconfigurar search box
+                    if (searchBox && !searchBox.classList.contains('expanded')) {
+                        searchBox.classList.remove('expanded');
+                    }
+                } else {
+                    // Desktop: remover classes mobile
+                    if (sidebar) sidebar.classList.remove('active');
+                    if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+                    if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
+                    document.body.classList.remove('sidebar-open');
+                    
+                    // Resetar search box
+                    if (searchBox) searchBox.classList.remove('expanded');
+                }
+            });
+            
+            console.log('Dashboard mobile inicializado com sucesso!');
+        });
+        
+        // Forçar inicialização do dashboard se necessário
         setTimeout(function() {
-            console.log('Verificando inicialização...');
+            console.log('Verificando inicialização do dashboard...');
             if (typeof initializeDashboard === 'function') {
                 console.log('Função encontrada, inicializando...');
                 initializeDashboard();
             } else {
-                console.error('Função initializeDashboard não encontrada!');
+                console.log('Função initializeDashboard não encontrada, carregando dados básicos...');
+                // Carregar dados básicos se a função principal não estiver disponível
+                if (typeof loadUserData === 'function') {
+                    loadUserData();
+                }
             }
         }, 500);
     </script>

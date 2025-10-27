@@ -17,8 +17,9 @@ try {
     
     $pdo = Database::connect();
     
-    // Usuário padrão
-    $user = ['id' => 'admin-001'];
+    // Verificar autenticação
+    require_once __DIR__ . '/../app/helpers/auth-helper.php';
+    $user = getAuthenticatedUser();
     
     $method = $_SERVER['REQUEST_METHOD'];
     $path = $_SERVER['REQUEST_URI'];

@@ -20,8 +20,11 @@ require_once __DIR__ . '/../app/helpers/whatsapp-helper.php';
 
 loadEnv(__DIR__ . '/../.env');
 
+require_once __DIR__ . '/../app/helpers/auth-helper.php';
+
 $method = $_SERVER['REQUEST_METHOD'];
-$resellerId = 'admin-001'; // Por enquanto fixo
+$user = getAuthenticatedUser();
+$resellerId = $user['id'];
 
 // Log para debug
 error_log("WhatsApp Connect - Iniciando conexão para reseller: " . $resellerId);

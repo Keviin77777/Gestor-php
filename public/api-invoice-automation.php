@@ -16,12 +16,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Carregar dependências
 require_once __DIR__ . '/../app/helpers/functions.php';
+require_once __DIR__ . '/../app/helpers/auth-helper.php';
 require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/helpers/invoice-automation.php';
 
 loadEnv(__DIR__ . '/../.env');
 
 $method = $_SERVER['REQUEST_METHOD'];
+
+// Verificar autenticação
+$user = getAuthenticatedUser();
+$resellerId = $user['id'];
 
 try {
     switch ($method) {
@@ -43,11 +48,12 @@ try {
                      AND YEAR(i.issue_date) = YEAR(CURDATE())
                     ) as pending_invoices_this_month
                  FROM clients c
-                 WHERE c.reseller_id = 'admin-001' 
+                 WHERE c.reseller_id = ? 
                  AND c.status = 'active'
                  AND DATEDIFF(c.renewal_date, CURDATE()) <= 10
                  AND DATEDIFF(c.renewal_date, CURDATE()) >= 0
-                 ORDER BY c.renewal_date ASC"
+                 ORDER BY c.renewal_date ASC",
+                [$resellerId]
             );
             
             // Separar clientes que precisam de fatura dos que já têm
@@ -97,8 +103,8 @@ try {
                 
                 // Buscar dados do cliente
                 $client = Database::fetch(
-                    "SELECT id, name, value, renewal_date FROM clients WHERE id = ? AND reseller_id = 'admin-001'",
-                    [$clientId]
+                    "SELECT id, name, value, renewal_date FROM clients WHERE id = ? AND reseller_id = ?",
+                    [$clientId, $resellerId]
                 );
                 
                 if (!$client) {

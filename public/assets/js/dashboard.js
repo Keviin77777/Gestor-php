@@ -14,6 +14,22 @@ function formatMoney(value) {
 
 // Aguardar DOM e CSS carregarem
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('Dashboard: DOM carregado, garantindo sidebar fechada...');
+    
+    // Forçar sidebar fechada IMEDIATAMENTE
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    
+    if (sidebar) {
+        sidebar.classList.remove('active');
+    }
+    if (sidebarOverlay) {
+        sidebarOverlay.classList.remove('active');
+    }
+    
+    // Fechar sidebar imediatamente no mobile
+    ensureSidebarClosedOnMobile();
+    
     // Aguardar um pouco para garantir que o CSS foi carregado
     setTimeout(() => {
         // Verificar se estamos na página do dashboard
@@ -27,16 +43,46 @@ document.addEventListener('DOMContentLoaded', function () {
  * Inicializar dashboard
  */
 function initializeDashboard() {
+    // 0. Garantir que sidebar inicie fechada no mobile
+    ensureSidebarClosedOnMobile();
+    
     // 1. Configurar eventos PRIMEIRO
     setupDashboardEvents();
 
-    // 3. Carregar dados do usuário
+    // 2. Carregar dados do usuário
     loadUserData();
 
-    // 4. Mostrar dados por último
+    // 3. Mostrar dados por último
     setTimeout(() => {
         showDashboardData();
     }, 200);
+}
+
+/**
+ * Garantir que sidebar inicie fechada no mobile
+ */
+function ensureSidebarClosedOnMobile() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    
+    console.log('Verificando sidebar em mobile - Largura:', window.innerWidth);
+    
+    // Se for mobile (largura menor que 768px) ou sempre em desktop inicial
+    if (window.innerWidth <= 768) {
+        console.log('Mobile detectado, fechando sidebar...');
+        if (sidebar) {
+            sidebar.classList.remove('active');
+        }
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.remove('active');
+        }
+        if (mobileMenuBtn) {
+            mobileMenuBtn.classList.remove('active');
+        }
+        // Garantir que body pode fazer scroll
+        document.body.classList.remove('sidebar-open');
+    }
 }
 
 /**
@@ -379,15 +425,136 @@ function drawChart() {
  * Configurar eventos
  */
 function setupDashboardEvents() {
-    // Menu mobile
+    console.log('Configurando eventos do dashboard...');
+    
+    // Menu mobile e sidebar toggle
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
 
-    if (mobileMenuBtn && sidebar) {
-        mobileMenuBtn.addEventListener('click', function () {
-            sidebar.classList.toggle('active');
+    // Função para abrir sidebar
+    function openSidebar() {
+        console.log('Abrindo sidebar...');
+        if (sidebar) sidebar.classList.add('active');
+        if (sidebarOverlay) sidebarOverlay.classList.add('active');
+        if (mobileMenuBtn) mobileMenuBtn.classList.add('active');
+        // Prevenir scroll do body em mobile
+        if (window.innerWidth <= 768) {
+            document.body.classList.add('sidebar-open');
+        }
+    }
+
+    // Função para fechar sidebar
+    function closeSidebar() {
+        console.log('Fechando sidebar...');
+        if (sidebar) sidebar.classList.remove('active');
+        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+        if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
+        // Permitir scroll do body novamente
+        document.body.classList.remove('sidebar-open');
+    }
+
+    // Função para abrir/fechar sidebar
+    function toggleSidebar() {
+        if (sidebar && sidebar.classList.contains('active')) {
+            closeSidebar();
+        } else {
+            openSidebar();
+        }
+    }
+
+    // Botão mobile menu
+    if (mobileMenuBtn) {
+        console.log('Configurando mobile menu button...');
+        
+        mobileMenuBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Mobile menu clicado');
+            toggleSidebar();
+        });
+        
+        // Touch events para melhor responsividade mobile
+        mobileMenuBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Mobile menu touch');
+            toggleSidebar();
         });
     }
+
+    // Botão sidebar toggle (se existir)
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSidebar();
+        });
+    }
+
+    // Fechar sidebar ao clicar no overlay
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeSidebar);
+        sidebarOverlay.addEventListener('touchend', closeSidebar);
+    }
+
+    // Fechar sidebar ao clicar em links da navegação (mobile) - APENAS links que navegam
+    if (sidebar) {
+        // Apenas links diretos (sem submenu) que realmente navegam
+        const directNavLinks = sidebar.querySelectorAll('a.nav-item:not(.has-submenu)[href]:not([href="#"])');
+        directNavLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    setTimeout(closeSidebar, 100);
+                }
+            });
+        });
+
+        // Links de submenu que realmente navegam
+        const submenuLinks = sidebar.querySelectorAll('a.submenu-item[href]:not([href="#"])');
+        submenuLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    setTimeout(closeSidebar, 100);
+                }
+            });
+        });
+    }
+
+    // Fechar sidebar ao pressionar ESC
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeSidebar();
+        }
+    });
+    
+    // Fechar sidebar ao redimensionar para mobile
+    window.addEventListener('resize', () => {
+        if (window.innerWidth <= 768) {
+            // Forçar sidebar fechada no mobile
+            closeSidebar();
+        } else {
+            // Desktop: remover classes mobile
+            if (sidebar) sidebar.classList.remove('active');
+            if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+            if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
+            document.body.classList.remove('sidebar-open');
+        }
+    });
+
+    // Fechar sidebar ao tocar fora dela no mobile
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('active')) {
+            // Se clicou fora da sidebar, overlay e botão menu
+            if (!sidebar.contains(e.target) && 
+                e.target !== sidebarOverlay && 
+                e.target !== mobileMenuBtn &&
+                !mobileMenuBtn.contains(e.target)) {
+                closeSidebar();
+            }
+        }
+    });
 
     // Logout
     window.logout = function () {
@@ -395,6 +562,8 @@ function setupDashboardEvents() {
         localStorage.removeItem('user');
         window.location.href = '/login';
     };
+    
+    console.log('Eventos do dashboard configurados com sucesso!');
 }
 
 // Adicionar estilos para badges se não existirem

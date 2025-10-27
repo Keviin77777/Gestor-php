@@ -39,7 +39,9 @@ function generateInvoice() {
         throw new Exception('ID do cliente é obrigatório');
     }
     
-    $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+    require_once __DIR__ . '/../app/helpers/auth-helper.php';
+    $user = getAuthenticatedUser();
+    $resellerId = $user['id'];
     $clientId = $data['client_id'];
     
     // Buscar informações do cliente

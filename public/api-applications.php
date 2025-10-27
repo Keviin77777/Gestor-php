@@ -39,17 +39,9 @@ try {
         $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
     }
     
-    // Para teste, permitir sem autenticação temporariamente
-    $user = null;
-    if (!empty($authHeader) && str_starts_with($authHeader, 'Bearer ')) {
-        $token = substr($authHeader, 7);
-        $user = validateToken($token);
-    }
-    
-    // Se não há usuário autenticado, usar usuário padrão para teste
-    if (!$user) {
-        $user = ['id' => 'admin-001', 'name' => 'Admin', 'email' => 'admin@test.com'];
-    }
+    // Verificar autenticação usando o helper
+    require_once __DIR__ . '/../app/helpers/auth-helper.php';
+    $user = getAuthenticatedUser();
 
     $pdo = Database::connect();
     

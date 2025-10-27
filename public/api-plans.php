@@ -4,6 +4,7 @@ header('Content-Type: application/json');
 
 // Carregar funções auxiliares
 require_once __DIR__ . '/../app/helpers/functions.php';
+require_once __DIR__ . '/../app/helpers/auth-helper.php';
 loadEnv(__DIR__ . '/../.env');
 
 // Carregar Database
@@ -16,7 +17,8 @@ try {
         case 'GET':
             // Verificar se é uma requisição para servidores
             if (isset($_GET['action']) && $_GET['action'] === 'servers') {
-                $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+                $user = getAuthenticatedUser();
+                $resellerId = $user['id'];
                 
                 // Buscar servidores reais da tabela servers
                 $servers = Database::fetchAll(
@@ -32,7 +34,8 @@ try {
             }
             
             // Buscar planos do reseller atual
-            $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+            $user = getAuthenticatedUser();
+            $resellerId = $user['id'];
             
             // Buscar planos com informações do servidor
             $plans = Database::fetchAll(
@@ -137,7 +140,8 @@ try {
                 throw new Exception('Campos obrigatórios: name, price, server_id');
             }
             
-            $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+            $user = getAuthenticatedUser();
+            $resellerId = $user['id'];
             $features = json_encode($data['features'] ?? []);
             $planId = 'plan-' . uniqid();
             
@@ -169,7 +173,8 @@ try {
             // Atualizar plano
             $data = json_decode(file_get_contents('php://input'), true);
             $id = $_GET['id'] ?? null;
-            $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+            $user = getAuthenticatedUser();
+            $resellerId = $user['id'];
             
             if (!$id) {
                 throw new Exception('ID do plano é obrigatório');
@@ -206,7 +211,8 @@ try {
             // Atualizar status do plano
             $data = json_decode(file_get_contents('php://input'), true);
             $id = $_GET['id'] ?? null;
-            $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+            $user = getAuthenticatedUser();
+            $resellerId = $user['id'];
             
             if (!$id) {
                 throw new Exception('ID do plano é obrigatório');
@@ -236,7 +242,8 @@ try {
         case 'DELETE':
             // Deletar plano
             $id = $_GET['id'] ?? null;
-            $resellerId = 'admin-001'; // Por enquanto fixo, depois pegar do token
+            $user = getAuthenticatedUser();
+            $resellerId = $user['id'];
             
             if (!$id) {
                 throw new Exception('ID do plano é obrigatório');
