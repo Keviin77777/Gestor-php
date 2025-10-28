@@ -322,6 +322,71 @@ $router->delete('/api/invoices/{id}', function() {
     require __DIR__ . '/../public/api-invoices.php';
 });
 
+// API Routes - Resellers (Admin only)
+$router->get('/api-resellers.php', function() {
+    require __DIR__ . '/../public/api-resellers.php';
+});
+
+$router->get('/api-resellers.php/{id}', function() {
+    require __DIR__ . '/../public/api-resellers.php';
+});
+
+$router->put('/api-resellers.php/{id}/suspend', function() {
+    require __DIR__ . '/../public/api-resellers.php';
+});
+
+$router->put('/api-resellers.php/{id}/activate', function() {
+    require __DIR__ . '/../public/api-resellers.php';
+});
+
+$router->put('/api-resellers.php/{id}/change-plan', function() {
+    require __DIR__ . '/../public/api-resellers.php';
+});
+
+$router->delete('/api-resellers.php/{id}', function() {
+    require __DIR__ . '/../public/api-resellers.php';
+});
+
+// API Routes - Reseller Plans
+$router->get('/api-reseller-plans.php', function() {
+    require __DIR__ . '/../public/api-reseller-plans.php';
+});
+
+$router->post('/api-reseller-plans.php', function() {
+    require __DIR__ . '/../public/api-reseller-plans.php';
+});
+
+$router->get('/api-reseller-plans.php/{id}', function() {
+    require __DIR__ . '/../public/api-reseller-plans.php';
+});
+
+$router->put('/api-reseller-plans.php/{id}', function() {
+    require __DIR__ . '/../public/api-reseller-plans.php';
+});
+
+$router->delete('/api-reseller-plans.php/{id}', function() {
+    require __DIR__ . '/../public/api-reseller-plans.php';
+});
+
+// API Route - Auth Me
+$router->get('/api/auth/me', function() {
+    require __DIR__ . '/../public/api-auth-me.php';
+});
+
+// Admin Pages
+$router->get('/admin/resellers', function() {
+    require __DIR__ . '/../app/views/admin/resellers.php';
+});
+
+$router->get('/admin/reseller-plans', function() {
+    require __DIR__ . '/../app/views/admin/reseller-plans.php';
+});
+
+// Reseller Pages
+$router->get('/renew-access', function() {
+    require __DIR__ . '/../app/views/reseller/renew-access.php';
+});
+
 // Logout
 $router->post('/api/auth/logout', function() {
     Auth::logout();

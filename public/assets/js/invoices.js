@@ -439,7 +439,11 @@ async function markAsPaid(invoiceId) {
         const result = await response.json();
 
         if (result.success) {
-            showSuccess('Fatura marcada como paga!');
+            let message = 'Fatura marcada como paga!';
+            if (result.client_renewed) {
+                message += '\n\n✅ Cliente renovado automaticamente por +30 dias!\n📱 Mensagem WhatsApp enviada!';
+            }
+            showSuccess(message);
             loadInvoices(); // Recarregar lista
         } else {
             throw new Error(result.error || 'Erro ao atualizar fatura');

@@ -429,7 +429,7 @@ function sendAutomaticRenewalMessage($clientId, $invoiceId) {
     try {
         // Buscar dados do cliente e fatura
         $data = Database::fetch(
-            "SELECT c.*, i.final_value, i.paid_at
+            "SELECT c.*, i.final_value, i.payment_date
              FROM clients c 
              LEFT JOIN invoices i ON i.id = ? 
              WHERE c.id = ?",

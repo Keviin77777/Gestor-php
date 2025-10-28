@@ -42,6 +42,19 @@ try {
     }
     
     if ($method === 'PUT' && $action === 'mark-paid') {
+        // Buscar informações da fatura antes da atualização
+        $invoice = Database::fetch(
+            "SELECT client_id, status FROM invoices WHERE id = ? AND reseller_id = ?",
+            [$invoiceId, $user['id']]
+        );
+        
+        if (!$invoice) {
+            throw new Exception('Fatura não encontrada');
+        }
+        
+        $oldStatus = $invoice['status'];
+        $clientId = $invoice['client_id'];
+        
         // Marcar como paga
         $stmt = $pdo->prepare("
             UPDATE invoices 
@@ -50,9 +63,80 @@ try {
         ");
         
         if ($stmt->execute([$invoiceId, $user['id']])) {
+            $clientRenewed = false;
+            
+            // Se o status mudou para "paid", renovar o cliente
+            if ($oldStatus !== 'paid') {
+                // Buscar data de vencimento atual do cliente
+                $client = Database::fetch(
+                    "SELECT renewal_date FROM clients WHERE id = ? AND reseller_id = ?",
+                    [$clientId, $user['id']]
+                );
+                
+                if ($client) {
+                    // Adicionar 30 dias à data de vencimento atual
+                    $currentRenewalDate = $client['renewal_date'];
+                    $newRenewalDate = date('Y-m-d', strtotime($currentRenewalDate . ' +30 days'));
+                    
+                    // Atualizar data de renovação do cliente
+                    Database::query(
+                        "UPDATE clients SET renewal_date = ? WHERE id = ? AND reseller_id = ?",
+                        [$newRenewalDate, $clientId, $user['id']]
+                    );
+                    
+                    // Registrar log de renovação
+                    $logId = 'log-' . uniqid();
+                    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+                    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
+                    
+                    Database::query(
+                        "INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, new_values, ip_address, user_agent) 
+                         VALUES (?, ?, 'client_renewed', 'client', ?, ?, ?, ?)",
+                        [
+                            $logId,
+                            $user['id'],
+                            $clientId,
+                            json_encode([
+                                'old_renewal_date' => $currentRenewalDate,
+                                'new_renewal_date' => $newRenewalDate,
+                                'invoice_id' => $invoiceId,
+                                'reason' => 'payment_confirmed_invoice'
+                            ]),
+                            $ipAddress,
+                            $userAgent
+                        ]
+                    );
+                    
+                    $clientRenewed = true;
+                    
+                    // Enviar mensagem WhatsApp de renovação
+                    try {
+                        error_log("=== INICIANDO ENVIO DE WHATSAPP DE RENOVAÇÃO (FATURA) ===");
+                        error_log("Cliente ID: {$clientId}");
+                        error_log("Fatura ID: {$invoiceId}");
+                        error_log("Reseller ID: {$user['id']}");
+                        
+                        require_once __DIR__ . '/../app/helpers/whatsapp-automation.php';
+                        $whatsappResult = sendAutomaticRenewalMessage($clientId, $invoiceId);
+                        
+                        error_log("Resultado do envio: " . json_encode($whatsappResult));
+                        
+                        if ($whatsappResult['success']) {
+                            error_log("✅ WhatsApp de renovação enviado com sucesso para cliente {$clientId}: {$whatsappResult['message_id']}");
+                        } else {
+                            error_log("❌ Erro ao enviar WhatsApp de renovação para cliente {$clientId}: {$whatsappResult['error']}");
+                        }
+                    } catch (Exception $e) {
+                        error_log("❌ Exceção ao enviar WhatsApp de renovação para cliente {$clientId}: " . $e->getMessage());
+                        error_log("Stack trace: " . $e->getTraceAsString());
+                    }
+                }
+            }
+            
             echo json_encode([
                 'success' => true,
-                'message' => 'Fatura marcada como paga com sucesso'
+                'message' => 'Fatura marcada como paga com sucesso',
+                'client_renewed' => $clientRenewed
             ]);
         } else {
             throw new Exception('Erro ao atualizar fatura');

@@ -1949,7 +1949,16 @@ let currentWhatsAppClient = null;
 
 // Tornar funções globais imediatamente
 window.openWhatsAppModal = async function(clientId, clientName, clientPhone) {
-    currentWhatsAppClient = { id: clientId, name: clientName, phone: clientPhone };
+    // Buscar dados completos do cliente
+    const fullClient = clients.find(c => c.id == clientId);
+    currentWhatsAppClient = fullClient ? {
+        id: clientId,
+        name: clientName,
+        phone: clientPhone,
+        plan: fullClient.plan,
+        value: fullClient.value,
+        renewal_date: fullClient.renewal_date
+    } : { id: clientId, name: clientName, phone: clientPhone };
     
     // Preencher informações do cliente
     const clientNameEl = document.getElementById('whatsappClientName');
@@ -2049,9 +2058,9 @@ window.sendWhatsAppMessage = async function() {
             const clientData = {
                 'cliente_nome': currentWhatsAppClient.name,
                 'cliente_telefone': currentWhatsAppClient.phone,
-                'cliente_plano': 'Plano Premium', // Pode ser obtido dos dados do cliente
-                'cliente_valor': 'R$ 29,90', // Pode ser obtido dos dados do cliente
-                'cliente_vencimento': '15/12/2024', // Pode ser obtido dos dados do cliente
+                'cliente_plano': currentWhatsAppClient.plan || 'Personalizado',
+                'cliente_valor': currentWhatsAppClient.value ? formatMoney(currentWhatsAppClient.value) : 'N/A',
+                'cliente_vencimento': currentWhatsAppClient.renewal_date ? formatDate(currentWhatsAppClient.renewal_date) : 'N/A',
                 'empresa_nome': 'UltraGestor'
             };
             
@@ -2161,9 +2170,9 @@ function selectWhatsAppTemplate() {
         const clientData = {
             'cliente_nome': currentWhatsAppClient.name,
             'cliente_telefone': currentWhatsAppClient.phone,
-            'cliente_plano': 'Plano Premium', // Pode ser obtido dos dados do cliente
-            'cliente_valor': 'R$ 29,90', // Pode ser obtido dos dados do cliente
-            'cliente_vencimento': '15/12/2024', // Pode ser obtido dos dados do cliente
+            'cliente_plano': currentWhatsAppClient.plan || 'Personalizado',
+            'cliente_valor': currentWhatsAppClient.value ? formatMoney(currentWhatsAppClient.value) : 'N/A',
+            'cliente_vencimento': currentWhatsAppClient.renewal_date ? formatDate(currentWhatsAppClient.renewal_date) : 'N/A',
             'empresa_nome': 'UltraGestor'
         };
         

@@ -225,11 +225,9 @@ function updatePayment() {
         throw new Exception('ID da fatura é obrigatório');
     }
     
-    $finalValue = $data['value'] - ($data['discount'] ?? 0);
-    
     // Buscar informações da fatura antes da atualização
     $invoice = Database::fetch(
-        "SELECT client_id, status FROM invoices WHERE id = ? AND reseller_id = ?",
+        "SELECT client_id, status, value, discount, final_value, due_date FROM invoices WHERE id = ? AND reseller_id = ?",
         [$id, $resellerId]
     );
     
@@ -238,8 +236,16 @@ function updatePayment() {
     }
     
     $oldStatus = $invoice['status'];
-    $newStatus = $data['status'];
+    $newStatus = $data['status'] ?? $invoice['status'];
     $clientId = $invoice['client_id'];
+    
+    // Usar valores existentes se não fornecidos
+    $value = $data['value'] ?? $invoice['value'];
+    $discount = $data['discount'] ?? $invoice['discount'];
+    $finalValue = $value - $discount;
+    $dueDate = $data['due_date'] ?? $invoice['due_date'];
+    $paymentDate = $data['payment_date'] ?? $invoice['payment_date'];
+    $transactionId = $data['transaction_id'] ?? null;
     
     // Atualizar a fatura
     Database::query(
@@ -248,13 +254,13 @@ function updatePayment() {
              status = ?, payment_date = ?, transaction_id = ?
          WHERE id = ? AND reseller_id = ?",
         [
-            $data['value'],
-            $data['discount'] ?? 0,
+            $value,
+            $discount,
             $finalValue,
-            $data['due_date'],
+            $dueDate,
             $newStatus,
-            $data['payment_date'] ?? null,
-            $data['transaction_id'] ?? null,
+            $paymentDate,
+            $transactionId,
             $id,
             $resellerId
         ]
@@ -304,15 +310,24 @@ function updatePayment() {
             
             // Enviar mensagem WhatsApp de renovação
             try {
+                error_log("=== INICIANDO ENVIO DE WHATSAPP DE RENOVAÇÃO ===");
+                error_log("Cliente ID: {$clientId}");
+                error_log("Fatura ID: {$id}");
+                error_log("Reseller ID: {$resellerId}");
+                
                 require_once __DIR__ . '/../app/helpers/whatsapp-automation.php';
                 $whatsappResult = sendAutomaticRenewalMessage($clientId, $id);
+                
+                error_log("Resultado do envio: " . json_encode($whatsappResult));
+                
                 if ($whatsappResult['success']) {
-                    error_log("WhatsApp de renovação enviado para cliente {$clientId}: {$whatsappResult['message_id']}");
+                    error_log("✅ WhatsApp de renovação enviado com sucesso para cliente {$clientId}: {$whatsappResult['message_id']}");
                 } else {
-                    error_log("Erro ao enviar WhatsApp de renovação para cliente {$clientId}: {$whatsappResult['error']}");
+                    error_log("❌ Erro ao enviar WhatsApp de renovação para cliente {$clientId}: {$whatsappResult['error']}");
                 }
             } catch (Exception $e) {
-                error_log("Erro ao enviar WhatsApp de renovação para cliente {$clientId}: " . $e->getMessage());
+                error_log("❌ Exceção ao enviar WhatsApp de renovação para cliente {$clientId}: " . $e->getMessage());
+                error_log("Stack trace: " . $e->getTraceAsString());
             }
         }
     }

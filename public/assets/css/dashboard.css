@@ -4419,8 +4419,39 @@ la Profissional de Clientes - Design Único */
     }
 
     .pro-actions {
-        flex-direction: column;
+        flex-direction: row;
         gap: 0.25rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .pro-btn-action {
+        min-width: 36px;
+        min-height: 36px;
+        padding: 0.5rem !important;
+    }
+    
+    .pro-btn-action svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+/* Responsividade extra para telas muito pequenas */
+@media (max-width: 480px) {
+    .pro-actions {
+        gap: 0.2rem;
+    }
+    
+    .pro-btn-action {
+        min-width: 32px;
+        min-height: 32px;
+        padding: 0.4rem !important;
+    }
+    
+    .pro-btn-action svg {
+        width: 12px;
+        height: 12px;
     }
 }
 
@@ -6443,15 +6474,15 @@ o de Saldo Líquido Moderna */
 .modern-balance-card {
     background: var(--bg-primary);
     border-radius: 16px;
-    padding: 1.5rem;
+    padding: 1rem;
     display: flex;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.75rem;
     border: 1px solid var(--border);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
-    min-height: 120px;
+    min-height: 90px;
 }
 
 .modern-balance-card::before {
@@ -6478,8 +6509,8 @@ o de Saldo Líquido Moderna */
 
 /* Ícone do Saldo */
 .balance-icon-modern {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -6507,18 +6538,18 @@ o de Saldo Líquido Moderna */
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .balance-header-modern {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 .balance-header-modern h3 {
-    font-size: 1rem;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
@@ -6526,7 +6557,7 @@ o de Saldo Líquido Moderna */
 }
 
 .balance-value-modern {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     line-height: 1;
     text-align: right;
@@ -6543,18 +6574,18 @@ o de Saldo Líquido Moderna */
 /* Detalhes do Saldo */
 .balance-details-modern {
     display: flex;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 .balance-item-modern {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.2rem;
 }
 
 .balance-label-modern {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: var(--text-secondary);
     font-weight: 500;
     text-transform: uppercase;
@@ -6562,7 +6593,7 @@ o de Saldo Líquido Moderna */
 }
 
 .balance-amount-modern {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 600;
 }
 
@@ -6600,8 +6631,8 @@ o de Saldo Líquido Moderna */
     }
 
     .modern-balance-card {
-        padding: 1rem;
-        min-height: 100px;
+        padding: 0.75rem;
+        min-height: 80px;
     }
 
     .balance-header-modern {
@@ -8074,7 +8105,7 @@ os específicos para Servidores */
     }
 }
 
-/ *=====MELHORIAS ESPECÍFICAS PARA MOBILE=====*/
+/* ===== MELHORIAS ESPECÍFICAS PARA MOBILE ===== */
 /* Garantir que todos os botões tenham área de toque adequada */
 @media (max-width: 768px) {
 
@@ -8303,7 +8334,6 @@ os específicos para Servidores */
         .sidebar,
         .main-content {
             -webkit-overflow-scrolling: touch;
-            overflow-scrolling: touch;
         }
 
         body.sidebar-open {
@@ -9086,11 +9116,11 @@ os específicos para Servidores */
 
     .balance-icon-modern {
         position: absolute;
-        top: 1rem;
-        left: 1rem;
+        top: 0.75rem;
+        left: 0.75rem;
         margin: 0;
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
     }
 
     .balance-content-modern {
@@ -9278,7 +9308,10 @@ ORREÇÃO ESPECÍFICA - SALDO LÍQUIDO MOBILE ===== */
     }
 }
 
-/ *=====MOVER CARDS DE RECEITAS E DESPESAS PARA ESQUERDA NO MOBILE=====*/ @media (max-width: 768px) {
+/* ===== MOVER CARDS DE RECEITAS E DESPESAS PARA ESQUERDA NO MOBILE ===== */
+
+@media (max-width: 768px) {
+
     /* Ajustar posicionamento dos cards de receitas e despesas */
     .modern-balance-card .balance-details-modern {
         margin-left: -1.5rem;
@@ -9301,7 +9334,10 @@ ORREÇÃO ESPECÍFICA - SALDO LÍQUIDO MOBILE ===== */
     }
 }
 
-/ *=====VOLTAR VALORES PARA A DIREITA DOS CARDS=====*/ @media (max-width: 768px) {
+/* ===== VOLTAR VALORES PARA A DIREITA DOS CARDS ===== */
+
+@media (max-width: 768px) {
+
     /* Manter layout original com valores à direita */
     .modern-balance-card .balance-item-modern {
         display: flex;
@@ -9355,7 +9391,9 @@ ORREÇÃO ESPECÍFICA - SALDO LÍQUIDO MOBILE ===== */
         text-align: right !important;
         margin-left: auto !important;
     }
-}/*
+}
+
+/*
  ===== BARRA DE AÇÕES RESPONSIVA ===== */
 
 .action-buttons-bar {
@@ -9392,14 +9430,14 @@ ORREÇÃO ESPECÍFICA - SALDO LÍQUIDO MOBILE ===== */
         gap: 0.75rem;
         margin-bottom: 1rem;
     }
-    
+
     .action-buttons-bar .btn {
         flex: 1;
         justify-content: center;
         padding: 0.75rem 1rem;
         font-size: 0.875rem;
     }
-    
+
     .action-buttons-bar .btn svg {
         width: 16px;
         height: 16px;
@@ -9412,7 +9450,7 @@ ORREÇÃO ESPECÍFICA - SALDO LÍQUIDO MOBILE ===== */
         gap: 0.5rem;
         padding: 0.75rem;
     }
-    
+
     .action-buttons-bar .btn {
         width: 100%;
         padding: 0.875rem 1rem;

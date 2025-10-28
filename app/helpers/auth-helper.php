@@ -25,5 +25,5 @@ function isAdmin($user = null) {
     if (!$user) {
         $user = getAuthenticatedUser();
     }
-    return $user['role'] === 'admin';
+    return ($user['role'] === 'admin') || ($user['is_admin'] ?? false);
 }

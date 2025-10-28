@@ -126,7 +126,7 @@ function handleRegister() {
         $trialExpiry = date('Y-m-d H:i:s', strtotime('+3 days'));
         
         Database::query(
-            "INSERT INTO users (id, email, name, password_hash, role, account_status, subscription_expiry_date, whatsapp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO users (id, email, name, password_hash, role, account_status, subscription_expiry_date, whatsapp, current_plan_id, plan_expires_at, plan_status, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 $userId,
                 $data['email'],
@@ -135,8 +135,20 @@ function handleRegister() {
                 'reseller',
                 'trial',
                 $trialExpiry,
-                $data['whatsapp'] ?? null
+                $data['whatsapp'] ?? null,
+                'plan-trial',
+                $trialExpiry,
+                'active',
+                false
             ]
+        );
+        
+        // Registrar no histórico de planos
+        $historyId = 'hist-' . uniqid();
+        Database::query(
+            "INSERT INTO reseller_plan_history (id, user_id, plan_id, started_at, expires_at, status, payment_amount) 
+             VALUES (?, ?, ?, NOW(), ?, 'active', 0.00)",
+            [$historyId, $userId, 'plan-trial', $trialExpiry]
         );
         
         // Gerar token
