@@ -55,25 +55,25 @@ try {
         [$resellerId]
     )['total'] ?? 0;
     
-    // Clientes a vencer nos próximos 7 dias
+    // Clientes que expiram HOJE (para o card)
     $expiringClients = Database::fetch(
         "SELECT COUNT(*) as total 
          FROM clients 
          WHERE reseller_id = ?
          AND status = 'active' 
-         AND renewal_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)",
+         AND DATE(renewal_date) = CURDATE()",
         [$resellerId]
     )['total'] ?? 0;
     
-    // Lista de clientes a vencer
+    // Lista de clientes que expiram nos próximos 7 dias (para a tabela)
     $expiringClientsList = Database::fetchAll(
         "SELECT name, renewal_date, status 
          FROM clients 
          WHERE reseller_id = ?
          AND status = 'active' 
-         AND renewal_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
+         AND renewal_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
          ORDER BY renewal_date ASC 
-         LIMIT 5",
+         LIMIT 10",
         [$resellerId]
     );
     

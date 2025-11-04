@@ -118,7 +118,9 @@ function listResellers() {
             END as current_status,
             CASE 
                 WHEN u.plan_expires_at IS NULL THEN 0
-                ELSE GREATEST(0, DATEDIFF(u.plan_expires_at, NOW()))
+                WHEN DATE(u.plan_expires_at) < CURDATE() THEN DATEDIFF(DATE(u.plan_expires_at), CURDATE())
+                WHEN DATE(u.plan_expires_at) = CURDATE() THEN 0
+                ELSE DATEDIFF(DATE(u.plan_expires_at), CURDATE())
             END as days_remaining
         FROM users u
         LEFT JOIN reseller_plans rp ON u.current_plan_id = rp.id
@@ -322,6 +324,77 @@ function changeResellerPlan($resellerId) {
         'success' => true,
         'message' => 'Plano alterado com sucesso',
         'new_expires_at' => $expiresAt
+    ]);
+}
+
+/**
+ * Atualizar dados do revendedor
+ */
+function updateReseller($resellerId) {
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    if (!$resellerId) {
+        throw new Exception('ID do revendedor é obrigatório');
+    }
+    
+    // Verificar se o revendedor existe
+    $reseller = Database::fetch(
+        "SELECT * FROM users WHERE id = ? AND is_admin = FALSE",
+        [$resellerId]
+    );
+    
+    if (!$reseller) {
+        throw new Exception('Revendedor não encontrado');
+    }
+    
+    // Preparar campos para atualização
+    $fields = [];
+    $values = [];
+    
+    if (isset($data['name'])) {
+        $fields[] = 'name = ?';
+        $values[] = $data['name'];
+    }
+    
+    if (isset($data['email'])) {
+        // Verificar se o email já existe em outro usuário
+        $existingUser = Database::fetch(
+            "SELECT id FROM users WHERE email = ? AND id != ?",
+            [$data['email'], $resellerId]
+        );
+        
+        if ($existingUser) {
+            throw new Exception('Este email já está em uso por outro usuário');
+        }
+        
+        $fields[] = 'email = ?';
+        $values[] = $data['email'];
+    }
+    
+    if (isset($data['whatsapp'])) {
+        $fields[] = 'whatsapp = ?';
+        $values[] = $data['whatsapp'];
+    }
+    
+    if (isset($data['password']) && !empty($data['password'])) {
+        $fields[] = 'password_hash = ?';
+        $values[] = password_hash($data['password'], PASSWORD_DEFAULT);
+    }
+    
+    if (empty($fields)) {
+        throw new Exception('Nenhum campo para atualizar');
+    }
+    
+    $values[] = $resellerId;
+    
+    Database::query(
+        "UPDATE users SET " . implode(', ', $fields) . " WHERE id = ? AND is_admin = FALSE",
+        $values
+    );
+    
+    echo json_encode([
+        'success' => true,
+        'message' => 'Dados atualizados com sucesso'
     ]);
 }
 

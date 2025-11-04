@@ -46,7 +46,7 @@ class Database {
             return $stmt;
         } catch (PDOException $e) {
             logError('Query failed: ' . $e->getMessage(), ['sql' => $sql, 'params' => $params]);
-            throw new Exception('Erro ao executar query');
+            throw new Exception('Erro ao executar query: ' . $e->getMessage());
         }
     }
     

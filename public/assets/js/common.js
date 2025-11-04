@@ -56,10 +56,36 @@ function toggleSubmenu(event, submenuId) {
 /**
  * Logout function
  */
-function logout() {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    window.location.href = '/login';
+async function logout() {
+    if (confirm('Tem certeza que deseja sair?')) {
+        try {
+            // Chamar API de logout para destruir sessão
+            const response = await fetch('/api-auth.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'logout'
+                })
+            });
+            
+            // Limpar dados locais independente da resposta da API
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.clear();
+            
+            // Redirecionar para login
+            window.location.href = '/login';
+        } catch (error) {
+            console.error('Erro no logout:', error);
+            // Mesmo com erro, limpar dados locais e redirecionar
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.clear();
+            window.location.href = '/login';
+        }
+    }
 }
 
 /**

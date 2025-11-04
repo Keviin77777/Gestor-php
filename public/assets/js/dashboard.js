@@ -14,8 +14,6 @@ function formatMoney(value) {
 
 // Aguardar DOM e CSS carregarem
 document.addEventListener('DOMContentLoaded', function () {
-    console.log('Dashboard: DOM carregado, garantindo sidebar fechada...');
-    
     // Forçar sidebar fechada IMEDIATAMENTE
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
@@ -66,11 +64,8 @@ function ensureSidebarClosedOnMobile() {
     const sidebarOverlay = document.getElementById('sidebarOverlay');
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     
-    console.log('Verificando sidebar em mobile - Largura:', window.innerWidth);
-    
     // Se for mobile (largura menor que 768px) ou sempre em desktop inicial
     if (window.innerWidth <= 768) {
-        console.log('Mobile detectado, fechando sidebar...');
         if (sidebar) {
             sidebar.classList.remove('active');
         }
@@ -137,11 +132,14 @@ async function showDashboardData() {
             return;
         }
 
-        const response = await fetch('/api-test.php', {
+        const response = await fetch('/api-test.php?t=' + Date.now(), {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
             }
         });
 
@@ -425,8 +423,6 @@ function drawChart() {
  * Configurar eventos
  */
 function setupDashboardEvents() {
-    console.log('Configurando eventos do dashboard...');
-    
     // Menu mobile e sidebar toggle
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     const sidebarToggle = document.getElementById('sidebarToggle');
@@ -435,7 +431,6 @@ function setupDashboardEvents() {
 
     // Função para abrir sidebar
     function openSidebar() {
-        console.log('Abrindo sidebar...');
         if (sidebar) sidebar.classList.add('active');
         if (sidebarOverlay) sidebarOverlay.classList.add('active');
         if (mobileMenuBtn) mobileMenuBtn.classList.add('active');
@@ -447,7 +442,6 @@ function setupDashboardEvents() {
 
     // Função para fechar sidebar
     function closeSidebar() {
-        console.log('Fechando sidebar...');
         if (sidebar) sidebar.classList.remove('active');
         if (sidebarOverlay) sidebarOverlay.classList.remove('active');
         if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
@@ -466,12 +460,9 @@ function setupDashboardEvents() {
 
     // Botão mobile menu
     if (mobileMenuBtn) {
-        console.log('Configurando mobile menu button...');
-        
         mobileMenuBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Mobile menu clicado');
             toggleSidebar();
         });
         
@@ -479,7 +470,6 @@ function setupDashboardEvents() {
         mobileMenuBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Mobile menu touch');
             toggleSidebar();
         });
     }
@@ -557,14 +547,39 @@ function setupDashboardEvents() {
     });
 
     // Logout
-    window.logout = function () {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+    window.logout = async function () {
+        if (confirm('Tem certeza que deseja sair?')) {
+            try {
+                // Chamar API de logout para destruir sessão
+                await fetch('/api-auth.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'logout'
+                    })
+                });
+                
+                // Limpar dados locais independente da resposta da API
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                sessionStorage.clear();
+                
+                // Redirecionar para login
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Erro no logout:', error);
+                // Mesmo com erro, limpar dados locais e redirecionar
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                sessionStorage.clear();
+                window.location.href = '/login';
+            }
+        }
     };
     
-    console.log('Eventos do dashboard configurados com sucesso!');
-}
+    }
 
 // Adicionar estilos para badges se não existirem
 if (!document.querySelector('#badge-styles')) {
@@ -806,9 +821,18 @@ async function initializeAnalyticsCharts() {
     const clientsData = await generateClientsData();
     const paymentsData = generatePaymentsData();
 
-    // Desenhar gráficos
-    drawClientsChart(clientsData);
-    drawPaymentsChart(paymentsData);
+    // Desenhar gráficos com Chart.js
+    if (typeof drawClientsChartJS === 'function') {
+        drawClientsChartJS(clientsData);
+    } else {
+        drawClientsChart(clientsData);
+    }
+    
+    if (typeof drawPaymentsChartJS === 'function') {
+        drawPaymentsChartJS(paymentsData);
+    } else {
+        drawPaymentsChart(paymentsData);
+    }
 
     // Atualizar métricas
     updateClientsMetrics(clientsData);
@@ -822,7 +846,14 @@ async function initializeAnalyticsCharts() {
  * Gerar dados reais para clientes novos
  */
 async function generateClientsData() {
-    const days = 31; // Outubro tem 31 dias
+    // Obter mês e ano atual
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Calcular número de dias no mês atual
+    const days = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
     const data = [];
     const labels = [];
 
@@ -845,30 +876,30 @@ async function generateClientsData() {
                 labels.push(i.toString().padStart(2, '0'));
             }
 
-            // Contar clientes por dia de criação
+            // Contar clientes por dia de criação no mês atual
             clients.forEach(client => {
                 if (client.created_at) {
                     const createdDate = new Date(client.created_at);
                     const day = createdDate.getDate();
                     
-                    // Se o cliente foi criado em outubro do ano atual
-                    const currentYear = new Date().getFullYear();
-                    if (createdDate.getMonth() === 9 && createdDate.getFullYear() === currentYear) {
-                        if (day >= 1 && day <= 31) {
+                    // Se o cliente foi criado no mês e ano atual
+                    if (createdDate.getMonth() === currentMonth && 
+                        createdDate.getFullYear() === currentYear) {
+                        if (day >= 1 && day <= days) {
                             data[day - 1] = (data[day - 1] || 0) + 1;
                         }
                     }
                 }
             });
         } else {
-            // Fallback: dados simulados
+            // Fallback: dados zerados
             for (let i = 1; i <= days; i++) {
                 data.push(0);
                 labels.push(i.toString().padStart(2, '0'));
             }
         }
     } catch (error) {
-        // Fallback: dados simulados
+        // Fallback: dados zerados
         for (let i = 1; i <= days; i++) {
             data.push(0);
             labels.push(i.toString().padStart(2, '0'));
@@ -879,20 +910,29 @@ async function generateClientsData() {
 }
 
 /**
- * Gerar dados simulados para pagamentos
+ * Gerar dados de pagamentos do mês atual
  */
 function generatePaymentsData() {
-    const days = 31; // Outubro tem 31 dias
+    // Obter mês e ano atual
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Calcular número de dias no mês atual
+    const days = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
     const data = [];
     const labels = [];
 
+    // Inicializar com zeros para todos os dias do mês atual
     for (let i = 1; i <= days; i++) {
-        // Simular dados mais realistas - sem pagamentos ainda
-        const value = 0;
-
-        data.push(value);
+        data.push(0);
         labels.push(i.toString().padStart(2, '0'));
     }
+
+    // TODO: Buscar dados reais de pagamentos da API quando disponível
+    // Por enquanto retorna zeros, mas quando houver pagamentos no mês atual
+    // eles serão contabilizados aqui
 
     return { data, labels };
 }
@@ -1240,17 +1280,29 @@ function updateClientsMetrics(chartData) {
     const today = data[data.length - 1] || 0;
     const maxValue = Math.max(...data);
     const bestDayIndex = data.indexOf(maxValue);
+    
+    // Calcular porcentagem de hoje
+    const todayPercent = total > 0 ? ((today / total) * 100).toFixed(1) : 0;
 
     // Atualizar elementos
     updateElement('totalNewClients', total);
     updateElement('avgNewClients', avg);
     updateElement('todayNewClients', today);
     updateElement('bestDayClients', maxValue);
+    
+    // Atualizar porcentagem de hoje
+    const todayPercentElement = document.getElementById('todayNewClientsPercent');
+    if (todayPercentElement) {
+        todayPercentElement.textContent = `${todayPercent}% do total`;
+    }
 
-    // Atualizar subtítulos
-    const bestDayElement = document.querySelector('#bestDayClients')?.parentElement?.querySelector('.metric-subtitle');
+    // Atualizar subtítulo do melhor dia
+    const bestDayElement = document.querySelector('#bestDayClients')?.parentElement?.querySelector('.metric-card-subtitle');
     if (bestDayElement && maxValue > 0) {
-        const dayName = new Date(2025, 9, bestDayIndex + 1).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const dayName = new Date(currentYear, currentMonth, bestDayIndex + 1).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
         bestDayElement.textContent = dayName;
     }
 }
@@ -1262,15 +1314,35 @@ function updatePaymentsMetrics(chartData) {
     const { data } = chartData;
 
     const total = data.reduce((sum, val) => sum + val, 0);
-    const avg = (total / 7).toFixed(0); // Média dos últimos 7 dias
+    const avg = (total / 7).toFixed(2); // Média dos últimos 7 dias
     const today = data[data.length - 1] || 0;
     const maxValue = Math.max(...data);
+    const bestDayIndex = data.indexOf(maxValue);
+    
+    // Calcular porcentagem de hoje
+    const todayPercent = total > 0 ? ((today / total) * 100).toFixed(1) : 0;
 
     // Atualizar elementos
     updateElement('totalPayments', formatCurrency(total));
     updateElement('avgPayments', formatCurrency(avg));
-    updateElement('todayPayments', today);
+    updateElement('todayPayments', formatCurrency(today));
     updateElement('bestDayPayments', formatCurrency(maxValue));
+    
+    // Atualizar porcentagem de hoje
+    const todayPercentElement = document.getElementById('todayPaymentsPercent');
+    if (todayPercentElement) {
+        todayPercentElement.textContent = `${todayPercent}% do total`;
+    }
+    
+    // Atualizar subtítulo do melhor dia
+    const bestDayElement = document.querySelector('#bestDayPayments')?.parentElement?.querySelector('.metric-card-subtitle');
+    if (bestDayElement && maxValue > 0) {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const dayName = new Date(currentYear, currentMonth, bestDayIndex + 1).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+        bestDayElement.textContent = dayName;
+    }
 }
 
 /**
@@ -1281,19 +1353,43 @@ function setupAnalyticsEvents() {
     const paymentsPeriodSelect = document.getElementById('paymentsPeriod');
 
     if (clientsPeriodSelect) {
-        clientsPeriodSelect.addEventListener('change', function () {
-            // Aqui você pode recarregar os dados baseado no período selecionado
-            const newData = generateClientsData(); // Por enquanto, mesmos dados
-            drawClientsChart(newData);
+        clientsPeriodSelect.addEventListener('change', async function () {
+            const period = this.value;
+            
+            // Usar função de período se disponível
+            let newData;
+            if (typeof generateClientsDataByPeriod === 'function') {
+                newData = await generateClientsDataByPeriod(period);
+            } else {
+                newData = await generateClientsData();
+            }
+            
+            if (typeof drawClientsChartJS === 'function') {
+                drawClientsChartJS(newData);
+            } else {
+                drawClientsChart(newData);
+            }
             updateClientsMetrics(newData);
         });
     }
 
     if (paymentsPeriodSelect) {
         paymentsPeriodSelect.addEventListener('change', function () {
-            // Aqui você pode recarregar os dados baseado no período selecionado
-            const newData = generatePaymentsData(); // Por enquanto, mesmos dados
-            drawPaymentsChart(newData);
+            const period = this.value;
+            
+            // Usar função de período se disponível
+            let newData;
+            if (typeof generatePaymentsDataByPeriod === 'function') {
+                newData = generatePaymentsDataByPeriod(period);
+            } else {
+                newData = generatePaymentsData();
+            }
+            
+            if (typeof drawPaymentsChartJS === 'function') {
+                drawPaymentsChartJS(newData);
+            } else {
+                drawPaymentsChart(newData);
+            }
             updatePaymentsMetrics(newData);
         });
     }
@@ -1328,7 +1424,6 @@ async function initializeTopServers() {
         renderServersList();
         updateServersStats();
     } catch (error) {
-        console.error('Erro ao inicializar Top 5 Servidores:', error);
         showServersError();
     }
 }
@@ -1338,32 +1433,23 @@ async function initializeTopServers() {
  */
 async function loadServersData() {
     try {
-        console.log('Carregando dados dos servidores...');
         const response = await fetch('/api-servers-stats.php');
-        
-        console.log('Response status:', response.status);
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Erro na resposta:', errorText);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log('Dados recebidos:', data);
-        
         if (data.success) {
             serversData = data;
-            console.log('Dados dos servidores carregados com sucesso');
-        } else {
+            } else {
             throw new Error(data.error || 'Erro ao carregar dados dos servidores');
         }
     } catch (error) {
-        console.error('Erro ao carregar dados dos servidores:', error);
         // Usar dados de fallback em caso de erro
         serversData = generateFallbackServersData();
-        console.log('Usando dados de fallback');
-    }
+        }
 }
 
 /**

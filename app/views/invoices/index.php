@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Faturas - UltraGestor</title>
     <link rel="stylesheet" href="/assets/css/dashboard.css">
+    <link rel="stylesheet" href="/assets/css/header-menu.css">
     <link rel="stylesheet" href="/assets/css/invoices.css">
 </head>
 <body>
@@ -15,29 +16,10 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <div class="header">
-            <div class="header-left">
-                <button class="mobile-menu-btn" id="mobileMenuBtn">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <h1 class="page-title">Faturas</h1>
-            </div>
-            <div class="header-right">
-                <div class="search-box" id="searchBox">
-                    <input type="text" placeholder="Buscar faturas..." id="searchInput">
-                    <svg class="search-icon" id="searchIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="M21 21l-4.35-4.35"></path>
-                    </svg>
-                </div>
-                
-                <button class="notification-btn" id="notificationBtn" type="button" aria-label="Notificações">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
+        <!-- Header Menu -->
+        <?php include __DIR__ . '/../components/header-menu.php'; ?>
+        
+        <!-- Page Content -->
                     <span class="notification-badge">3</span>
                 </button>
                 
@@ -47,15 +29,6 @@
 
         <!-- Action Buttons -->
         <div class="action-buttons-bar">
-            <button class="btn btn-secondary" onclick="runInvoiceAutomation()" title="Gerar faturas automáticas para clientes com renovação próxima">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="23 4 23 10 17 10"></polyline>
-                    <polyline points="1 20 1 14 7 14"></polyline>
-                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-                </svg>
-                Automação
-            </button>
-            
             <button class="btn btn-secondary" onclick="exportInvoices()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -213,7 +186,6 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Erro ao fazer logout:', error);
                     window.location.href = '/login';
                 });
             }

@@ -17,29 +17,38 @@ function shouldGenerateInvoice($clientId, $renewalDate) {
         // Calcular dias até o vencimento
         $today = new DateTime();
         $renewal = new DateTime($renewalDate);
-        $daysUntilRenewal = $today->diff($renewal)->days;
+        $interval = $today->diff($renewal);
         
-        // Se a data já passou, considerar como 0 dias
+        // Calcular dias restantes (positivo = futuro, negativo = passado)
+        $daysUntilRenewal = $interval->days;
         if ($renewal < $today) {
-            $daysUntilRenewal = 0;
+            $daysUntilRenewal = -$daysUntilRenewal; // Negativo se já passou
         }
         
-        // Gerar fatura se faltam 10 dias ou menos
+        error_log("shouldGenerateInvoice - Cliente: $clientId, Renovação: $renewalDate, Dias: $daysUntilRenewal");
+        
+        // Gerar fatura se faltam 10 dias ou menos (incluindo datas passadas)
         if ($daysUntilRenewal <= 10) {
-            // Verificar se já existe fatura pendente para este cliente no mês atual
+            // Verificar se já existe fatura pendente para este cliente
             $existingInvoice = Database::fetch(
                 "SELECT id FROM invoices 
                  WHERE client_id = ? 
                  AND status IN ('pending', 'overdue') 
-                 AND MONTH(issue_date) = MONTH(CURDATE()) 
-                 AND YEAR(issue_date) = YEAR(CURDATE())",
+                 ORDER BY created_at DESC 
+                 LIMIT 1",
                 [$clientId]
             );
             
-            // Só gerar se não existe fatura pendente no mês atual
-            return !$existingInvoice;
+            if ($existingInvoice) {
+                error_log("Fatura já existe para cliente $clientId: " . $existingInvoice['id']);
+                return false;
+            }
+            
+            error_log("Deve gerar fatura para cliente $clientId");
+            return true;
         }
         
+        error_log("Não deve gerar fatura para cliente $clientId (mais de 10 dias)");
         return false;
     } catch (Exception $e) {
         error_log("Erro ao verificar necessidade de fatura: " . $e->getMessage());
@@ -57,6 +66,13 @@ function generateAutomaticInvoice($client) {
         // Validar dados do cliente
         if (!$client || !isset($client['id'], $client['value'], $client['name'])) {
             throw new Exception('Dados do cliente inválidos');
+        }
+        
+        // Obter usuário autenticado
+        require_once __DIR__ . '/../core/Auth.php';
+        $user = Auth::user();
+        if (!$user) {
+            throw new Exception('Usuário não autenticado');
         }
         
         // Gerar ID único para a fatura
@@ -79,7 +95,7 @@ function generateAutomaticInvoice($client) {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())",
             [
                 $invoiceId,
-                'admin-001', // Por enquanto fixo
+                $user['id'], // Usar ID do usuário autenticado
                 $client['id'],
                 $value,
                 $discount,
@@ -155,8 +171,18 @@ function processClientInvoiceAutomation($client) {
  * Executar automação de faturas para todos os clientes elegíveis
  * @return array Relatório da execução
  */
-function runInvoiceAutomation() {
+function runInvoiceAutomation($resellerId = null) {
     try {
+        // Se não foi passado reseller_id, tentar obter do usuário autenticado
+        if (!$resellerId) {
+            require_once __DIR__ . '/../core/Auth.php';
+            $user = Auth::user();
+            if (!$user) {
+                throw new Exception('Usuário não autenticado e reseller_id não fornecido');
+            }
+            $resellerId = $user['id'];
+        }
+        
         // Configurações da automação
         $daysBeforeRenewal = (int)(getenv('INVOICE_AUTOMATION_DAYS') ?: 10);
         $maxInvoicesPerRun = (int)(getenv('INVOICE_AUTOMATION_MAX_PER_RUN') ?: 50);
@@ -173,13 +199,13 @@ function runInvoiceAutomation() {
                  AND YEAR(i.issue_date) = YEAR(CURDATE())
                 ) as pending_invoices_this_month
              FROM clients c
-             WHERE c.reseller_id = 'admin-001' 
+             WHERE c.reseller_id = ? 
              AND c.status = 'active'
              AND DATEDIFF(c.renewal_date, CURDATE()) <= ?
              AND DATEDIFF(c.renewal_date, CURDATE()) >= -5
              ORDER BY c.renewal_date ASC
              LIMIT ?",
-            [$daysBeforeRenewal, $maxInvoicesPerRun * 2]
+            [$resellerId, $daysBeforeRenewal, $maxInvoicesPerRun * 2]
         );
         
         $report = [
@@ -276,17 +302,26 @@ function runInvoiceAutomation() {
  */
 function checkAndGenerateInvoiceForClient($client) {
     try {
+        error_log("checkAndGenerateInvoiceForClient - Iniciando para cliente: " . $client['id']);
+        error_log("Dados do cliente: " . json_encode($client));
+        
         // Verificar se precisa gerar fatura
         if (shouldGenerateInvoice($client['id'], $client['renewal_date'])) {
+            error_log("Gerando fatura automática para cliente: " . $client['id']);
             $invoiceId = generateAutomaticInvoice($client);
             
             if ($invoiceId) {
+                error_log("Fatura gerada com sucesso: $invoiceId");
                 return [
                     'invoice_generated' => true,
                     'invoice_id' => $invoiceId,
                     'message' => 'Fatura gerada automaticamente - cliente com renovação próxima'
                 ];
+            } else {
+                error_log("Falha ao gerar fatura para cliente: " . $client['id']);
             }
+        } else {
+            error_log("Fatura não necessária para cliente: " . $client['id']);
         }
         
         return [

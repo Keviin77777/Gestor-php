@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Clientes - UltraGestor</title>
     <link rel="stylesheet" href="/assets/css/dashboard.css">
+    <link rel="stylesheet" href="/assets/css/header-menu.css">
     <link rel="stylesheet" href="/assets/css/clients-improved.css">
     <link rel="stylesheet" href="/assets/css/payment-history.css">
     <style>
@@ -26,28 +27,10 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <button class="mobile-menu-btn" id="mobileMenuBtn">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <h2 class="page-title">Clientes</h2>
-            </div>
-            <div class="header-right">
-                <div class="search-box" id="searchBox">
-                    <input type="text" placeholder="Buscar clientes..." id="searchInput">
-                    <svg class="search-icon" id="searchIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.35-4.35"></path>
-                    </svg>
-                </div>
-
-                <button class="notification-btn" id="notificationBtn" type="button" aria-label="Notificações">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <!-- Header Menu -->
+        <?php include __DIR__ . '/../components/header-menu.php'; ?>
+        
+        <!-- Page Content -->
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                     </svg>
                     <span class="notification-badge">3</span>
@@ -65,6 +48,15 @@
                 Novo Cliente
             </button>
             
+            <button class="btn btn-secondary" onclick="syncAllSigmaDates()" id="syncSigmaBtn" title="Sincronizar datas de vencimento do Sigma para o Gestor">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                Sincronizar Sigma
+            </button>
+            
             <button class="btn btn-secondary" onclick="exportClients()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -78,6 +70,14 @@
         <!-- Filters -->
         <div class="filters-bar">
             <div class="filter-group">
+                <div class="search-box-filter">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" class="filter-input search-input" id="searchFilterInput" placeholder="Pesquisar cliente, usuário, WhatsApp...">
+                </div>
+                
                 <select class="filter-select" id="statusFilter">
                     <option value="">Todos os status</option>
                     <option value="active">Ativo</option>
@@ -417,10 +417,7 @@
                         <div class="modern-form-group">
                             <label for="clientServer">Servidor</label>
                             <select id="clientServer" name="server">
-                                <option value="">Selecionar servidor</option>
-                                <option value="server1">Servidor 1 - Principal</option>
-                                <option value="server2">Servidor 2 - Backup</option>
-                                <option value="server3">Servidor 3 - Premium</option>
+                                <option value="">Carregando servidores...</option>
                             </select>
                         </div>
 

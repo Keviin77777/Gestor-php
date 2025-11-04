@@ -97,9 +97,25 @@ class Auth {
             session_start();
         }
         
-        // Primeiro tentar sessão PHP
-        if (isset($_SESSION['user'])) {
+        // Primeiro tentar sessão PHP com $_SESSION['user']
+        if (isset($_SESSION['user']) && is_array($_SESSION['user'])) {
             return $_SESSION['user'];
+        }
+        
+        // Fallback: verificar se existe $_SESSION['user_id'] (compatibilidade com api-auth.php)
+        if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+            // Construir array de usuário a partir das variáveis de sessão individuais
+            $user = [
+                'id' => $_SESSION['user_id'],
+                'email' => $_SESSION['user_email'] ?? '',
+                'name' => $_SESSION['user_name'] ?? '',
+                'role' => $_SESSION['user_role'] ?? 'reseller'
+            ];
+            
+            // Salvar em $_SESSION['user'] para próxima vez
+            $_SESSION['user'] = $user;
+            
+            return $user;
         }
         
         // Fallback para JWT se existir

@@ -6,6 +6,7 @@
     <title>Planos de Revendedores - UltraGestor</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="/assets/css/dashboard.css" rel="stylesheet">
+    <link href="/assets/css/admin-responsive.css" rel="stylesheet">
     <style>
         /* Reseller Plans - Design Profissional Melhorado */
         body {
@@ -15,44 +16,26 @@
         }
 
         .plans-container {
-            padding: 2rem;
+            padding: 0;
             max-width: 1400px;
             margin: 0 auto;
-            margin-left: var(--sidebar-width);
-            transition: margin-left 0.3s ease;
-            min-height: 100vh;
         }
 
-        @media (max-width: 768px) {
-            .plans-container {
-                margin-left: 0;
-                padding: 1rem;
+        /* Responsividade do botão */
+        .btn-text {
+            display: inline;
+        }
+        
+        @media (max-width: 480px) {
+            .btn-text {
+                display: none;
             }
-        }
-
-        /* Header Melhorado */
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding: 1.5rem 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .page-title {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.875rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin: 0;
-        }
-
-        .page-title i {
-            color: var(--primary);
-            font-size: 1.5rem;
+            
+            .btn-new {
+                padding: 0.75rem;
+                min-width: 44px;
+                justify-content: center;
+            }
         }
 
         .btn-new {
@@ -576,14 +559,9 @@
         }
 
         @media (max-width: 768px) {
-            .page-header {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 1rem;
-            }
-
             .plans-grid {
                 grid-template-columns: 1fr;
+                gap: 1rem;
             }
 
             .form-row {
@@ -601,15 +579,51 @@
             .plan-actions.three-buttons {
                 grid-template-columns: 1fr;
             }
+            
+            .plans-container {
+                padding: 0.75rem;
+            }
+            
+            .modal-content {
+                margin: 0.5rem;
+                width: calc(100% - 1rem);
+            }
         }
 
         @media (max-width: 480px) {
-            .page-title {
-                font-size: 1.5rem;
-            }
-
             .plan-price .value {
                 font-size: 2rem;
+            }
+            
+            .plans-container {
+                padding: 0.5rem;
+            }
+            
+            .plan-card {
+                margin-bottom: 1rem;
+            }
+            
+            .plan-header {
+                padding: 1rem;
+            }
+            
+            .plan-body {
+                padding: 1rem;
+            }
+            
+            .plan-name {
+                font-size: 1.25rem;
+            }
+            
+            .modal-content {
+                margin: 0.25rem;
+                width: calc(100% - 0.5rem);
+            }
+            
+            .modal-header,
+            .modal-body,
+            .modal-footer {
+                padding: 1rem;
             }
         }
     </style>
@@ -620,18 +634,27 @@
     
     <?php include __DIR__ . '/../components/sidebar.php'; ?>
 
-    <div class="plans-container">
-        <!-- Header -->
-        <div class="page-header">
-            <h1 class="page-title">
-                <i class="fas fa-tags"></i>
-                Planos de Revendedores
-            </h1>
-            <button class="btn-new" onclick="openModal()">
-                <i class="fas fa-plus"></i>
-                Novo Plano
-            </button>
-        </div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header Mobile -->
+        <header class="header">
+            <div class="header-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <h2 class="page-title">Planos de Revendedores</h2>
+            </div>
+            <div class="header-right">
+                <button class="btn-new" onclick="openModal()">
+                    <i class="fas fa-plus"></i>
+                    <span class="btn-text">Novo Plano</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="plans-container">
 
         <!-- Loading -->
         <div class="loading" id="loadingSpinner">
@@ -651,7 +674,8 @@
                 Criar Primeiro Plano
             </button>
         </div>
-    </div>
+        </div>
+    </main>
 
     <!-- Modal Plano -->
     <div class="modal" id="planModal">
@@ -703,7 +727,9 @@
         </div>
     </div>
 
+    <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/dashboard.js"></script>
+    <script src="/assets/js/admin-common.js"></script>
     <script>
         let plans = [];
         let editingPlanId = null;
@@ -747,7 +773,6 @@
                     showError(data.error || 'Erro ao carregar planos');
                 }
             } catch (error) {
-                console.error('Erro:', error);
                 showError('Erro ao carregar planos: ' + error.message);
             } finally {
                 hideLoading();
@@ -897,20 +922,22 @@
         }
 
         async function togglePlan(planId, currentStatus) {
-            const action = currentStatus ? 'deactivate' : 'activate';
+            const newStatus = !currentStatus;
             
             try {
-                const response = await fetch(`/api-reseller-plans.php/${planId}/${action}`, {
-                    method: 'PUT'
+                const response = await fetch(`/api-reseller-plans.php/${planId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: newStatus })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    showSuccess(`Plano ${currentStatus ? 'desativado' : 'ativado'}!`);
+                    showSuccess(`Plano ${newStatus ? 'ativado' : 'desativado'}!`);
                     loadPlans();
                 } else {
-                    showError(data.error);
+                    showError(data.error || 'Erro ao alterar status do plano');
                 }
             } catch (error) {
                 showError('Erro: ' + error.message);
@@ -947,87 +974,6 @@
         function hideLoading() {
             document.getElementById('loadingSpinner').style.display = 'none';
         }
-
-        function showSuccess(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: var(--success);
-                color: white;
-                padding: 1rem 1.5rem;
-                border-radius: var(--radius-sm);
-                box-shadow: var(--shadow-lg);
-                z-index: 9999;
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                animation: slideInRight 0.3s ease;
-                max-width: 400px;
-            `;
-            notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.style.animation = 'slideOutRight 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
-
-        function showError(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: var(--danger);
-                color: white;
-                padding: 1rem 1.5rem;
-                border-radius: var(--radius-sm);
-                box-shadow: var(--shadow-lg);
-                z-index: 9999;
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                animation: slideInRight 0.3s ease;
-                max-width: 400px;
-            `;
-            notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.style.animation = 'slideOutRight 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 5000);
-        }
-
-        // Adicionar animações CSS
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideInRight {
-                from {
-                    opacity: 0;
-                    transform: translateX(100%);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-            
-            @keyframes slideOutRight {
-                from {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-                to {
-                    opacity: 0;
-                    transform: translateX(100%);
-                }
-            }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>

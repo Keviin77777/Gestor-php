@@ -549,7 +549,6 @@
                     throw new Error(data.error || 'Erro ao carregar planos');
                 }
             } catch (error) {
-                console.error('Erro:', error);
                 showError('Erro ao carregar planos: ' + error.message);
             } finally {
                 hideLoading();

@@ -5,6 +5,7 @@
 let clients = [];
 let currentPage = 1;
 const itemsPerPage = 10;
+let mercadoPagoConfigured = false;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,6 +31,7 @@ function initClients() {
     loadClients();
     loadPlansAndServers(); // Carregar planos e servidores
     loadWhatsAppTemplates(); // Carregar templates do WhatsApp
+    checkSigmaServerAndShowButton(); // Verificar se tem servidor Sigma
 }
 
 /**
@@ -415,8 +417,8 @@ async function loadPlansAndServers() {
             availablePlans = plansResult.plans || [];
         }
 
-        // Carregar servidores com autenticação JWT
-        const serversResponse = await fetch('/api/servers', {
+        // Carregar servidores - usar a rota correta
+        const serversResponse = await fetch('/api-servers.php', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -424,13 +426,21 @@ async function loadPlansAndServers() {
             }
         });
 
+        if (!serversResponse.ok) {
+            throw new Error(`HTTP ${serversResponse.status}: ${serversResponse.statusText}`);
+        }
+
         const serversResult = await serversResponse.json();
 
         if (serversResult.success) {
             availableServers = serversResult.servers || [];
+        } else {
+            console.error('Erro ao carregar servidores:', serversResult.error);
+            availableServers = [];
         }
     } catch (error) {
-        // Erro ao carregar planos/servidores
+        console.error('Erro ao carregar planos/servidores:', error);
+        availableServers = [];
     }
 }
 
@@ -465,28 +475,45 @@ function populatePlansDropdown() {
 /**
  * Preencher dropdown de servidores
  */
-function populateServersDropdown() {
+async function populateServersDropdown() {
     const serverSelect = document.getElementById('clientServer');
     if (!serverSelect) return;
 
     // Limpar opções existentes
+    serverSelect.innerHTML = '<option value="">Carregando servidores...</option>';
+
+    // Se não há servidores carregados, tentar carregar novamente
+    if (!availableServers || availableServers.length === 0) {
+        await loadPlansAndServers();
+    }
+
+    // Limpar e adicionar opção padrão
     serverSelect.innerHTML = '<option value="">Selecionar servidor</option>';
 
     // Adicionar servidores do banco de dados
-    availableServers.forEach(server => {
-        if (server.status === 'active') {
-            const option = document.createElement('option');
-            option.value = server.name;
-            option.textContent = server.name;
-            serverSelect.appendChild(option);
-        }
-    });
+    if (availableServers && availableServers.length > 0) {
+        availableServers.forEach(server => {
+            if (server.status === 'active') {
+                const option = document.createElement('option');
+                option.value = server.name;
+                option.textContent = server.name;
+                serverSelect.appendChild(option);
+            }
+        });
+    } else {
+        // Se ainda não há servidores, mostrar mensagem
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Nenhum servidor disponível';
+        option.disabled = true;
+        serverSelect.appendChild(option);
+    }
 }
 
 /**
  * Abrir modal de adicionar cliente
  */
-function openAddClientModal() {
+async function openAddClientModal() {
     document.getElementById('modalTitle').textContent = 'Novo Cliente';
     document.getElementById('clientForm').reset();
 
@@ -500,7 +527,7 @@ function openAddClientModal() {
 
     // Preencher dropdowns com dados reais
     populatePlansDropdown();
-    populateServersDropdown();
+    await populateServersDropdown();
 
     document.getElementById('clientModal').classList.add('active');
 }
@@ -537,7 +564,7 @@ function handlePlanChange() {
 /**
  * Editar cliente
  */
-function editClient(clientId) {
+async function editClient(clientId) {
     const client = clients.find(c => c.id == clientId);
     if (!client) {
         alert('Cliente não encontrado!');
@@ -550,7 +577,7 @@ function editClient(clientId) {
 
     // Preencher dropdowns com dados reais primeiro
     populatePlansDropdown();
-    populateServersDropdown();
+    await populateServersDropdown();
 
     // Usar setTimeout para garantir que os dropdowns foram preenchidos
     setTimeout(() => {
@@ -708,7 +735,6 @@ function formatDate(dateString) {
         
         return date.toLocaleDateString('pt-BR');
     } catch (error) {
-        console.warn('Erro ao formatar data:', dateString, error);
         return dateString;
     }
 }
@@ -717,14 +743,31 @@ function formatDate(dateString) {
  * Calcular dias até data
  */
 function calculateDaysUntil(dateString) {
+    // Criar data de hoje sem hora
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const targetDate = new Date(dateString);
+    // Parsear a data de vencimento
+    let targetDate;
+    if (dateString.includes('/')) {
+        // Formato DD/MM/YYYY
+        const [day, month, year] = dateString.split('/');
+        targetDate = new Date(year, month - 1, day);
+    } else if (dateString.includes('-')) {
+        // Formato YYYY-MM-DD
+        const [year, month, day] = dateString.split('-');
+        targetDate = new Date(year, month - 1, day);
+    } else {
+        // Fallback
+        targetDate = new Date(dateString);
+    }
     targetDate.setHours(0, 0, 0, 0);
 
-    const diffTime = targetDate - today;
-    return Math.round(diffTime / (1000 * 60 * 60 * 24));
+    // Calcular diferença em dias
+    const diffTime = targetDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
 }
 
 /**
@@ -1006,7 +1049,7 @@ async function processClientDeletion(clientId, client) {
 /**
  * Abrir modal de novo cliente
  */
-function openClientModal() {
+async function openClientModal() {
     // Limpar formulário
     const form = document.getElementById('clientForm');
     if (form) {
@@ -1040,7 +1083,7 @@ function openClientModal() {
 
     // Preencher dropdowns com dados reais
     populatePlansDropdown();
-    populateServersDropdown();
+    await populateServersDropdown();
 
     // Abrir modal
     const modal = document.getElementById('clientModal');
@@ -1403,6 +1446,9 @@ async function openPaymentHistory(clientId, clientName) {
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 
+    // Verificar status do Mercado Pago e atualizar botão
+    await checkMercadoPagoStatus();
+
     // Carregar dados do histórico
     await loadPaymentHistory(clientId);
 }
@@ -1427,7 +1473,11 @@ function closePaymentHistoryModal() {
 async function loadPaymentHistory(clientId) {
     try {
         await window.LoadingManager.withLoading(async () => {
-            const response = await fetch(`/api-payment-history.php?client_id=${clientId}`);
+            const response = await fetch(`/api-invoices.php?client_id=${clientId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -1436,8 +1486,33 @@ async function loadPaymentHistory(clientId) {
             const data = await response.json();
 
             if (data.success) {
-                updatePaymentStats(data.stats);
-                renderPaymentHistory(data.invoices);
+                // Calcular estatísticas das faturas
+                const invoices = data.invoices || [];
+                const stats = {
+                    total: { count: invoices.length, amount: 0 },
+                    paid: { count: 0, amount: 0 },
+                    pending: { count: 0, amount: 0 },
+                    cancelled: { count: 0, amount: 0 }
+                };
+                
+                invoices.forEach(invoice => {
+                    const value = parseFloat(invoice.value || 0);
+                    stats.total.amount += value;
+                    
+                    if (invoice.status === 'paid') {
+                        stats.paid.count++;
+                        stats.paid.amount += value;
+                    } else if (invoice.status === 'pending') {
+                        stats.pending.count++;
+                        stats.pending.amount += value;
+                    } else if (invoice.status === 'cancelled') {
+                        stats.cancelled.count++;
+                        stats.cancelled.amount += value;
+                    }
+                });
+                
+                updatePaymentStats(stats);
+                renderPaymentHistory(invoices);
             } else {
                 throw new Error(data.error || 'Erro ao carregar histórico');
             }
@@ -1456,29 +1531,45 @@ async function loadPaymentHistory(clientId) {
  * Atualizar estatísticas de pagamento
  */
 function updatePaymentStats(stats) {
+    // Validar se stats existe e tem a estrutura esperada
+    if (!stats || typeof stats !== 'object') {
+        stats = {
+            total: { count: 0, amount: 0 },
+            paid: { count: 0, amount: 0 },
+            pending: { count: 0, amount: 0 },
+            cancelled: { count: 0, amount: 0 }
+        };
+    }
+    
+    // Garantir que cada propriedade existe
+    stats.total = stats.total || { count: 0, amount: 0 };
+    stats.paid = stats.paid || { count: 0, amount: 0 };
+    stats.pending = stats.pending || { count: 0, amount: 0 };
+    stats.cancelled = stats.cancelled || { count: 0, amount: 0 };
+    
     // Total
     const totalInvoices = document.getElementById('totalInvoices');
     const totalAmount = document.getElementById('totalAmount');
-    if (totalInvoices) totalInvoices.textContent = stats.total.count;
-    if (totalAmount) totalAmount.textContent = formatMoney(stats.total.amount);
+    if (totalInvoices) totalInvoices.textContent = stats.total.count || 0;
+    if (totalAmount) totalAmount.textContent = formatMoney(stats.total.amount || 0);
 
     // Pagas
     const paidInvoices = document.getElementById('paidInvoices');
     const paidAmount = document.getElementById('paidAmount');
-    if (paidInvoices) paidInvoices.textContent = stats.paid.count;
-    if (paidAmount) paidAmount.textContent = formatMoney(stats.paid.amount);
+    if (paidInvoices) paidInvoices.textContent = stats.paid.count || 0;
+    if (paidAmount) paidAmount.textContent = formatMoney(stats.paid.amount || 0);
 
     // Pendentes
     const pendingInvoices = document.getElementById('pendingInvoices');
     const pendingAmount = document.getElementById('pendingAmount');
-    if (pendingInvoices) pendingInvoices.textContent = stats.pending.count;
-    if (pendingAmount) pendingAmount.textContent = formatMoney(stats.pending.amount);
+    if (pendingInvoices) pendingInvoices.textContent = stats.pending.count || 0;
+    if (pendingAmount) pendingAmount.textContent = formatMoney(stats.pending.amount || 0);
 
     // Canceladas
     const cancelledInvoices = document.getElementById('cancelledInvoices');
     const cancelledAmount = document.getElementById('cancelledAmount');
-    if (cancelledInvoices) cancelledInvoices.textContent = stats.cancelled.count;
-    if (cancelledAmount) cancelledAmount.textContent = formatMoney(stats.cancelled.amount);
+    if (cancelledInvoices) cancelledInvoices.textContent = stats.cancelled.count || 0;
+    if (cancelledAmount) cancelledAmount.textContent = formatMoney(stats.cancelled.amount || 0);
 }
 
 /**
@@ -1525,14 +1616,14 @@ function renderPaymentHistory(invoices) {
             <td>
                 <div class="payment-method">
                     <svg class="payment-method-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        ${getPaymentMethodIcon(invoice.payment_method_type)}
+                        ${getPaymentMethodIcon(invoice.payment_method_type || invoice.payment_method || (mercadoPagoConfigured ? 'mercadopago' : null))}
                     </svg>
-                    ${invoice.payment_method}
+                    ${invoice.payment_method || invoice.payment_method_type || (mercadoPagoConfigured ? 'Mercado Pago' : 'Não definido')}
                 </div>
             </td>
             <td>
                 <div style="font-size: 0.875rem; color: var(--text-secondary);">
-                    ${invoice.transaction_id || invoice.external_id || '-'}
+                    ${getInvoiceReference(invoice)}
                 </div>
             </td>
             <td>
@@ -1642,17 +1733,151 @@ function formatPaymentDate(dateString) {
         
         return date.toLocaleDateString('pt-BR');
     } catch (error) {
-        console.warn('Erro ao formatar data:', dateString, error);
         return dateString; // Retorna a string original em caso de erro
+    }
+}
+
+/**
+ * Gerar referência da fatura com mês por extenso
+ */
+function getInvoiceReference(invoice) {
+    // Se já tem transaction_id ou external_id, usar
+    if (invoice.transaction_id || invoice.external_id) {
+        return invoice.transaction_id || invoice.external_id;
+    }
+    
+    // Gerar referência com mês por extenso
+    if (invoice.due_date || invoice.issue_date) {
+        try {
+            const dateStr = invoice.due_date || invoice.issue_date;
+            let date;
+            
+            // Converter data para objeto Date
+            if (dateStr.includes('/')) {
+                const [day, month, year] = dateStr.split('/');
+                date = new Date(year, month - 1, day);
+            } else if (dateStr.includes('-')) {
+                date = new Date(dateStr);
+            } else {
+                return '-';
+            }
+            
+            // Meses por extenso
+            const meses = [
+                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+            ];
+            
+            const mes = meses[date.getMonth()];
+            const ano = date.getFullYear();
+            
+            return `${mes}/${ano}`;
+        } catch (error) {
+            return '-';
+        }
+    }
+    
+    return '-';
+}
+
+/**
+ * Verificar status do Mercado Pago e atualizar botão
+ */
+async function checkMercadoPagoStatus() {
+    try {
+        // Verificar se o usuário é admin antes de fazer a requisição
+        // Resellers não têm acesso à API de métodos de pagamento
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            const isAdmin = user.role === 'admin' || user.is_admin === true;
+            
+            if (!isAdmin) {
+                // Se não for admin, apenas definir como não configurado
+                mercadoPagoConfigured = false;
+                updateAddPaymentButton();
+                return;
+            }
+        }
+        
+        const response = await fetch('/api-payment-methods.php?method=mercadopago', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        // Se retornar 403, significa que não é admin ou não tem permissão
+        if (response.status === 403) {
+            mercadoPagoConfigured = false;
+            updateAddPaymentButton();
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        mercadoPagoConfigured = result.success && result.config && result.config.enabled;
+        updateAddPaymentButton();
+    } catch (error) {
+        // Tratar erro de forma silenciosa - apenas definir como não configurado
+        console.log('Não foi possível verificar status do Mercado Pago:', error.message);
+        mercadoPagoConfigured = false;
+        updateAddPaymentButton();
+    }
+}
+
+/**
+ * Atualizar botão de adicionar pagamento
+ */
+function updateAddPaymentButton() {
+    const addButton = document.querySelector('[onclick="addPayment()"]');
+    
+    if (!addButton) return;
+    
+    if (mercadoPagoConfigured) {
+        // Mercado Pago configurado - botão verde com check
+        addButton.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            Pagamento Configurado
+        `;
+        addButton.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        addButton.style.cursor = 'default';
+        addButton.title = 'Mercado Pago está configurado e ativo';
+    } else {
+        // Mercado Pago não configurado - botão normal
+        addButton.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Adicionar Pagamento
+        `;
+        addButton.style.background = '';
+        addButton.style.cursor = 'pointer';
+        addButton.title = 'Configurar método de pagamento';
     }
 }
 
 /**
  * Adicionar novo pagamento
  */
-function addPayment() {
-    // TODO: Implementar modal para adicionar pagamento
-    showNotification('Funcionalidade em desenvolvimento', 'info');
+async function addPayment() {
+    if (mercadoPagoConfigured) {
+        // Mercado Pago está configurado - apenas mostrar mensagem
+        showNotification('✅ Mercado Pago configurado e ativo', 'success');
+        return;
+    }
+    
+    // Mercado Pago não está configurado - perguntar se quer configurar
+    if (confirm('Mercado Pago não está configurado.\n\nDeseja ir para a página de configuração?')) {
+        window.location.href = '/payment-methods';
+    }
 }
 
 /**
@@ -1763,8 +1988,11 @@ async function processDeletePayment(paymentId) {
 
     try {
         await window.LoadingManager.withLoading(async () => {
-            const response = await fetch(`/api-payment-history.php?id=${paymentId}`, {
-                method: 'DELETE'
+            const response = await fetch(`/api-invoices.php/${paymentId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
             });
 
             const data = await response.json();
@@ -2130,8 +2358,7 @@ window.sendWhatsAppMessage = async function() {
         });
     } catch (error) {
         showNotification('Erro ao enviar mensagem: ' + error.message, 'error');
-        console.error('Erro detalhado:', error);
-    }
+        }
 };
 
 /**
@@ -2200,3 +2427,125 @@ document.addEventListener('DOMContentLoaded', function() {
         templateSelect.addEventListener('change', selectWhatsAppTemplate);
     }
 });
+
+/**
+ * Verificar se há servidor Sigma configurado e mostrar/ocultar botão
+ */
+async function checkSigmaServerAndShowButton() {
+    try {
+        const response = await fetch('/api-sigma-sync.php?action=check-sigma-server', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        const syncBtn = document.getElementById('syncSigmaBtn');
+        if (syncBtn) {
+            if (result.has_sigma_server) {
+                syncBtn.style.display = 'flex'; // Mostrar botão
+            } else {
+                syncBtn.style.display = 'none'; // Ocultar botão
+            }
+        }
+    } catch (error) {
+        // Em caso de erro, ocultar o botão
+        const syncBtn = document.getElementById('syncSigmaBtn');
+        if (syncBtn) {
+            syncBtn.style.display = 'none';
+        }
+    }
+}
+
+/**
+ * 
+Sincronizar datas de todos os clientes do Sigma
+ */
+async function syncAllSigmaDates() {
+    const btn = document.getElementById('syncSigmaBtn');
+    const originalText = btn.innerHTML;
+    
+    try {
+        // Desabilitar botão e mostrar loading
+        btn.disabled = true;
+        btn.innerHTML = `
+            <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            Sincronizando...
+        `;
+        
+        const response = await fetch('/api-sigma-sync.php?action=sync-all-dates', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const stats = result.results;
+            let message = `Sincronização concluída!\n\n`;
+            message += `✅ ${stats.synced} cliente(s) atualizado(s)\n`;
+            message += `ℹ️ ${stats.unchanged} cliente(s) já sincronizado(s)\n`;
+            
+            if (stats.errors > 0) {
+                message += `❌ ${stats.errors} erro(s)\n`;
+            }
+            
+            alert(message);
+            
+            // Recarregar lista de clientes se houve atualizações
+            if (stats.synced > 0) {
+                loadClients();
+            }
+        } else {
+            alert('Erro na sincronização: ' + result.message);
+        }
+        
+    } catch (error) {
+        alert('Erro ao sincronizar com Sigma: ' + error.message);
+    } finally {
+        // Restaurar botão
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+/**
+ * Sincronizar data de um cliente específico do Sigma
+ */
+async function syncClientSigmaDate(clientId) {
+    try {
+        const response = await fetch('/api-sigma-sync.php?action=sync-date', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ client_id: clientId })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            if (result.date_changed) {
+                alert(`Data sincronizada!\n\nData antiga: ${result.old_date}\nData nova: ${result.new_date}`);
+                loadClients(); // Recarregar lista
+            } else {
+                alert('Data já está sincronizada com o Sigma');
+            }
+        } else {
+            alert('Erro na sincronização: ' + result.message);
+        }
+        
+    } catch (error) {
+        alert('Erro ao sincronizar com Sigma: ' + error.message);
+    }
+}

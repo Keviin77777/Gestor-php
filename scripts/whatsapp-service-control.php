@@ -255,11 +255,17 @@ function runAutomation() {
         echo "Hora atual: $currentTime\n\n";
         
         // Debug: Buscar todos os templates
+        // Obter reseller_id do usuário autenticado ou usar padrão
+        $resellerId = 'admin-001'; // Padrão para scripts
+        if (isset($_SESSION['user_id'])) {
+            $resellerId = $_SESSION['user_id'];
+        }
+        
         $allTemplates = Database::fetchAll(
             "SELECT id, name, type, is_scheduled, scheduled_days, scheduled_time, is_active 
              FROM whatsapp_templates 
              WHERE reseller_id = ?",
-            ['admin-001']
+            [$resellerId]
         );
         
         echo "Total de templates no banco: " . count($allTemplates) . "\n";

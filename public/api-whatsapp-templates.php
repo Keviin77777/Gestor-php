@@ -26,19 +26,33 @@ $method = $_SERVER['REQUEST_METHOD'];
 $user = getAuthenticatedUser();
 $resellerId = $user['id'];
 
+// Log para debug
+error_log("API WhatsApp Templates - Método: $method, Usuário: " . json_encode($user));
+
 try {
     switch ($method) {
         case 'GET':
             // Listar templates
-            $templates = Database::fetchAll(
-                "SELECT * FROM whatsapp_templates WHERE reseller_id = ? ORDER BY is_default DESC, type, created_at DESC",
-                [$resellerId]
-            );
-            
-            echo json_encode([
-                'success' => true,
-                'templates' => $templates
-            ], JSON_UNESCAPED_UNICODE);
+            try {
+                $templates = Database::fetchAll(
+                    "SELECT * FROM whatsapp_templates WHERE reseller_id = ? ORDER BY is_default DESC, type, created_at DESC",
+                    [$resellerId]
+                );
+                
+                // Log para debug
+                error_log("Templates encontrados para reseller $resellerId: " . count($templates));
+                
+                echo json_encode([
+                    'success' => true,
+                    'templates' => $templates
+                ], JSON_UNESCAPED_UNICODE);
+            } catch (Exception $e) {
+                error_log("Erro ao buscar templates: " . $e->getMessage());
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Erro ao buscar templates: ' . $e->getMessage()
+                ], JSON_UNESCAPED_UNICODE);
+            }
             break;
             
         case 'POST':
@@ -149,19 +163,25 @@ try {
             $updateFields = [];
             $updateValues = [];
             
+            error_log("WhatsApp Templates - Atualizando agendamento para template: $templateId");
+            error_log("WhatsApp Templates - Dados recebidos: " . json_encode($data));
+            
             if (isset($data['is_scheduled'])) {
                 $updateFields[] = 'is_scheduled = ?';
                 $updateValues[] = $data['is_scheduled'] ? 1 : 0;
+                error_log("WhatsApp Templates - is_scheduled: " . ($data['is_scheduled'] ? '1' : '0'));
             }
             
             if (isset($data['scheduled_days'])) {
                 $updateFields[] = 'scheduled_days = ?';
                 $updateValues[] = json_encode($data['scheduled_days']);
+                error_log("WhatsApp Templates - scheduled_days: " . json_encode($data['scheduled_days']));
             }
             
             if (isset($data['scheduled_time'])) {
                 $updateFields[] = 'scheduled_time = ?';
                 $updateValues[] = $data['scheduled_time'];
+                error_log("WhatsApp Templates - scheduled_time: " . $data['scheduled_time']);
             }
             
             if (empty($updateFields)) {
@@ -173,8 +193,12 @@ try {
             $updateValues[] = $resellerId;
             
             $sql = "UPDATE whatsapp_templates SET " . implode(', ', $updateFields) . " WHERE id = ? AND reseller_id = ?";
+            error_log("WhatsApp Templates - SQL: $sql");
+            error_log("WhatsApp Templates - Values: " . json_encode($updateValues));
             
             Database::query($sql, $updateValues);
+            
+            error_log("WhatsApp Templates - Agendamento atualizado com sucesso!");
             
             echo json_encode([
                 'success' => true,

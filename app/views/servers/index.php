@@ -5,39 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Servidores - UltraGestor</title>
     <link rel="stylesheet" href="/assets/css/dashboard.css">
+    <link rel="stylesheet" href="/assets/css/header-menu.css">
+    <link rel="stylesheet" href="/assets/css/servers-responsive.css">
 </head>
 <body>
     <?php include __DIR__ . '/../components/sidebar.php'; ?>
 
     <!-- Main Content -->
     <main class="main-content">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <button class="mobile-menu-btn" id="mobileMenuBtn">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <h2 class="page-title">Servidores</h2>
-            </div>
-            <div class="header-right">
-                <div class="search-box">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.35-4.35"></path>
-                    </svg>
-                    <input type="text" placeholder="Buscar servidores..." id="searchInput">
+        <!-- Header Menu -->
+        <?php include __DIR__ . '/../components/header-menu.php'; ?>
+        
+        <!-- Page Content -->
+        <div class="page-container">
+            <!-- Page Header -->
+            <header class="page-header">
+                <div class="header-content">
+                    <div class="header-title-section">
+                        <h1 class="page-title">Servidores</h1>
+                        <p class="page-subtitle">Gerencie seus servidores e custos</p>
+                    </div>
+                    <button class="btn btn-primary" id="newServerBtn" onclick="openServerModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 0.5rem;">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Adicionar Servidor
+                    </button>
                 </div>
-                <button class="btn btn-primary" id="newServerBtn" onclick="openServerModal()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 0.5rem;">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    Adicionar Servidor
-                </button>
-            </div>
-        </header>
+            </header>
 
         <!-- Estatísticas -->
         <div class="statistics-section">
@@ -99,38 +95,48 @@
             </div>
         </div>
 
-        <!-- Servers Table -->
-        <div class="card">
-            <div class="card-body">
-                <div class="table-container">
-                    <table class="table" id="serversTable">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Tipo de Cobrança</th>
-                                <th>Custo</th>
-                                <th>Painel</th>
-                                <th>URL</th>
-                                <th>Clientes Conectados</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                                    <div class="loading-state">
-                                        <div class="loading-spinner">
-                                            <div class="spinner-ring"></div>
-                                            <div class="spinner-ring"></div>
-                                            <div class="spinner-ring"></div>
+            <!-- Servers Table -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="scroll-hint" id="scrollHint">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 18l-6-6 6-6"/>
+                        </svg>
+                        <span>Arraste horizontalmente para ver todas as colunas</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </div>
+                    <div class="table-container" id="tableContainer">
+                        <table class="table" id="serversTable">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Tipo de Cobrança</th>
+                                    <th>Custo</th>
+                                    <th>Painel</th>
+                                    <th>URL</th>
+                                    <th>Clientes Conectados</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                        <div class="loading-state">
+                                            <div class="loading-spinner">
+                                                <div class="spinner-ring"></div>
+                                                <div class="spinner-ring"></div>
+                                                <div class="spinner-ring"></div>
+                                            </div>
+                                            <p>Carregando servidores...</p>
                                         </div>
-                                        <p>Carregando servidores...</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -188,13 +194,13 @@
                                 <label for="panelType">Tipo de Painel</label>
                                 <select id="panelType" name="panel_type" onchange="togglePanelFields()">
                                     <option value="">Selecione o tipo de painel...</option>
-                                    <option value="qpanel_sigma">Qpanel/Sigma</option>
+                                    <option value="sigma">Sigma</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- Campos Qpanel/Sigma -->
-                        <div id="qpanelFields" style="display: none; margin-top: 1.5rem;">
+                        <!-- Campos Sigma -->
+                        <div id="sigmaFields" style="display: none; margin-top: 1.5rem;">
                             <div class="form-grid">
                                 <!-- URL do Painel -->
                                 <div class="form-group full-width">
@@ -242,5 +248,30 @@
     <script src="/assets/js/common.js"></script>
     <script src="/assets/js/auth.js"></script>
     <script src="/assets/js/servers.js"></script>
+    
+    <script>
+    // Scroll hint para mobile
+    (function() {
+        const tableContainer = document.getElementById('tableContainer');
+        const scrollHint = document.getElementById('scrollHint');
+        
+        if (tableContainer && scrollHint) {
+            let hasScrolled = false;
+            
+            tableContainer.addEventListener('scroll', function() {
+                if (!hasScrolled && this.scrollLeft > 10) {
+                    hasScrolled = true;
+                    scrollHint.classList.add('hidden');
+                    localStorage.setItem('serversTableScrolled', 'true');
+                }
+            });
+            
+            // Verificar se o usuário já fez scroll antes
+            if (localStorage.getItem('serversTableScrolled') === 'true') {
+                scrollHint.classList.add('hidden');
+            }
+        }
+    })();
+    </script>
 </body>
 </html>

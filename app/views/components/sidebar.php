@@ -43,7 +43,12 @@ try {
                     SELECT 
                         u.*,
                         rp.name as plan_name,
-                        DATEDIFF(u.plan_expires_at, NOW()) as days_remaining
+                        CASE 
+                            WHEN u.plan_expires_at IS NULL THEN 0
+                            WHEN DATE(u.plan_expires_at) < CURDATE() THEN DATEDIFF(DATE(u.plan_expires_at), CURDATE())
+                            WHEN DATE(u.plan_expires_at) = CURDATE() THEN 0
+                            ELSE DATEDIFF(DATE(u.plan_expires_at), CURDATE())
+                        END as days_remaining
                     FROM users u
                     LEFT JOIN reseller_plans rp ON u.current_plan_id = rp.id
                     WHERE u.id = ?
@@ -59,11 +64,12 @@ try {
             }
         }
     } else {
-        // Se não há usuário autenticado, redirecionar para login
-        if ($currentPath !== '/login' && $currentPath !== '/register') {
-            header('Location: /login');
-            exit;
-        }
+        // Se não há usuário autenticado, verificar se é uma página pública
+        // Não redirecionar aqui para evitar loop - deixar o index.php gerenciar
+        // Apenas definir como não autenticado
+        $currentUser = null;
+        $isAdmin = false;
+        $userPlan = null;
     }
     
 } catch (Exception $e) {
@@ -129,6 +135,13 @@ try {
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
                         <span>Planos de Revendedores</span>
+                    </a>
+                    <a href="/admin/payment-history" class="submenu-item <?= $currentPath === '/admin/payment-history' ? 'active' : '' ?>">
+                        <svg class="submenu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                            <line x1="1" y1="10" x2="23" y2="10"></line>
+                        </svg>
+                        <span>Histórico de Pagamentos</span>
                     </a>
                 </div>
             </div>
@@ -250,6 +263,14 @@ try {
                 <?php endif; ?>
             </a>
         <?php endif; ?>
+        
+        <a href="/payment-methods" class="nav-item <?= $currentPath === '/payment-methods' ? 'active' : '' ?>">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+            </svg>
+            <span>Métodos de Pagamento</span>
+        </a>
         
         <a href="/settings" class="nav-item <?= $currentPath === '/settings' ? 'active' : '' ?>">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -373,34 +394,113 @@ try {
 .logout-btn {
     width: 100%;
     padding: 12px 16px;
-    background: rgba(255,255,255,0.1);
-    border: none;
-    color: #fff;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #ef4444;
     cursor: pointer;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     font-size: 13px;
-    transition: background-color 0.2s;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    min-height: 44px; /* Área de toque adequada */
+    margin-top: 8px;
 }
 
 .logout-btn:hover {
-    background: rgba(255,255,255,0.2);
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.logout-btn:active {
+    transform: translateY(0);
 }
 
 .logout-btn svg {
     width: 16px;
     height: 16px;
+    flex-shrink: 0;
+}
+
+/* Responsividade do botão logout */
+@media (max-width: 768px) {
+    .logout-btn {
+        padding: 14px 16px;
+        font-size: 14px;
+        min-height: 48px;
+        margin-top: 12px;
+    }
+    
+    .logout-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .logout-btn {
+        padding: 12px 14px;
+        font-size: 13px;
+        min-height: 44px;
+    }
+    
+    .logout-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+@media (max-width: 360px) {
+    .logout-btn {
+        padding: 10px 12px;
+        font-size: 12px;
+        min-height: 42px;
+    }
+    
+    .logout-btn svg {
+        width: 14px;
+        height: 14px;
+    }
 }
 </style>
 
 <script>
 // Função de logout
-function logout() {
+async function logout() {
     if (confirm('Tem certeza que deseja sair?')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        try {
+            // Chamar API de logout para destruir sessão
+            const response = await fetch('/api-auth.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'logout'
+                })
+            });
+            
+            // Limpar dados locais independente da resposta da API
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.clear();
+            
+            // Redirecionar para login
+            window.location.href = '/login';
+        } catch (error) {
+            console.error('Erro no logout:', error);
+            // Mesmo com erro, limpar dados locais e redirecionar
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.clear();
+            window.location.href = '/login';
+        }
     }
 }
 

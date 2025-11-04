@@ -94,8 +94,7 @@ function loadUserData() {
             userAvatar.textContent = initials;
         }
     } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error);
-    }
+        }
 }
 
 /**
@@ -130,7 +129,6 @@ async function loadServers() {
         }
 
     } catch (error) {
-        console.error('Erro ao carregar servidores:', error);
         showError('Erro ao carregar servidores: ' + error.message);
     }
 }
@@ -167,7 +165,6 @@ async function loadPlans() {
         }
 
     } catch (error) {
-        console.error('Erro ao carregar planos:', error);
         showError('Erro ao carregar planos: ' + error.message);
         renderEmptyState();
     }
@@ -473,7 +470,6 @@ async function loadPlanData(planId) {
         form.dataset.planId = planId;
 
     } catch (error) {
-        console.error('Erro ao carregar dados do plano:', error);
         showError('Erro ao carregar dados do plano');
     }
 }
@@ -527,7 +523,6 @@ async function savePlan() {
         }
 
     } catch (error) {
-        console.error('Erro ao salvar plano:', error);
         showError('Erro ao salvar plano: ' + error.message);
     }
 }
@@ -567,7 +562,6 @@ async function deletePlan(planId) {
         }
 
     } catch (error) {
-        console.error('Erro ao excluir plano:', error);
         showError('Erro ao excluir plano: ' + error.message);
     }
 }

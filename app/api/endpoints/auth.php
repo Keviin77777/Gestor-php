@@ -123,7 +123,8 @@ function handleRegister() {
         
         // Criar usuário com trial de 3 dias
         $userId = generateUuid();
-        $trialExpiry = date('Y-m-d H:i:s', strtotime('+3 days'));
+        // Definir expiração para o final do 3º dia (23:59:59)
+        $trialExpiry = date('Y-m-d 23:59:59', strtotime('+3 days'));
         
         Database::query(
             "INSERT INTO users (id, email, name, password_hash, role, account_status, subscription_expiry_date, whatsapp, current_plan_id, plan_expires_at, plan_status, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -205,7 +206,7 @@ function createDefaultTemplates($userId) {
             'type' => 'welcome',
             'name' => 'Boas Vindas Padrão',
             'title' => 'Bem-vindo ao nosso serviço!',
-            'message' => 'Olá {{cliente_nome}}! Seja bem-vindo(a) ao nosso serviço de IPTV! Seus dados de acesso: Usuario: {{cliente_usuario}} Senha: {{cliente_senha}} Servidor: {{cliente_servidor}} Plano: {{cliente_plano}} Vencimento: {{cliente_vencimento}} Valor: R$ {{cliente_valor}} Qualquer dúvida, estamos aqui para ajudar!',
+            'message' => "Olá {{cliente_nome}}! 🎉\n\nSeja bem-vindo(a) ao nosso serviço de IPTV!\n\n📺 *Seus dados de acesso:*\n👤 Usuário: {{cliente_usuario}}\n🔐 Senha: {{cliente_senha}}\n🌐 Servidor: {{cliente_servidor}}\n📋 Plano: {{cliente_plano}}\n📅 Vencimento: {{cliente_vencimento}}\n💰 Valor: R$ {{cliente_valor}}\n\nQualquer dúvida, estamos aqui para ajudar! 😊",
             'variables' => '["cliente_nome", "cliente_usuario", "cliente_senha", "cliente_servidor", "cliente_plano", "cliente_vencimento", "cliente_valor"]'
         ],
         [
@@ -213,15 +214,15 @@ function createDefaultTemplates($userId) {
             'type' => 'invoice_generated',
             'name' => 'Fatura Gerada Padrão',
             'title' => 'Nova fatura disponível',
-            'message' => 'Olá {{cliente_nome}}! Sua fatura foi gerada com sucesso! Detalhes da fatura: Valor: R$ {{fatura_valor}} Vencimento: {{fatura_vencimento}} Período: {{fatura_periodo}} Para efetuar o pagamento, entre em contato conosco. Obrigado pela preferência!',
-            'variables' => '["cliente_nome", "fatura_valor", "fatura_vencimento", "fatura_periodo"]'
+            'message' => "Olá {{cliente_nome}}! 📄\n\nSua fatura foi gerada com sucesso!\n\n💳 *Detalhes da fatura:*\n💰 Valor: R$ {{fatura_valor}}\n📅 Vencimento: {{fatura_vencimento}}\n📋 Período: {{fatura_periodo}}\n\n💳 *Pague agora pelo link:*\n{{payment_link}}\n\nObrigado pela preferência! 🙏",
+            'variables' => '["cliente_nome", "fatura_valor", "fatura_vencimento", "fatura_periodo", "payment_link"]'
         ],
         [
             'id' => 'tpl-renewed-' . substr($userId, 0, 8),
             'type' => 'renewed',
             'name' => 'Renovado Padrão',
             'title' => 'Pagamento confirmado - Serviço renovado!',
-            'message' => 'Olá {{cliente_nome}}! Pagamento confirmado! Seu serviço foi renovado com sucesso! Nova data de vencimento: {{cliente_vencimento}} Valor pago: R$ {{fatura_valor}} Seu acesso já está liberado e funcionando normalmente. Obrigado pela confiança!',
+            'message' => "Olá {{cliente_nome}}! ✅\n\n*Pagamento confirmado!*\nSeu serviço foi renovado com sucesso! 🎉\n\n📅 Nova data de vencimento: {{cliente_vencimento}}\n💰 Valor pago: R$ {{fatura_valor}}\n\nSeu acesso já está liberado e funcionando normalmente.\n\nObrigado pela confiança! 🙏",
             'variables' => '["cliente_nome", "cliente_vencimento", "fatura_valor"]'
         ],
         [
@@ -229,31 +230,31 @@ function createDefaultTemplates($userId) {
             'type' => 'expires_3d',
             'name' => 'Vence em 3 dias Padrão',
             'title' => 'Seu serviço vence em 3 dias',
-            'message' => 'Olá {{cliente_nome}}! Lembrete importante: Seu serviço vence em 3 dias ({{cliente_vencimento}}). Valor: R$ {{cliente_valor}} Plano: {{cliente_plano}} Para evitar a interrupção do serviço, efetue o pagamento o quanto antes. Entre em contato conosco para mais informações!',
-            'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano"]'
+            'message' => "Olá {{cliente_nome}}! ⚠️\n\n*Lembrete importante:*\nSeu serviço vence em *3 dias* ({{cliente_vencimento}})\n\n💰 Valor: R$ {{cliente_valor}}\n📋 Plano: {{cliente_plano}}\n\nPara evitar a interrupção do serviço, efetue o pagamento o quanto antes.\n\n💳 *Pague agora pelo link:*\n{{payment_link}}\n\nEntre em contato conosco se precisar de ajuda! 📞",
+            'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano", "payment_link"]'
         ],
         [
             'id' => 'tpl-expires-7d-' . substr($userId, 0, 8),
             'type' => 'expires_7d',
             'name' => 'Vence em 7 dias Padrão',
             'title' => 'Seu serviço vence em 7 dias',
-            'message' => 'Olá {{cliente_nome}}! Lembrete: Seu serviço vence em 7 dias ({{cliente_vencimento}}). Valor: R$ {{cliente_valor}} Plano: {{cliente_plano}} Já pode ir se organizando para a renovação! Qualquer dúvida, estamos aqui!',
-            'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano"]'
+            'message' => "Olá {{cliente_nome}}! 📅\n\n*Lembrete:*\nSeu serviço vence em *7 dias* ({{cliente_vencimento}})\n\n💰 Valor: R$ {{cliente_valor}}\n📋 Plano: {{cliente_plano}}\n\nJá pode ir se organizando para a renovação!\n\n💳 *Pague agora pelo link:*\n{{payment_link}}\n\nQualquer dúvida, estamos aqui! 😊",
+            'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano", "payment_link"]'
         ],
         [
             'id' => 'tpl-expires-today-' . substr($userId, 0, 8),
             'type' => 'expires_today',
             'name' => 'Vence hoje Padrão',
             'title' => 'Seu serviço vence hoje!',
-            'message' => 'Olá {{cliente_nome}}! URGENTE: Seu serviço vence HOJE ({{cliente_vencimento}})! Valor: R$ {{cliente_valor}} Plano: {{cliente_plano}} Para evitar a suspensão do serviço, efetue o pagamento hoje mesmo. Entre em contato conosco AGORA!',
-            'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano"]'
+            'message' => "Olá {{cliente_nome}}! 🚨\n\n*URGENTE:*\nSeu serviço vence *HOJE* ({{cliente_vencimento}})!\n\n💰 Valor: R$ {{cliente_valor}}\n📋 Plano: {{cliente_plano}}\n\nPara evitar a suspensão do serviço, efetue o pagamento hoje mesmo.\n\n💳 *Pague agora pelo link:*\n{{payment_link}}\n\n📞 Entre em contato conosco se precisar de ajuda!",
+            'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano", "payment_link"]'
         ],
         [
             'id' => 'tpl-expired-1d-' . substr($userId, 0, 8),
             'type' => 'expired_1d',
             'name' => 'Venceu há 1 dia Padrão',
             'title' => 'Serviço vencido - Renove agora!',
-            'message' => 'Olá {{cliente_nome}}! Serviço vencido: Seu serviço venceu ontem ({{cliente_vencimento}}). Valor: R$ {{cliente_valor}} Plano: {{cliente_plano}} O acesso pode ser suspenso a qualquer momento. Renove URGENTEMENTE para manter o serviço ativo!',
+            'message' => "Olá {{cliente_nome}}! ❌\n\n*Serviço vencido:*\nSeu serviço venceu ontem ({{cliente_vencimento}})\n\n💰 Valor: R$ {{cliente_valor}}\n📋 Plano: {{cliente_plano}}\n\nO acesso pode ser suspenso a qualquer momento.\n\n⚡ Renove *URGENTEMENTE* para manter o serviço ativo!",
             'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano"]'
         ]
     ];

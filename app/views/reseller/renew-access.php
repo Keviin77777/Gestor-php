@@ -912,8 +912,6 @@
 
         // Carregar dados ao inicializar
         document.addEventListener('DOMContentLoaded', async function() {
-            console.log('Iniciando carregamento da página...');
-            
             try {
                 // Carregar dados do usuário e planos em paralelo
                 await Promise.all([
@@ -926,9 +924,7 @@
                     renderCurrentPlan();
                 }
                 
-                console.log('Carregamento concluído!');
-            } catch (error) {
-                console.error('Erro durante inicialização:', error);
+                } catch (error) {
                 hideLoading();
             }
         });
@@ -946,14 +942,11 @@
                 
                 if (data.success) {
                     currentUser = data.user;
-                    console.log('Usuário carregado:', currentUser);
                     renderCurrentPlan();
                 } else {
                     throw new Error(data.error || 'Erro ao carregar dados do usuário');
                 }
             } catch (error) {
-                console.error('Erro ao carregar usuário:', error);
-                
                 // Se for erro 401, redirecionar para login
                 if (error.message.includes('401') || error.message.includes('Não autorizado')) {
                     showError('Sessão expirada. Redirecionando para login...');
@@ -980,15 +973,12 @@
                 if (data.success) {
                     // Para revendedores, todos os planos retornados já são ativos
                     availablePlans = data.plans;
-                    console.log('Planos carregados:', availablePlans);
                     renderPlansGrid();
                     hideLoading();
                 } else {
                     throw new Error(data.error || 'Erro ao carregar planos');
                 }
             } catch (error) {
-                console.error('Erro ao carregar planos:', error);
-                
                 // Se for erro 401, redirecionar para login
                 if (error.message.includes('401') || error.message.includes('Não autorizado')) {
                     showError('Sessão expirada. Redirecionando para login...');
@@ -1007,9 +997,9 @@
             if (!currentUser) return;
             
             const content = document.querySelector('.current-plan-content');
-            const expiresAt = new Date(currentUser.plan_expires_at);
-            const now = new Date();
-            const daysRemaining = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+            
+            // Usar o valor de days_remaining que vem da API (já calculado corretamente no backend)
+            const daysRemaining = currentUser.days_remaining || 0;
             
             let daysClass = '';
             let daysText = '';
@@ -1150,8 +1140,8 @@
             }).join('');
         }
 
-        // Selecionar plano
-        function selectPlan(planId) {
+        // Selecionar plano e gerar PIX
+        async function selectPlan(planId) {
             const plan = availablePlans.find(p => p.id === planId);
             
             if (!plan) {
@@ -1164,44 +1154,35 @@
                 return;
             }
             
-            // Calcular economia se aplicável
-            let savingsText = '';
-            if (plan.duration_days >= 180) {
-                const monthlyPlan = availablePlans.find(p => p.duration_days === 30 && !p.is_trial);
-                if (monthlyPlan) {
-                    const monthlyTotal = (monthlyPlan.price * plan.duration_days / 30);
-                    const savings = monthlyTotal - plan.price;
-                    const savingsPercent = ((savings / monthlyTotal) * 100).toFixed(0);
-                    
-                    if (savings > 0) {
-                        savingsText = `\n💰 Economia: ${savingsPercent}% (R$ ${savings.toFixed(2).replace('.', ',')})`;
-                    }
-                }
-            }
-            
-            // Mostrar informações do plano selecionado
-            const message = `🎯 Plano Selecionado: ${plan.name}
-💰 Valor: R$ ${plan.price.toFixed(2).replace('.', ',')}
-📅 Duração: ${plan.duration_days} dias${savingsText}
-
-📞 Entre em contato para finalizar:
-📱 WhatsApp: (11) 99999-9999
-📧 Email: suporte@ultragestor.com
-
-Deseja continuar?`;
-            
-            if (confirm(message)) {
-                // Criar mensagem personalizada para WhatsApp
-                const userInfo = currentUser ? `\n👤 Usuário: ${currentUser.email}` : '';
-                const whatsappMessage = encodeURIComponent(`🎯 Solicitação de Renovação
-
-📋 Plano: ${plan.name}
-💰 Valor: R$ ${plan.price.toFixed(2).replace('.', ',')}
-📅 Duração: ${plan.duration_days} dias${userInfo}
-
-Gostaria de renovar meu acesso com este plano. Aguardo retorno!`);
+            // Gerar PIX automaticamente
+            await generatePixPayment(plan);
+        }
+        
+        // Gerar pagamento PIX
+        async function generatePixPayment(plan) {
+            try {
+                showInfo('Gerando PIX... Aguarde...');
                 
-                window.open(`https://wa.me/5511999999999?text=${whatsappMessage}`, '_blank');
+                const response = await fetch('/api-reseller-renew-pix.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        plan_id: plan.id
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showPixModal(result, plan);
+                } else {
+                    showError(result.error || 'Erro ao gerar PIX');
+                }
+            } catch (error) {
+                showError('Erro ao gerar PIX. Tente novamente.');
             }
         }
 
@@ -1301,6 +1282,230 @@ Gostaria de renovar meu acesso com este plano. Aguardo retorno!`);
             document.getElementById('mainContent').style.display = 'block';
         }
 
+        // Mostrar modal com PIX
+        function showPixModal(pixData, plan) {
+            // Criar modal
+            const modal = document.createElement('div');
+            modal.id = 'pixModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                backdrop-filter: blur(4px);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1rem;
+                animation: fadeIn 0.3s ease;
+            `;
+            
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: var(--bg-primary);
+                border-radius: 16px;
+                max-width: 500px;
+                width: 100%;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                animation: slideUp 0.3s ease;
+            `;
+            
+            modalContent.innerHTML = `
+                <div style="padding: 2rem;">
+                    <!-- Header -->
+                    <div style="text-align: center; margin-bottom: 1.5rem;">
+                        <div style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                            <i class="fas fa-qrcode" style="font-size: 1.5rem; color: white;"></i>
+                        </div>
+                        <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.5rem 0;">
+                            Pagamento via PIX
+                        </h2>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin: 0;">
+                            Escaneie o QR Code ou copie o código
+                        </p>
+                    </div>
+                    
+                    <!-- Plano Info -->
+                    <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid var(--border);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="color: var(--text-secondary); font-size: 0.875rem;">Plano:</span>
+                            <span style="color: var(--text-primary); font-weight: 600;">${plan.name}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-secondary); font-size: 0.875rem;">Valor:</span>
+                            <span style="color: var(--primary); font-weight: 700; font-size: 1.25rem;">R$ ${plan.price.toFixed(2).replace('.', ',')}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- QR Code -->
+                    <div style="background: white; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; border: 2px solid var(--border);">
+                        <img src="data:image/png;base64,${pixData.qr_code_base64}" 
+                             alt="QR Code PIX" 
+                             style="max-width: 100%; height: auto; border-radius: 8px;">
+                    </div>
+                    
+                    <!-- Código PIX -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; color: var(--text-secondary); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
+                            Código PIX Copia e Cola:
+                        </label>
+                        <div style="position: relative;">
+                            <textarea 
+                                id="pixCode" 
+                                readonly 
+                                style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 0.75rem; resize: none; background: var(--bg-secondary); color: var(--text-primary);"
+                                rows="3"
+                            >${pixData.qr_code}</textarea>
+                            <button 
+                                onclick="copyPixCode()" 
+                                style="position: absolute; top: 0.5rem; right: 0.5rem; background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;"
+                            >
+                                <i class="fas fa-copy"></i>
+                                Copiar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Instruções -->
+                    <div style="background: rgba(99, 102, 241, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid rgba(99, 102, 241, 0.2);">
+                        <h4 style="color: var(--primary); font-size: 0.875rem; font-weight: 600; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-info-circle"></i>
+                            Como pagar:
+                        </h4>
+                        <ol style="margin: 0; padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">
+                            <li>Abra o app do seu banco</li>
+                            <li>Escolha pagar com PIX</li>
+                            <li>Escaneie o QR Code ou cole o código</li>
+                            <li>Confirme o pagamento</li>
+                        </ol>
+                    </div>
+                    
+                    <!-- Status -->
+                    <div id="paymentStatus" style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 1rem; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--warning);">
+                            <div class="spinner-small"></div>
+                            <span style="font-size: 0.875rem; font-weight: 600;">Aguardando pagamento...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Botões -->
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button 
+                            onclick="closePixModal()" 
+                            style="flex: 1; padding: 0.75rem; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.875rem;"
+                        >
+                            Fechar
+                        </button>
+                        <button 
+                            onclick="checkPaymentStatus('${pixData.payment_id}')" 
+                            style="flex: 1; padding: 0.75rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+                        >
+                            <i class="fas fa-sync-alt"></i>
+                            Verificar Pagamento
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+            
+            // Iniciar verificação automática
+            startPaymentCheck(pixData.payment_id);
+        }
+        
+        // Copiar código PIX
+        function copyPixCode() {
+            const textarea = document.getElementById('pixCode');
+            textarea.select();
+            document.execCommand('copy');
+            showSuccess('Código PIX copiado!');
+        }
+        
+        // Fechar modal
+        function closePixModal() {
+            const modal = document.getElementById('pixModal');
+            if (modal) {
+                modal.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => modal.remove(), 300);
+            }
+            
+            // Parar verificação automática
+            if (window.paymentCheckInterval) {
+                clearInterval(window.paymentCheckInterval);
+            }
+        }
+        
+        // Verificar status do pagamento
+        async function checkPaymentStatus(paymentId) {
+            try {
+                const response = await fetch(`/api-check-payment-status.php?payment_id=${paymentId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const statusDiv = document.getElementById('paymentStatus');
+                    
+                    if (result.status === 'approved') {
+                        statusDiv.innerHTML = `
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--success);">
+                                <i class="fas fa-check-circle" style="font-size: 1.5rem;"></i>
+                                <span style="font-size: 0.875rem; font-weight: 600;">Pagamento aprovado!</span>
+                            </div>
+                        `;
+                        
+                        // Parar verificação
+                        if (window.paymentCheckInterval) {
+                            clearInterval(window.paymentCheckInterval);
+                        }
+                        
+                        // Recarregar dados após 2 segundos
+                        setTimeout(() => {
+                            closePixModal();
+                            showSuccess('Seu acesso foi renovado com sucesso!');
+                            loadUserData();
+                        }, 2000);
+                    } else if (result.status === 'rejected' || result.status === 'cancelled') {
+                        statusDiv.innerHTML = `
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--danger);">
+                                <i class="fas fa-times-circle" style="font-size: 1.5rem;"></i>
+                                <span style="font-size: 0.875rem; font-weight: 600;">Pagamento não aprovado</span>
+                            </div>
+                        `;
+                        
+                        if (window.paymentCheckInterval) {
+                            clearInterval(window.paymentCheckInterval);
+                        }
+                    }
+                }
+            } catch (error) {
+                }
+        }
+        
+        // Iniciar verificação automática
+        function startPaymentCheck(paymentId) {
+            // Verificar a cada 5 segundos
+            window.paymentCheckInterval = setInterval(() => {
+                checkPaymentStatus(paymentId);
+            }, 5000);
+            
+            // Parar após 10 minutos
+            setTimeout(() => {
+                if (window.paymentCheckInterval) {
+                    clearInterval(window.paymentCheckInterval);
+                }
+            }, 600000);
+        }
+
         // Adicionar animações CSS
         const style = document.createElement('style');
         style.textContent = `
@@ -1324,6 +1529,41 @@ Gostaria de renovar meu acesso com este plano. Aguardo retorno!`);
                     opacity: 0;
                     transform: translateX(100%);
                 }
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+            
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .spinner-small {
+                width: 16px;
+                height: 16px;
+                border: 2px solid var(--border);
+                border-top: 2px solid var(--warning);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+            
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
             }
         `;
         document.head.appendChild(style);

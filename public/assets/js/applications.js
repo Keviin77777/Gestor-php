@@ -3,8 +3,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Applications page loaded');
-    
     // Verificar autenticação
     if (!isAuthenticated()) {
         window.location.href = '/login';
@@ -78,8 +76,7 @@ function loadUserData() {
             userAvatar.textContent = initials;
         }
     } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error);
-    }
+        }
 }
 
 /**
@@ -109,8 +106,6 @@ async function loadApplications() {
         }
 
         const result = await response.json();
-        console.log('Resposta da API:', result);
-
         if (result.success) {
             displayApplications(result.applications || []);
         } else {
@@ -118,7 +113,6 @@ async function loadApplications() {
         }
 
     } catch (error) {
-        console.error('Erro ao carregar aplicativos:', error);
         showError('Erro ao carregar aplicativos: ' + error.message);
         displayEmptyState();
     } finally {
@@ -375,7 +369,6 @@ async function saveApplication() {
         try {
             result = JSON.parse(text);
         } catch (e) {
-            console.error('Resposta não é JSON válido:', text);
             throw new Error('Resposta inválida do servidor');
         }
 
@@ -388,7 +381,6 @@ async function saveApplication() {
         }
 
     } catch (error) {
-        console.error('Erro ao salvar aplicativo:', error);
         showError('Erro ao salvar aplicativo: ' + error.message);
     } finally {
         // Verificar se LoadingManager está disponível
@@ -447,7 +439,6 @@ async function loadApplicationData(applicationId, form) {
             throw new Error(result.error || 'Aplicativo não encontrado');
         }
     } catch (error) {
-        console.error('Erro ao carregar dados do aplicativo:', error);
         showError('Erro ao carregar dados do aplicativo');
         closeApplicationModal();
     } finally {
@@ -513,7 +504,6 @@ async function deleteApplication(applicationId) {
         }
 
     } catch (error) {
-        console.error('Erro ao excluir aplicativo:', error);
         showError('Erro ao excluir aplicativo: ' + error.message);
     } finally {
         // Verificar se LoadingManager está disponível

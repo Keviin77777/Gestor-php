@@ -1,0 +1,151 @@
+/**
+ * Cards de Métricas Simples
+ */
+
+.analytics-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    padding: 1rem 1.5rem;
+    background: transparent;
+}
+
+.metric-card {
+    position: relative;
+    background: transparent;
+    border-radius: 12px;
+    padding: 1.25rem 2.5rem;
+    border: 2px solid currentColor;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 90px;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px currentColor;
+    opacity: 0.9;
+}
+
+.metric-card-value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: currentColor;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.metric-card-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+}
+
+/* Cores dos Cards - Paleta Única */
+.metric-card-green {
+    color: #22c55e;
+}
+
+.metric-card-green:hover {
+    box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
+}
+
+.metric-card-blue {
+    color: #0ea5e9;
+}
+
+.metric-card-blue:hover {
+    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
+}
+
+.metric-card-purple {
+    color: #8b5cf6;
+}
+
+.metric-card-purple:hover {
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+}
+
+.metric-card-orange {
+    color: #fb923c;
+}
+
+.metric-card-orange:hover {
+    box-shadow: 0 8px 20px rgba(251, 146, 60, 0.3);
+}
+
+.metric-card-yellow {
+    color: #facc15;
+}
+
+.metric-card-yellow:hover {
+    box-shadow: 0 8px 20px rgba(250, 204, 21, 0.3);
+}
+
+.metric-card-cyan {
+    color: #06b6d4;
+}
+
+.metric-card-cyan:hover {
+    box-shadow: 0 8px 20px rgba(6, 182, 212, 0.3);
+}
+
+.metric-card-pink {
+    color: #f472b6;
+}
+
+.metric-card-pink:hover {
+    box-shadow: 0 8px 20px rgba(244, 114, 182, 0.3);
+}
+
+.metric-card-teal {
+    color: #2dd4bf;
+}
+
+.metric-card-teal:hover {
+    box-shadow: 0 8px 20px rgba(45, 212, 191, 0.3);
+}
+
+/* Responsivo */
+@media (max-width: 1024px) {
+    .analytics-metrics-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    
+    .metric-card {
+        padding: 1rem 2rem;
+        min-height: 80px;
+    }
+    
+    .metric-card-value {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .analytics-metrics-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+    
+    .metric-card {
+        padding: 1.25rem 2rem;
+        min-height: 80px;
+    }
+    
+    .metric-card-value {
+        font-size: 2rem;
+    }
+    
+    .metric-card-label {
+        font-size: 0.75rem;
+    }
+}

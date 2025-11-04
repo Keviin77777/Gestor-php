@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Templates WhatsApp - UltraGestor</title>
     <link rel="stylesheet" href="/assets/css/dashboard.css">
+    <link rel="stylesheet" href="/assets/css/header-menu.css">
     <link rel="stylesheet" href="/assets/css/whatsapp.css">
 </head>
 <body>
@@ -13,27 +14,9 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Header -->
-            <header class="header">
-                <div class="header-left">
-                    <button class="mobile-menu-btn" id="mobileMenuBtn">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </button>
-                    <h2 class="page-title">Templates de Mensagens</h2>
-                </div>
-                <div class="header-right">
-                    <button class="btn btn-primary" onclick="openTemplateModal()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                        Novo Template
-                    </button>
-                </div>
-            </header>
-
+            <!-- Header Menu -->
+            <?php include __DIR__ . '/../components/header-menu.php'; ?>
+            
             <!-- Content -->
             <div class="content">
                 <!-- Templates List -->

@@ -35,7 +35,12 @@ try {
                 WHEN u.plan_expires_at IS NULL THEN 'no_plan'
                 ELSE u.plan_status
             END as current_status,
-            DATEDIFF(u.plan_expires_at, NOW()) as days_remaining
+            CASE 
+                WHEN u.plan_expires_at IS NULL THEN 0
+                WHEN DATE(u.plan_expires_at) < CURDATE() THEN DATEDIFF(DATE(u.plan_expires_at), CURDATE())
+                WHEN DATE(u.plan_expires_at) = CURDATE() THEN 0
+                ELSE DATEDIFF(DATE(u.plan_expires_at), CURDATE())
+            END as days_remaining
         FROM users u
         LEFT JOIN reseller_plans rp ON u.current_plan_id = rp.id
         WHERE u.id = ?

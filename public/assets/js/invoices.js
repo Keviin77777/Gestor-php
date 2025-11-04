@@ -3,8 +3,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Invoices page loaded');
-    
     // Verificar autenticação
     if (!isAuthenticated()) {
         window.location.href = '/login';
@@ -83,8 +81,7 @@ function loadUserData() {
             userAvatar.textContent = initials;
         }
     } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error);
-    }
+        }
 }/**
 
  * Carregar faturas
@@ -116,7 +113,6 @@ async function loadInvoices() {
         }
 
     } catch (error) {
-        console.error('Erro ao carregar faturas:', error);
         showError('Erro ao carregar faturas: ' + error.message);
         displayEmptyState();
     } finally {
@@ -450,7 +446,6 @@ async function markAsPaid(invoiceId) {
         }
 
     } catch (error) {
-        console.error('Erro ao marcar fatura como paga:', error);
         showError('Erro ao atualizar fatura: ' + error.message);
     } finally {
         if (typeof LoadingManager !== 'undefined' && LoadingManager.hide) {
@@ -493,7 +488,6 @@ async function deleteInvoice(invoiceId) {
         }
 
     } catch (error) {
-        console.error('Erro ao excluir fatura:', error);
         showError('Erro ao excluir fatura: ' + error.message);
     } finally {
         if (typeof LoadingManager !== 'undefined' && LoadingManager.hide) {

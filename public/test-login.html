@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Login</title>
+</head>
+<body>
+    <h1>Teste de Login</h1>
+    <form id="testForm">
+        <div>
+            <label>Email:</label>
+            <input type="email" id="email" value="admin@ultragestor.com" required>
+        </div>
+        <div>
+            <label>Senha:</label>
+            <input type="password" id="password" value="admin123" required>
+        </div>
+        <button type="submit">Testar Login</button>
+    </form>
+    
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('testForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = 'Testando...';
+            
+            try {
+                console.log('Enviando requisição para /api-auth.php');
+                
+                const response = await fetch('/api-auth.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'login',
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                console.log('Status:', response.status);
+                console.log('Headers:', response.headers);
+                
+                const text = await response.text();
+                console.log('Response text:', text);
+                
+                resultDiv.innerHTML = `
+                    <h3>Resultado:</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Response:</strong></p>
+                    <pre>${text}</pre>
+                `;
+                
+                // Tentar fazer parse do JSON
+                try {
+                    const data = JSON.parse(text);
+                    console.log('JSON parsed:', data);
+                } catch (e) {
+                    console.error('Erro ao fazer parse do JSON:', e);
+                }
+                
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                resultDiv.innerHTML = `<p style="color: red;">Erro: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

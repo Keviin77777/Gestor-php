@@ -4,8 +4,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando responsividade mobile universal...');
-    
     // Elementos principais
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     const sidebar = document.getElementById('sidebar');
@@ -17,7 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Funções de controle da sidebar
     function openSidebar() {
-        console.log('Abrindo sidebar mobile...');
         if (sidebar) sidebar.classList.add('active');
         if (sidebarOverlay) sidebarOverlay.classList.add('active');
         if (mobileMenuBtn) mobileMenuBtn.classList.add('active');
@@ -25,7 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function closeSidebar() {
-        console.log('Fechando sidebar mobile...');
         if (sidebar) sidebar.classList.remove('active');
         if (sidebarOverlay) sidebarOverlay.classList.remove('active');
         if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
@@ -45,14 +41,12 @@ document.addEventListener('DOMContentLoaded', function() {
         mobileMenuBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Mobile menu button clicado');
             toggleSidebar();
         });
         
         mobileMenuBtn.addEventListener('touchend', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Mobile menu touch end');
             toggleSidebar();
         });
     }
@@ -97,11 +91,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function setupSearchBox() {
         if (!searchIcon || !searchBox || !searchInput) return;
         
-        console.log('Configurando search box mobile...');
-        
         function performSearch() {
             if (searchInput.value.trim()) {
-                console.log('Fazendo busca por:', searchInput.value);
                 // Redirecionar para página de clientes com busca
                 window.location.href = '/clients?search=' + encodeURIComponent(searchInput.value);
             } else {
@@ -140,53 +131,128 @@ document.addEventListener('DOMContentLoaded', function() {
         notificationBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Notificações clicadas');
-            
             // Implementar modal de notificações ou redirecionamento
             alert('Você tem 3 notificações pendentes!\n\n• Cliente João Silva vence hoje\n• Pagamento recebido: R$ 150,00\n• Novo cliente cadastrado');
         });
     }
     
     // Garantir que sidebar inicie fechada no mobile
-    if (window.innerWidth <= 768) {
-        closeSidebar();
+    function initializeMobileLayout() {
+        if (window.innerWidth <= 768) {
+            closeSidebar();
+            // Forçar estilos inline para garantir funcionamento
+            if (sidebar) {
+                sidebar.style.transform = 'translateX(-100%)';
+                sidebar.style.transition = 'transform 0.3s ease';
+            }
+        }
     }
     
-    // Redimensionamento da janela
+    // Inicializar layout mobile
+    initializeMobileLayout();
+    
+    // Redimensionamento da janela com debounce
+    let resizeTimeout;
     window.addEventListener('resize', function() {
-        if (window.innerWidth <= 768) {
-            // Mobile: garantir que sidebar esteja fechada
-            closeSidebar();
-        } else {
-            // Desktop: remover classes mobile
-            if (sidebar) sidebar.classList.remove('active');
-            if (sidebarOverlay) sidebarOverlay.classList.remove('active');
-            if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
-            document.body.classList.remove('sidebar-open');
-        }
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            if (window.innerWidth <= 768) {
+                // Mobile: garantir que sidebar esteja fechada
+                closeSidebar();
+                if (sidebar) {
+                    sidebar.style.transform = 'translateX(-100%)';
+                }
+            } else {
+                // Desktop: remover classes mobile e estilos inline
+                if (sidebar) {
+                    sidebar.classList.remove('active');
+                    sidebar.style.transform = '';
+                }
+                if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+                if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
+                document.body.classList.remove('sidebar-open');
+            }
+        }, 100);
     });
     
-    // Forçar sidebar fechada imediatamente no mobile
-    if (window.innerWidth <= 768) {
-        if (sidebar) {
-            sidebar.classList.remove('active');
-            sidebar.style.transform = 'translateX(-100%)';
+    // Prevenir scroll horizontal em mobile
+    function preventHorizontalScroll() {
+        if (window.innerWidth <= 768) {
+            document.body.style.overflowX = 'hidden';
+            document.documentElement.style.overflowX = 'hidden';
+        } else {
+            document.body.style.overflowX = '';
+            document.documentElement.style.overflowX = '';
         }
-        if (sidebarOverlay) {
-            sidebarOverlay.classList.remove('active');
-        }
-        if (mobileMenuBtn) {
-            mobileMenuBtn.classList.remove('active');
-        }
-        document.body.classList.remove('sidebar-open');
     }
     
-    console.log('Responsividade mobile universal inicializada com sucesso!');
-});
+    preventHorizontalScroll();
+    window.addEventListener('resize', preventHorizontalScroll);
+    
+    // Melhorar performance em dispositivos touch
+    if ('ontouchstart' in window) {
+        document.body.classList.add('touch-device');
+        
+        // Adicionar suporte a swipe para fechar sidebar
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+        
+        if (sidebar) {
+            sidebar.addEventListener('touchstart', function(e) {
+                startX = e.touches[0].clientX;
+                isDragging = true;
+            }, { passive: true });
+            
+            sidebar.addEventListener('touchmove', function(e) {
+                if (!isDragging) return;
+                currentX = e.touches[0].clientX;
+                const diffX = startX - currentX;
+                
+                // Se arrastar para a esquerda mais de 50px, fechar sidebar
+                if (diffX > 50) {
+                    closeSidebar();
+                    isDragging = false;
+                }
+            }, { passive: true });
+            
+            sidebar.addEventListener('touchend', function() {
+                isDragging = false;
+            }, { passive: true });
+        }
+    }
+    
+    });
 
 // Função global para logout
-window.logout = function() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+window.logout = async function() {
+    if (confirm('Tem certeza que deseja sair?')) {
+        try {
+            // Chamar API de logout para destruir sessão
+            await fetch('/api-auth.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'logout'
+                })
+            });
+            
+            // Limpar dados locais independente da resposta da API
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.clear();
+            
+            // Redirecionar para login
+            window.location.href = '/login';
+        } catch (error) {
+            console.error('Erro no logout:', error);
+            // Mesmo com erro, limpar dados locais e redirecionar
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.clear();
+            window.location.href = '/login';
+        }
+    }
 };

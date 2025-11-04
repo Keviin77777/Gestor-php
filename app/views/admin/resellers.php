@@ -6,53 +6,30 @@
     <title>Revendedores - UltraGestor</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="/assets/css/dashboard.css" rel="stylesheet">
+    <link href="/assets/css/admin-responsive.css" rel="stylesheet">
     <style>
         /* Resellers - Design Profissional Melhorado */
         .resellers-container {
-            padding: 2rem;
+            padding: 0;
             max-width: 1400px;
             margin: 0 auto;
-            margin-left: var(--sidebar-width);
-            transition: margin-left 0.3s ease;
-            min-height: 100vh;
+        }
+
+        /* Responsividade do botão */
+        .btn-text {
+            display: inline;
         }
         
-        @media (max-width: 768px) {
-            .resellers-container {
-                margin-left: 0;
-                padding: 1rem;
+        @media (max-width: 480px) {
+            .btn-text {
+                display: none;
             }
-        }
-
-        /* Header Melhorado */
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding: 1.5rem 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .page-title {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.875rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin: 0;
-        }
-
-        .page-title i {
-            color: var(--primary);
-            font-size: 1.5rem;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
+            
+            .btn-new {
+                padding: 0.75rem;
+                min-width: 44px;
+                justify-content: center;
+            }
         }
 
         .btn-new {
@@ -510,6 +487,186 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8) !important;
+            backdrop-filter: blur(4px);
+            z-index: 99999 !important;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            pointer-events: auto !important;
+        }
+
+        .modal.show {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: var(--bg-primary) !important;
+            border-radius: var(--radius);
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
+            border: 3px solid #6366f1 !important;
+            animation: slideUp 0.3s ease;
+            position: relative;
+            z-index: 100000 !important;
+            pointer-events: auto !important;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .btn-close {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.5rem;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            transition: all 0.2s ease;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+        .btn-close:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-sm);
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+        }
+
         /* Responsividade Melhorada */
         @media (max-width: 1024px) {
             .filters-row {
@@ -519,12 +676,6 @@
         }
 
         @media (max-width: 768px) {
-            .page-header {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 1rem;
-            }
-
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 1rem;
@@ -537,6 +688,7 @@
 
             .resellers-table-container {
                 overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .resellers-table {
@@ -545,6 +697,14 @@
 
             .user-info-cell {
                 min-width: 200px;
+            }
+            
+            .filters-section {
+                padding: 1rem;
+            }
+            
+            .resellers-container {
+                padding: 0.75rem;
             }
         }
 
@@ -558,9 +718,42 @@
                 text-align: center;
                 gap: 0.75rem;
             }
-
-            .page-title {
+            
+            .resellers-container {
+                padding: 0.5rem;
+            }
+            
+            .filters-section {
+                padding: 0.75rem;
+            }
+            
+            .stat-card {
+                padding: 1rem;
+            }
+            
+            .stat-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 1.25rem;
+            }
+            
+            .stat-number {
                 font-size: 1.5rem;
+            }
+
+            .modal-content {
+                margin: 0.5rem;
+                width: calc(100% - 1rem);
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-header,
+            .modal-body,
+            .modal-footer {
+                padding: 1rem;
             }
         }
     </style>
@@ -571,20 +764,27 @@
     
     <?php include __DIR__ . '/../components/sidebar.php'; ?>
     
-    <div class="resellers-container">
-        <!-- Header -->
-        <div class="page-header">
-            <h1 class="page-title">
-                <i class="fas fa-users"></i>
-                Revendedores
-            </h1>
-            <div class="header-actions">
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header Mobile -->
+        <header class="header">
+            <div class="header-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <h2 class="page-title">Revendedores</h2>
+            </div>
+            <div class="header-right">
                 <button class="btn-new" onclick="openNewResellerModal()">
                     <i class="fas fa-plus"></i>
-                    Novo Revendedor
+                    <span class="btn-text">Novo</span>
                 </button>
             </div>
-        </div>
+        </header>
+
+        <div class="resellers-container">
 
         <!-- Estatísticas -->
         <div class="stats-grid" id="statsGrid">
@@ -719,10 +919,105 @@
                 <p>Não há revendedores cadastrados no sistema.</p>
             </div>
         </div>
+        </div>
+    </main>
+
+    <!-- Modal Editar Revendedor -->
+    <div class="modal" id="editResellerModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>Editar Revendedor</h3>
+                <button class="btn-close" onclick="closeEditResellerModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="editResellerModalBody">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Alterar Plano -->
+    <div class="modal" id="changePlanModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Alterar Plano do Revendedor</h3>
+                <button class="btn-close" onclick="closeChangePlanModal()">&times;</button>
+            </div>
+            <form id="changePlanForm" onsubmit="saveChangePlan(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="changePlanResellerId">
+                    
+                    <div class="form-group">
+                        <label>Revendedor</label>
+                        <input type="text" id="changePlanResellerName" readonly style="background: var(--bg-tertiary); cursor: not-allowed;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newPlanId">Novo Plano *</label>
+                        <select id="newPlanId" required class="filter-input">
+                            <option value="">Carregando planos...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label for="paymentAmount">Valor Pago (R$)</label>
+                            <input type="number" id="paymentAmount" step="0.01" class="filter-input" placeholder="0,00">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="paymentMethod">Método de Pagamento</label>
+                            <select id="paymentMethod" class="filter-input">
+                                <option value="admin_change">Alteração Admin</option>
+                                <option value="pix">PIX</option>
+                                <option value="credit_card">Cartão de Crédito</option>
+                                <option value="bank_transfer">Transferência</option>
+                                <option value="boleto">Boleto</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="planNotes">Observações</label>
+                        <textarea id="planNotes" class="filter-input" rows="3" placeholder="Observações sobre a alteração do plano..."></textarea>
+                    </div>
+
+                    <div id="planPreview" style="display: none; background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-sm); margin-top: 1rem; border: 1px solid var(--border);">
+                        <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase;">Preview do Novo Plano</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Preço</div>
+                                <div style="font-weight: 600; color: var(--text-primary);" id="previewPrice">-</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duração</div>
+                                <div style="font-weight: 600; color: var(--text-primary);" id="previewDuration">-</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Vencimento Atual</div>
+                                <div style="font-weight: 600; color: var(--text-primary);" id="previewCurrentExpiry">-</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Novo Vencimento</div>
+                                <div style="font-weight: 600; color: var(--success);" id="previewNewExpiry">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeChangePlanModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Alterar Plano</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Scripts -->
+    <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/dashboard.js"></script>
+    <script src="/assets/js/admin-common.js"></script>
     <script>
         let resellers = [];
         let filteredResellers = [];
@@ -751,7 +1046,6 @@
                     throw new Error(data.error || 'Erro ao carregar revendedores');
                 }
             } catch (error) {
-                console.error('Erro:', error);
                 showError('Erro ao carregar revendedores: ' + error.message);
             } finally {
                 hideLoading();
@@ -831,16 +1125,16 @@
                     </td>
                     <td>
                         <div class="reseller-actions">
-                            <button class="pro-btn-action" onclick="viewResellerDetails('${reseller.id}')" title="Ver Detalhes">
+                            <button class="pro-btn-action" onclick="editReseller('${reseller.id}')" title="Editar Revendedor">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
                             </button>
                             <button class="pro-btn-action" onclick="changePlan('${reseller.id}')" title="Alterar Plano">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    <path d="M3 3h18v18H3V3z"></path>
+                                    <path d="M3 9h18M9 21V9"></path>
                                 </svg>
                             </button>
                             ${reseller.current_status === 'suspended' 
@@ -891,8 +1185,7 @@
                         }
                     }
                 } catch (error) {
-                    console.error(`Erro ao carregar stats do revendedor ${reseller.id}:`, error);
-                }
+                    }
             }
         }
 
@@ -957,88 +1250,6 @@
             document.getElementById('loadingSpinner').style.display = 'none';
         }
 
-        // Funções de notificação melhoradas
-        function showSuccess(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: var(--success);
-                color: white;
-                padding: 1rem 1.5rem;
-                border-radius: var(--radius-sm);
-                box-shadow: var(--shadow-lg);
-                z-index: 9999;
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                animation: slideInRight 0.3s ease;
-                max-width: 400px;
-            `;
-            notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.style.animation = 'slideOutRight 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 4000);
-        }
-        
-        function showError(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: var(--danger);
-                color: white;
-                padding: 1rem 1.5rem;
-                border-radius: var(--radius-sm);
-                box-shadow: var(--shadow-lg);
-                z-index: 9999;
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                animation: slideInRight 0.3s ease;
-                max-width: 400px;
-            `;
-            notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.style.animation = 'slideOutRight 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 6000);
-        }
-
-        // Adicionar animações CSS
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideInRight {
-                from {
-                    opacity: 0;
-                    transform: translateX(100%);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-            
-            @keyframes slideOutRight {
-                from {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-                to {
-                    opacity: 0;
-                    transform: translateX(100%);
-                }
-            }
-        `;
-        document.head.appendChild(style);
-
 
 
         // Funções adicionais
@@ -1058,42 +1269,431 @@
         }
 
         // Ações dos revendedores
-        function viewResellerDetails(resellerId) {
-            // TODO: Implementar modal de detalhes
-            showInfo(`Ver detalhes do revendedor ${resellerId}`);
-        }
-
-        function changePlan(resellerId) {
-            // TODO: Implementar modal de alteração de plano
-            showInfo(`Alterar plano do revendedor ${resellerId}`);
-        }
-
-        function showInfo(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: var(--info);
-                color: white;
-                padding: 15px 20px;
-                border-radius: var(--radius-sm);
-                box-shadow: var(--shadow-lg);
-                z-index: 9999;
-                max-width: 400px;
-                font-size: 14px;
-                font-weight: 500;
-            `;
-            notification.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+        async function editReseller(resellerId) {
+            const modal = document.getElementById('editResellerModal');
+            const modalBody = document.getElementById('editResellerModalBody');
             
-            document.body.appendChild(notification);
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+            modal.style.visibility = 'visible';
+            modal.style.opacity = '1';
+            modal.style.zIndex = '99999';
             
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
+            modalBody.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+            
+            try {
+                const response = await fetch(`/api-resellers.php/${resellerId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderEditResellerForm(data);
+                } else {
+                    throw new Error(data.error);
                 }
-            }, 4000);
+            } catch (error) {
+                modalBody.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: var(--danger);">
+                        <i class="fas fa-exclamation-circle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                        <p>Erro ao carregar dados: ${error.message}</p>
+                    </div>
+                `;
+            }
         }
+
+        function renderEditResellerForm(data) {
+            const reseller = data.reseller;
+            const clientStats = data.client_stats;
+            const invoiceStats = data.invoice_stats;
+            const planHistory = data.plan_history || [];
+            
+            const modalBody = document.getElementById('editResellerModalBody');
+            modalBody.innerHTML = `
+                <form id="editResellerForm" onsubmit="saveResellerDetails(event)">
+                    <input type="hidden" id="editResellerId" value="${reseller.id}">
+                    
+                    <div style="display: grid; gap: 1.5rem;">
+                        <!-- Informações Básicas -->
+                        <div>
+                            <h4 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                                <i class="fas fa-user"></i> Informações Básicas
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Nome</label>
+                                    <input type="text" id="editName" value="${reseller.name || ''}" class="filter-input" placeholder="Nome do revendedor">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Email</label>
+                                    <input type="email" id="editEmail" value="${reseller.email}" class="filter-input" placeholder="email@exemplo.com" required>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">WhatsApp</label>
+                                    <input type="text" id="editWhatsapp" value="${reseller.whatsapp || ''}" class="filter-input" placeholder="(00) 00000-0000" maxlength="15">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Nova Senha (deixe vazio para não alterar)</label>
+                                    <input type="password" id="editPassword" class="filter-input" placeholder="••••••••">
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Cadastro</div>
+                                    <div style="font-weight: 600;">${formatDate(reseller.created_at)}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Status</div>
+                                    <div><span class="status-badge status-${reseller.plan_status || 'no_plan'}">${getStatusLabel(reseller.plan_status || 'no_plan')}</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                    <!-- Plano Atual -->
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                            <i class="fas fa-tag"></i> Plano Atual
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Plano</div>
+                                <div style="font-weight: 600;">${reseller.plan_name || 'Sem plano'}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Preço</div>
+                                <div style="font-weight: 600;">R$ ${parseFloat(reseller.plan_price || 0).toFixed(2).replace('.', ',')}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Vencimento</div>
+                                <div style="font-weight: 600;">${reseller.plan_expires_at ? formatDate(reseller.plan_expires_at) : '-'}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duração</div>
+                                <div style="font-weight: 600;">${reseller.plan_duration || '-'} dias</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Estatísticas -->
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                            <i class="fas fa-chart-bar"></i> Estatísticas
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${clientStats.total_clients}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Total Clientes</div>
+                            </div>
+                            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">${clientStats.active_clients}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Clientes Ativos</div>
+                            </div>
+                            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--danger);">${clientStats.inactive_clients}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Clientes Inativos</div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+                            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--info);">${invoiceStats.total_invoices}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Total Faturas</div>
+                            </div>
+                            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">${invoiceStats.paid_invoices}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Faturas Pagas</div>
+                            </div>
+                            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">R$ ${parseFloat(invoiceStats.total_revenue).toFixed(2).replace('.', ',')}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Receita Total</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Histórico de Planos -->
+                    ${planHistory.length > 0 ? `
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                            <i class="fas fa-history"></i> Histórico de Planos
+                        </h4>
+                        <div style="max-height: 200px; overflow-y: auto;">
+                            <table style="width: 100%; font-size: 0.875rem;">
+                                <thead style="background: var(--bg-secondary); position: sticky; top: 0;">
+                                    <tr>
+                                        <th style="padding: 0.5rem; text-align: left;">Plano</th>
+                                        <th style="padding: 0.5rem; text-align: left;">Início</th>
+                                        <th style="padding: 0.5rem; text-align: left;">Vencimento</th>
+                                        <th style="padding: 0.5rem; text-align: right;">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${planHistory.map(h => `
+                                        <tr style="border-bottom: 1px solid var(--border);">
+                                            <td style="padding: 0.5rem;">${h.plan_name}</td>
+                                            <td style="padding: 0.5rem;">${formatDate(h.started_at)}</td>
+                                            <td style="padding: 0.5rem;">${formatDate(h.expires_at)}</td>
+                                            <td style="padding: 0.5rem; text-align: right;">R$ ${parseFloat(h.plan_price).toFixed(2).replace('.', ',')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Botões de Ação -->
+                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--border);">
+                        <button type="button" class="btn-secondary" onclick="closeEditResellerModal()">Cancelar</button>
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-save"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </div>
+                </form>
+            `;
+        }
+
+        async function saveResellerDetails(event) {
+            event.preventDefault();
+            
+            const resellerId = document.getElementById('editResellerId').value;
+            const name = document.getElementById('editName').value;
+            const email = document.getElementById('editEmail').value;
+            const whatsapp = document.getElementById('editWhatsapp').value;
+            const password = document.getElementById('editPassword').value;
+            
+            const updateData = {
+                name: name,
+                email: email,
+                whatsapp: whatsapp
+            };
+            
+            // Só incluir senha se foi preenchida
+            if (password && password.trim() !== '') {
+                updateData.password = password;
+            }
+            
+            try {
+                const response = await fetch(`/api-resellers.php/${resellerId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('Dados atualizados com sucesso!');
+                    closeEditResellerModal();
+                    loadResellers(); // Recarregar lista
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                showError('Erro ao atualizar dados: ' + error.message);
+            }
+        }
+
+        // Formatar WhatsApp automaticamente
+        function formatWhatsApp(input) {
+            let value = input.value.replace(/\D/g, '');
+            
+            if (value.length <= 11) {
+                // Formato: (00) 00000-0000
+                value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+                value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+            }
+            
+            input.value = value;
+        }
+
+        // Adicionar evento de formatação ao campo WhatsApp quando o modal abrir
+        document.addEventListener('input', function(e) {
+            if (e.target && e.target.id === 'editWhatsapp') {
+                formatWhatsApp(e.target);
+            }
+        });
+
+        function closeEditResellerModal() {
+            const modal = document.getElementById('editResellerModal');
+            if (modal) {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+                modal.style.opacity = '0';
+            }
+        }
+
+        let availablePlans = [];
+        let currentResellerData = null;
+
+        async function changePlan(resellerId) {
+            try {
+                const modal = document.getElementById('changePlanModal');
+                if (!modal) {
+                    showError('Erro: Modal não encontrado');
+                    return;
+                }
+                
+                const reseller = resellers.find(r => r.id === resellerId);
+                
+                if (!reseller) {
+                    showError('Revendedor não encontrado');
+                    return;
+                }
+
+                currentResellerData = reseller;
+                
+                // Preencher campos do formulário
+                const resellerIdInput = document.getElementById('changePlanResellerId');
+                const resellerNameInput = document.getElementById('changePlanResellerName');
+                const paymentAmountInput = document.getElementById('paymentAmount');
+                const paymentMethodSelect = document.getElementById('paymentMethod');
+                const planNotesTextarea = document.getElementById('planNotes');
+                const planPreviewDiv = document.getElementById('planPreview');
+                
+                if (resellerIdInput) resellerIdInput.value = resellerId;
+                if (resellerNameInput) resellerNameInput.value = reseller.name || reseller.email;
+                if (paymentAmountInput) paymentAmountInput.value = '';
+                if (paymentMethodSelect) paymentMethodSelect.value = 'admin_change';
+                if (planNotesTextarea) planNotesTextarea.value = '';
+                if (planPreviewDiv) planPreviewDiv.style.display = 'none';
+                
+                // Carregar planos disponíveis
+                await loadAvailablePlans();
+                
+                modal.classList.add('show');
+                
+                // Forçar estilos inline para sobrescrever qualquer CSS externo
+                modal.style.display = 'flex';
+                modal.style.visibility = 'visible';
+                modal.style.opacity = '1';
+                modal.style.zIndex = '99999';
+                
+                } catch (error) {
+                showError('Erro ao abrir modal: ' + error.message);
+            }
+        }
+
+        async function loadAvailablePlans() {
+            try {
+                const response = await fetch('/api-reseller-plans.php');
+                const data = await response.json();
+                
+                if (data.success) {
+                    availablePlans = data.plans.filter(p => p.is_active);
+                    
+                    const select = document.getElementById('newPlanId');
+                    select.innerHTML = '<option value="">Selecione um plano</option>' + 
+                        availablePlans.map(plan => `
+                            <option value="${plan.id}" data-price="${plan.price}" data-duration="${plan.duration_days}">
+                                ${plan.name} - R$ ${parseFloat(plan.price).toFixed(2).replace('.', ',')} (${plan.duration_days} dias)
+                            </option>
+                        `).join('');
+                    
+                    // Evento para atualizar preview
+                    select.addEventListener('change', updatePlanPreview);
+                } else {
+                    showError('Erro ao carregar planos');
+                }
+            } catch (error) {
+                showError('Erro ao carregar planos: ' + error.message);
+            }
+        }
+
+        function updatePlanPreview() {
+            const select = document.getElementById('newPlanId');
+            const selectedOption = select.options[select.selectedIndex];
+            const preview = document.getElementById('planPreview');
+            
+            if (!select.value) {
+                preview.style.display = 'none';
+                return;
+            }
+            
+            const price = selectedOption.getAttribute('data-price');
+            const duration = selectedOption.getAttribute('data-duration');
+            
+            // Calcular novo vencimento
+            const today = new Date();
+            const newExpiry = new Date(today.getTime() + (duration * 24 * 60 * 60 * 1000));
+            
+            document.getElementById('previewPrice').textContent = 'R$ ' + parseFloat(price).toFixed(2).replace('.', ',');
+            document.getElementById('previewDuration').textContent = duration + ' dias';
+            document.getElementById('previewCurrentExpiry').textContent = currentResellerData.plan_expires_at ? formatDate(currentResellerData.plan_expires_at) : 'Sem plano';
+            document.getElementById('previewNewExpiry').textContent = newExpiry.toLocaleDateString('pt-BR');
+            
+            // Preencher valor de pagamento automaticamente
+            document.getElementById('paymentAmount').value = price;
+            
+            preview.style.display = 'block';
+        }
+
+        async function saveChangePlan(event) {
+            event.preventDefault();
+            
+            const resellerId = document.getElementById('changePlanResellerId').value;
+            const planId = document.getElementById('newPlanId').value;
+            const paymentAmount = document.getElementById('paymentAmount').value;
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            const notes = document.getElementById('planNotes').value;
+            
+            if (!planId) {
+                showError('Selecione um plano');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api-resellers.php/${resellerId}/change-plan`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plan_id: planId,
+                        payment_amount: paymentAmount || null,
+                        payment_method: paymentMethod,
+                        notes: notes
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('Plano alterado com sucesso!');
+                    closeChangePlanModal();
+                    loadResellers();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                showError('Erro ao alterar plano: ' + error.message);
+            }
+        }
+
+        function closeChangePlanModal() {
+            const modal = document.getElementById('changePlanModal');
+            if (modal) {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+                modal.style.opacity = '0';
+            }
+            const form = document.getElementById('changePlanForm');
+            if (form) {
+                form.reset();
+            }
+            currentResellerData = null;
+        }
+
+        // Fechar modal ao clicar fora
+        document.addEventListener('click', function(e) {
+            const changePlanModal = document.getElementById('changePlanModal');
+            const editResellerModal = document.getElementById('editResellerModal');
+            
+            if (changePlanModal && e.target === changePlanModal) {
+                closeChangePlanModal();
+            }
+            
+            if (editResellerModal && e.target === editResellerModal) {
+                closeEditResellerModal();
+            }
+        });
+
+
 
         async function suspendReseller(resellerId) {
             if (!confirm('Tem certeza que deseja suspender este revendedor?')) return;

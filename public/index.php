@@ -1,405 +1,407 @@
 <?php
 /**
  * UltraGestor - Sistema de Gestão IPTV
- * Entry Point da Aplicação
+ * Sistema de roteamento corrigido
  */
+
+// Verificar se é uma requisição para arquivo PHP (API)
+$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+$path = parse_url($requestUri, PHP_URL_PATH);
+
+// Se é um arquivo PHP que existe, não interceptar
+if (preg_match('/\.php$/', $path)) {
+    $filePath = __DIR__ . $path;
+    if (file_exists($filePath) && $filePath !== __FILE__) {
+        // Deixar o arquivo ser executado normalmente
+        return;
+    }
+}
 
 // Iniciar sessão
 session_start();
 
-// Definir timezone
-date_default_timezone_set('America/Sao_Paulo');
-
-// Carregar autoloader
-require_once __DIR__ . '/../app/helpers/functions.php';
-
-// Carregar variáveis de ambiente
-loadEnv(__DIR__ . '/../.env');
-
-// Configurações de erro baseadas no ambiente
-if (env('APP_DEBUG', true)) {
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
-    ini_set('log_errors', 1);
-} else {
-    error_reporting(0);
-    ini_set('display_errors', 0);
+// Remover barra final se existir (exceto para root)
+if ($path !== '/' && substr($path, -1) === '/') {
+    $path = rtrim($path, '/');
 }
 
-// Handler de erros global
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    logError("PHP Error [$errno]: $errstr in $errfile on line $errline");
-    if (env('APP_DEBUG', true)) {
-        echo "<pre>Error [$errno]: $errstr\nFile: $errfile\nLine: $errline</pre>";
+// Verificar autenticação
+function isAuthenticated() {
+    // Verificar ambas as formas de autenticação para compatibilidade
+    if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+        return true;
     }
-});
-
-// Handler de exceções global
-set_exception_handler(function($e) {
-    logError("Uncaught Exception: " . $e->getMessage(), [
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-        'trace' => $e->getTraceAsString()
-    ]);
     
-    if (env('APP_DEBUG', true)) {
-        echo "<pre>";
-        echo "Uncaught Exception: " . $e->getMessage() . "\n";
-        echo "File: " . $e->getFile() . "\n";
-        echo "Line: " . $e->getLine() . "\n";
-        echo "Trace:\n" . $e->getTraceAsString();
-        echo "</pre>";
-    } else {
-        http_response_code(500);
-        echo "Internal Server Error";
+    // Verificar se existe $_SESSION['user'] (formato usado por Auth::user())
+    if (isset($_SESSION['user']) && is_array($_SESSION['user']) && !empty($_SESSION['user']['id'])) {
+        return true;
     }
-});
+    
+    return false;
+}
 
-// Carregar classes core
-require_once __DIR__ . '/../app/core/Database.php';
-require_once __DIR__ . '/../app/core/Router.php';
-require_once __DIR__ . '/../app/core/Request.php';
-require_once __DIR__ . '/../app/core/Response.php';
-require_once __DIR__ . '/../app/core/Auth.php';
-
-// Inicializar router
-$router = new Router();
-
-// Obter método e URI
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-
-// Remover trailing slash
-$uri = rtrim($uri, '/');
-if (empty($uri)) $uri = '/';
-
-// Rotas públicas (sem autenticação)
-$router->get('/', function() {
-    if (Auth::check()) {
-        Response::redirect('/dashboard');
+// Função para verificar se usuário tem permissão para a rota
+function hasPermission($path) {
+    if (!isAuthenticated()) {
+        return false;
     }
-    Response::redirect('/login');
-});
-
-$router->get('/install-db', function() {
-    // Script de instalação da tabela servers
-    require_once __DIR__ . '/../app/helpers/functions.php';
-    loadEnv(__DIR__ . '/../.env');
     
-    $host = env('DB_HOST', 'localhost');
-    $dbname = env('DB_NAME', 'ultragestor_php');
-    $username = env('DB_USER', 'root');
-    $password = env('DB_PASS', '');
+    // Verificar se existe $_SESSION['user'] para obter role
+    $userRole = $_SESSION['user_role'] ?? 'reseller';
+    if (isset($_SESSION['user']) && is_array($_SESSION['user']) && isset($_SESSION['user']['role'])) {
+        $userRole = $_SESSION['user']['role'];
+    }
     
-    try {
-        $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
-        $pdo = new PDO($dsn, $username, $password, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-        ]);
-        
-        $sql = "
-        CREATE TABLE IF NOT EXISTS servers (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id VARCHAR(36) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            billing_type ENUM('fixed', 'per_active') NOT NULL DEFAULT 'fixed',
-            cost DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-            panel_type VARCHAR(50) NULL,
-            panel_url VARCHAR(255) NULL,
-            reseller_user VARCHAR(100) NULL,
-            sigma_token VARCHAR(500) NULL,
-            status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            INDEX idx_user_id (user_id),
-            INDEX idx_status (status)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        ";
-        
-        $pdo->exec($sql);
-        
-        echo '<html><head><title>Instalação Concluída</title><style>body{font-family:Arial;max-width:800px;margin:50px auto;padding:20px;background:#f5f5f5;}h1{color:#6366f1;}pre{background:#fff;padding:15px;border-radius:8px;overflow-x:auto;}</style></head><body>';
-        echo '<h1>✅ Tabela de Servidores Instalada com Sucesso!</h1>';
-        echo '<p>Banco de dados: <strong>' . $dbname . '</strong></p>';
-        
-        $stmt = $pdo->query("DESCRIBE servers");
-        $columns = $stmt->fetchAll();
-        
-        echo '<h2>Estrutura da Tabela:</h2>';
-        echo '<table border="1" cellpadding="8" cellspacing="0" style="background:#fff;width:100%;">';
-        echo '<tr style="background:#6366f1;color:#fff;"><th>Campo</th><th>Tipo</th><th>Null</th><th>Key</th><th>Default</th></tr>';
-        foreach ($columns as $col) {
-            echo "<tr><td>{$col['Field']}</td><td>{$col['Type']}</td><td>{$col['Null']}</td><td>{$col['Key']}</td><td>{$col['Default']}</td></tr";
+    // Rotas que requerem admin
+    $adminRoutes = ['/admin', '/resellers', '/payment-history'];
+    
+    foreach ($adminRoutes as $adminRoute) {
+        if (strpos($path, $adminRoute) === 0 && $userRole !== 'admin') {
+            return false;
         }
-        echo '</table>';
-        
-        echo '<hr><h2>Próximos Passos:</h2>';
-        echo '<ol><li><a href="/servidores">Acessar página de Servidores</a></li><li>Teste adicionar um servidor</li><li>Depois remova a rota /install-db do index.php</li></ol>';
-        echo '</body></html>';
-        
-    } catch (PDOException $e) {
-        echo '<html><head><title>Erro na Instalação</title><style>body{font-family:Arial;max-width:800px;margin:50px auto;padding:20px;background:#f5f5f5;}h1{color:#ef4444;}</style></head><body>';
-        echo '<h1>❌ Erro na Instalação</h1>';
-        echo '<p style="color:#ef4444;font-weight:bold;">' . $e->getMessage() . '</p>';
-        echo '<h2>Verifique:</h2><ul><li>MySQL está rodando</li><li>Banco ultragestor_php existe</li><li>Credenciais no .env estão corretas</li></ul>';
-        echo '</body></html>';
     }
-});
-
-$router->get('/login', function() {
-    require __DIR__ . '/../app/views/auth/login.php';
-});
-
-$router->get('/register', function() {
-    require __DIR__ . '/../app/views/auth/register.php';
-});
-
-$router->post('/api/auth/login', function() {
-    require __DIR__ . '/../app/api/endpoints/auth.php';
-    handleLogin();
-});
-
-$router->post('/api/auth/register', function() {
-    require __DIR__ . '/../app/api/endpoints/auth.php';
-    handleRegister();
-});
-
-// Rotas protegidas (requerem autenticação)
-$router->get('/dashboard', function() {
-    // Para views HTML, não requer auth no servidor
-    // A autenticação é verificada no JavaScript
-    require __DIR__ . '/../app/views/dashboard/index.php';
-});
-
-$router->get('/clients', function() {
-    require __DIR__ . '/../app/views/clients/index.php';
-});
-
-$router->get('/plans', function() {
-    require __DIR__ . '/../app/views/plans/index.php';
-});
-
-$router->get('/applications', function() {
-    require __DIR__ . '/../app/views/applications/index.php';
-});
-
-$router->get('/invoices', function() {
-    require __DIR__ . '/../app/views/invoices/index.php';
-});
-
-$router->get('/servidores', function() {
-    require __DIR__ . '/../app/views/servers/index.php';
-});
-
-$router->get('/whatsapp/parear', function() {
-    require __DIR__ . '/../app/views/whatsapp/parear.php';
-});
-
-$router->get('/whatsapp/templates', function() {
-    require __DIR__ . '/../app/views/whatsapp/templates.php';
-});
-
-$router->get('/whatsapp/scheduling', function() {
-    require __DIR__ . '/../app/views/whatsapp/scheduling.php';
-});
-
-$router->get('/settings', function() {
-    echo '<h1 style="padding: 2rem; color: #64748b;">Configurações - Em desenvolvimento</h1>';
-});
-
-
-
-// API Routes - Dashboard
-$router->get('/api/dashboard/metrics', function() {
-    require __DIR__ . '/../app/api/endpoints/dashboard.php';
-    getMetrics();
-});
-
-// API Routes - Servers
-$router->get('/api/servers', function() {
-    require __DIR__ . '/../app/api/endpoints/servers.php';
-    getServers();
-});
-
-$router->post('/api/servers', function() {
-    require __DIR__ . '/../app/api/endpoints/servers.php';
-    createServer();
-});
-
-$router->put('/api/servers/{id}', function() {
-    require __DIR__ . '/../app/api/endpoints/servers.php';
-    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    $parts = explode('/', trim($uri, '/'));
-    $serverId = end($parts);
-    updateServer($serverId);
-});
-
-$router->delete('/api/servers/{id}', function() {
-    require __DIR__ . '/../app/api/endpoints/servers.php';
-    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    $parts = explode('/', trim($uri, '/'));
-    $serverId = end($parts);
-    deleteServer($serverId);
-});
-
-// API Routes - Plans
-$router->get('/api/plans', function() {
-    require __DIR__ . '/../app/api/endpoints/plans.php';
-    getPlans();
-});
-
-$router->get('/api/plans/servers', function() {
-    require __DIR__ . '/../app/api/endpoints/plans.php';
-    getServers();
-});
-
-$router->post('/api/plans', function() {
-    require __DIR__ . '/../app/api/endpoints/plans.php';
-    createPlan();
-});
-
-$router->put('/api/plans/{id}', function() {
-    require __DIR__ . '/../app/api/endpoints/plans.php';
-    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    $parts = explode('/', trim($uri, '/'));
-    $planId = end($parts);
-    updatePlan($planId);
-});
-
-$router->delete('/api/plans/{id}', function() {
-    require __DIR__ . '/../app/api/endpoints/plans.php';
-    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    $parts = explode('/', trim($uri, '/'));
-    $planId = end($parts);
-    deletePlan($planId);
-});
-
-// API Routes - Applications
-$router->get('/api/applications', function() {
-    require __DIR__ . '/../public/api-applications.php';
-});
-
-$router->post('/api/applications', function() {
-    require __DIR__ . '/../public/api-applications.php';
-});
-
-$router->get('/api/applications/{id}', function() {
-    require __DIR__ . '/../public/api-applications.php';
-});
-
-$router->put('/api/applications/{id}', function() {
-    require __DIR__ . '/../public/api-applications.php';
-});
-
-$router->delete('/api/applications/{id}', function() {
-    require __DIR__ . '/../public/api-applications.php';
-});
-
-// API Routes - Invoices
-$router->get('/api/invoices', function() {
-    require __DIR__ . '/../public/api-invoices.php';
-});
-
-$router->post('/api/invoices', function() {
-    require __DIR__ . '/../public/api-invoices.php';
-});
-
-$router->get('/api/invoices/{id}', function() {
-    require __DIR__ . '/../public/api-invoices.php';
-});
-
-$router->put('/api/invoices/{id}', function() {
-    require __DIR__ . '/../public/api-invoices.php';
-});
-
-$router->put('/api/invoices/{id}/mark-paid', function() {
-    require __DIR__ . '/../public/api-invoices.php';
-});
-
-$router->delete('/api/invoices/{id}', function() {
-    require __DIR__ . '/../public/api-invoices.php';
-});
-
-// API Routes - Resellers (Admin only)
-$router->get('/api-resellers.php', function() {
-    require __DIR__ . '/../public/api-resellers.php';
-});
-
-$router->get('/api-resellers.php/{id}', function() {
-    require __DIR__ . '/../public/api-resellers.php';
-});
-
-$router->put('/api-resellers.php/{id}/suspend', function() {
-    require __DIR__ . '/../public/api-resellers.php';
-});
-
-$router->put('/api-resellers.php/{id}/activate', function() {
-    require __DIR__ . '/../public/api-resellers.php';
-});
-
-$router->put('/api-resellers.php/{id}/change-plan', function() {
-    require __DIR__ . '/../public/api-resellers.php';
-});
-
-$router->delete('/api-resellers.php/{id}', function() {
-    require __DIR__ . '/../public/api-resellers.php';
-});
-
-// API Routes - Reseller Plans
-$router->get('/api-reseller-plans.php', function() {
-    require __DIR__ . '/../public/api-reseller-plans.php';
-});
-
-$router->post('/api-reseller-plans.php', function() {
-    require __DIR__ . '/../public/api-reseller-plans.php';
-});
-
-$router->get('/api-reseller-plans.php/{id}', function() {
-    require __DIR__ . '/../public/api-reseller-plans.php';
-});
-
-$router->put('/api-reseller-plans.php/{id}', function() {
-    require __DIR__ . '/../public/api-reseller-plans.php';
-});
-
-$router->delete('/api-reseller-plans.php/{id}', function() {
-    require __DIR__ . '/../public/api-reseller-plans.php';
-});
-
-// API Route - Auth Me
-$router->get('/api/auth/me', function() {
-    require __DIR__ . '/../public/api-auth-me.php';
-});
-
-// Admin Pages
-$router->get('/admin/resellers', function() {
-    require __DIR__ . '/../app/views/admin/resellers.php';
-});
-
-$router->get('/admin/reseller-plans', function() {
-    require __DIR__ . '/../app/views/admin/reseller-plans.php';
-});
-
-// Reseller Pages
-$router->get('/renew-access', function() {
-    require __DIR__ . '/../app/views/reseller/renew-access.php';
-});
-
-// Logout
-$router->post('/api/auth/logout', function() {
-    Auth::logout();
-    Response::json(['success' => true]);
-});
-
-// Dispatch da rota
-try {
-    $router->dispatch($method, $uri);
-} catch (Exception $e) {
-    if (env('APP_DEBUG', false)) {
-        Response::json(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
-    } else {
-        Response::json(['error' => 'Erro interno do servidor'], 500);
-    }
+    
+    return true;
 }
+
+// Roteamento
+switch ($path) {
+    case '/':
+        // Página inicial - redirecionar baseado na autenticação
+        if (isAuthenticated()) {
+            header('Location: /dashboard');
+        } else {
+            header('Location: /login');
+        }
+        exit;
+        
+    case '/login':
+        // Página de login - se já está logado, vai para dashboard
+        if (isAuthenticated()) {
+            header('Location: /dashboard');
+            exit;
+        }
+        
+        // Verificar se o arquivo de login existe
+        $loginFile = __DIR__ . '/../app/views/auth/login.php';
+        if (file_exists($loginFile)) {
+            include $loginFile;
+        } else {
+            http_response_code(500);
+            echo "Erro: Arquivo de login não encontrado.";
+        }
+        break;
+        
+    case '/register':
+        // Página de registro
+        if (isAuthenticated()) {
+            header('Location: /dashboard');
+            exit;
+        }
+        
+        $registerFile = __DIR__ . '/../app/views/auth/register.php';
+        if (file_exists($registerFile)) {
+            include $registerFile;
+        } else {
+            header('Location: /login');
+            exit;
+        }
+        break;
+        
+    case '/logout':
+        // Logout direto via URL
+        session_destroy();
+        header('Location: /login');
+        exit;
+        
+    case '/dashboard':
+        // Dashboard principal
+        if (!isAuthenticated()) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $dashboardFile = __DIR__ . '/../app/views/dashboard/index.php';
+        if (file_exists($dashboardFile)) {
+            include $dashboardFile;
+        } else {
+            http_response_code(500);
+            echo "Erro: Dashboard não encontrado.";
+        }
+        break;
+        
+    case '/clients':
+        // Página de clientes
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $clientsFile = __DIR__ . '/../app/views/clients/index.php';
+        if (file_exists($clientsFile)) {
+            include $clientsFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/servers':
+    case '/servidores':
+        // Página de servidores (suporta ambas as rotas)
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $serversFile = __DIR__ . '/../app/views/servers/index.php';
+        if (file_exists($serversFile)) {
+            include $serversFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/plans':
+        // Página de planos
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $plansFile = __DIR__ . '/../app/views/plans/index.php';
+        if (file_exists($plansFile)) {
+            include $plansFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/applications':
+        // Página de aplicações
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $applicationsFile = __DIR__ . '/../app/views/applications/index.php';
+        if (file_exists($applicationsFile)) {
+            include $applicationsFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/invoices':
+        // Página de faturas
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $invoicesFile = __DIR__ . '/../app/views/invoices/index.php';
+        if (file_exists($invoicesFile)) {
+            include $invoicesFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/payment-methods':
+        // Página de métodos de pagamento
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $paymentMethodsFile = __DIR__ . '/../app/views/payment-methods/index.php';
+        if (file_exists($paymentMethodsFile)) {
+            include $paymentMethodsFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/whatsapp':
+        // Página do WhatsApp - redirecionar para templates
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        header('Location: /whatsapp/templates');
+        exit;
+        
+    case '/whatsapp/templates':
+        // Templates do WhatsApp
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $templatesFile = __DIR__ . '/../app/views/whatsapp/templates.php';
+        if (file_exists($templatesFile)) {
+            include $templatesFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/whatsapp/parear':
+        // Pareamento do WhatsApp
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $parearFile = __DIR__ . '/../app/views/whatsapp/parear.php';
+        if (file_exists($parearFile)) {
+            include $parearFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/whatsapp/scheduling':
+        // Agendamento do WhatsApp
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $schedulingFile = __DIR__ . '/../app/views/whatsapp/scheduling.php';
+        if (file_exists($schedulingFile)) {
+            include $schedulingFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/admin/resellers':
+        // Página de revendedores (admin)
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $resellersFile = __DIR__ . '/../app/views/admin/resellers.php';
+        if (file_exists($resellersFile)) {
+            include $resellersFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/admin/reseller-plans':
+        // Página de planos de revendedores (admin)
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $resellerPlansFile = __DIR__ . '/../app/views/admin/reseller-plans.php';
+        if (file_exists($resellerPlansFile)) {
+            include $resellerPlansFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/admin/payment-history':
+        // Histórico de pagamentos (admin)
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $paymentHistoryFile = __DIR__ . '/../app/views/admin/payment-history.php';
+        if (file_exists($paymentHistoryFile)) {
+            include $paymentHistoryFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/renew-access':
+        // Página de renovação de acesso
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $renewAccessFile = __DIR__ . '/../app/views/reseller/renew-access.php';
+        if (file_exists($renewAccessFile)) {
+            include $renewAccessFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    default:
+        // Verificar se é uma rota de API que começa com /api/invoices ou /api/applications
+        if (strpos($path, '/api/invoices') === 0) {
+            // Roteamento para API de faturas (incluindo rotas dinâmicas)
+            if (file_exists(__DIR__ . '/api-invoices.php')) {
+                include __DIR__ . '/api-invoices.php';
+            } else {
+                http_response_code(404);
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'API não encontrada']);
+            }
+            break;
+        }
+        
+        if (strpos($path, '/api/applications') === 0) {
+            // Roteamento para API de aplicações (incluindo rotas dinâmicas)
+            if (file_exists(__DIR__ . '/api-applications.php')) {
+                include __DIR__ . '/api-applications.php';
+            } else {
+                http_response_code(404);
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'API não encontrada']);
+            }
+            break;
+        }
+        
+        // Verificar se é uma rota de API
+        if (strpos($path, '/api') === 0 || strpos($path, '/api-') === 0) {
+            // Deixar o .htaccess tratar as APIs - não interceptar
+            return;
+        }
+        
+        // Página não encontrada
+        http_response_code(404);
+        echo '<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página não encontrada - UltraGestor</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+        h1 { color: #333; }
+        p { color: #666; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>404 - Página não encontrada</h1>
+    <p>A página que você está procurando não existe.</p>
+    <p><a href="/">Voltar ao início</a></p>
+</body>
+</html>';
+        break;
+}
+?>

@@ -3,8 +3,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Servers page loaded');
-    
     // Verificar autenticação
     if (!isAuthenticated()) {
         window.location.href = '/login';
@@ -78,8 +76,7 @@ function loadUserData() {
             userAvatar.textContent = initials;
         }
     } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error);
-    }
+        }
 }
 
 /**
@@ -92,7 +89,7 @@ async function loadServers() {
             throw new Error('Token não encontrado');
         }
 
-        const response = await fetch('/api/servers', {
+        const response = await fetch('/api-servers.php', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -105,8 +102,6 @@ async function loadServers() {
         }
 
         const result = await response.json();
-        console.log('Resposta da API:', result);
-
         if (result.success) {
             displayServers(result.servers || []);
             updateStats(result.servers || []);
@@ -115,7 +110,6 @@ async function loadServers() {
         }
 
     } catch (error) {
-        console.error('Erro ao carregar servidores:', error);
         showError('Erro ao carregar servidores: ' + error.message);
         displayEmptyState();
     }
@@ -267,7 +261,7 @@ function closeServerModal() {
     delete form.dataset.serverId; // Limpar ID do servidor
     
     // Esconder campos de painel
-    document.getElementById('qpanelFields').style.display = 'none';
+    document.getElementById('sigmaFields').style.display = 'none';
     document.getElementById('testConnectionBtn').style.display = 'none';
 }
 
@@ -276,28 +270,28 @@ function closeServerModal() {
  */
 function togglePanelFields() {
     const panelType = document.getElementById('panelType').value;
-    const qpanelFields = document.getElementById('qpanelFields');
+    const sigmaFields = document.getElementById('sigmaFields');
     const testBtn = document.getElementById('testConnectionBtn');
 
-    if (panelType === 'qpanel_sigma') {
-        qpanelFields.style.display = 'block';
+    if (panelType === 'sigma') {
+        sigmaFields.style.display = 'block';
         testBtn.style.display = 'inline-flex';
     } else {
-        qpanelFields.style.display = 'none';
+        sigmaFields.style.display = 'none';
         testBtn.style.display = 'none';
     }
 }
 
 /**
- * Test connection
+ * Test Sigma connection
  */
-function testConnection() {
+async function testConnection() {
     const panelUrl = document.getElementById('panelUrl').value;
     const resellerUser = document.getElementById('resellerUser').value;
     const sigmaToken = document.getElementById('sigmaToken').value;
 
     if (!panelUrl || !resellerUser || !sigmaToken) {
-        alert('❌ Por favor, preencha todos os campos de integração antes de testar.');
+        showError('Por favor, preencha todos os campos de integração antes de testar.');
         return;
     }
 
@@ -314,11 +308,35 @@ function testConnection() {
         Testando...
     `;
 
-    setTimeout(() => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api-sigma-test.php', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                panel_url: panelUrl,
+                sigma_token: sigmaToken,
+                reseller_user: resellerUser
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccess('✅ Conexão com Sigma estabelecida com sucesso!\n\nPainel: ' + panelUrl + '\nUsuário: ' + resellerUser);
+        } else {
+            showError('❌ Erro na conexão: ' + result.message);
+        }
+
+    } catch (error) {
+        showError('❌ Erro ao testar conexão: ' + error.message);
+    } finally {
         testBtn.disabled = false;
         testBtn.innerHTML = originalText;
-        alert('✅ Conexão testada com sucesso!\n\nPainel: ' + panelUrl + '\nUsuário: ' + resellerUser);
-    }, 2000);
+    }
 }
 
 /**
@@ -347,7 +365,7 @@ async function saveServer() {
         }
 
         const token = localStorage.getItem('token');
-        const url = serverId ? `/api/servers/${serverId}` : '/api/servers';
+        const url = serverId ? `/api-servers.php/${serverId}` : '/api-servers.php';
         const method = serverId ? 'PUT' : 'POST';
         
         const response = await fetch(url, {
@@ -370,7 +388,6 @@ async function saveServer() {
         }
 
     } catch (error) {
-        console.error('Erro ao salvar servidor:', error);
         showError('Erro ao salvar servidor: ' + error.message);
     }
 }
@@ -381,7 +398,7 @@ async function saveServer() {
 async function loadServerData(serverId) {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api/servers`, {
+        const response = await fetch(`/api-servers.php`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -404,7 +421,7 @@ async function loadServerData(serverId) {
                     document.getElementById('panelType').value = server.panel_type;
                     togglePanelFields(); // Mostrar campos de painel
                     
-                    if (server.panel_type === 'qpanel_sigma') {
+                    if (server.panel_type === 'sigma') {
                         document.getElementById('panelUrl').value = server.panel_url || '';
                         document.getElementById('resellerUser').value = server.reseller_user || '';
                         // Não preencher token por segurança
@@ -417,7 +434,6 @@ async function loadServerData(serverId) {
             }
         }
     } catch (error) {
-        console.error('Erro ao carregar dados do servidor:', error);
         showError('Erro ao carregar dados do servidor');
     }
 }
@@ -439,7 +455,7 @@ async function deleteServer(serverId) {
 
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api/servers/${serverId}`, {
+        const response = await fetch(`/api-servers.php/${serverId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -457,7 +473,6 @@ async function deleteServer(serverId) {
         }
 
     } catch (error) {
-        console.error('Erro ao excluir servidor:', error);
         showError('Erro ao excluir servidor: ' + error.message);
     }
 }

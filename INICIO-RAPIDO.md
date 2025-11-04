@@ -1,215 +1,192 @@
-# 🚀 Início Rápido - UltraGestor
+# 🚀 Início Rápido - Mercado Pago
 
-## ✅ Sistema Funcionando!
+## ✅ Configuração Completa
 
-O UltraGestor está rodando com sucesso usando o servidor PHP embutido!
+Tudo já está instalado e pronto! Siga estes passos:
 
-## 🎯 Como Usar
+### 1️⃣ Iniciar Servidor (escolha um)
 
-### Iniciar o Servidor
+**Opção A - Script automático:**
+```bash
+start-dev.bat
+```
 
-O servidor já está rodando! Se precisar reiniciar:
-
-```powershell
-# Na pasta do projeto
+**Opção B - Manual:**
+```bash
 php -S localhost:8000 -t public
 ```
 
-Ou use o script:
-```powershell
-.\start-server.ps1
+### 2️⃣ Acessar o Sistema
+
+Abra no navegador:
+```
+http://localhost:8000
 ```
 
-### Acessar o Sistema
+### 3️⃣ Fazer Login como Admin
 
-**Tela de Login:**
-```
-http://localhost:8000/login
-```
+Use suas credenciais de administrador.
 
-**Criar Nova Conta:**
-```
-http://localhost:8000/register
-```
+### 4️⃣ Configurar Mercado Pago
 
-**Teste de Instalação:**
-```
-http://localhost:8000/test.php
-```
+1. Acesse: **http://localhost:8000/payment-methods**
 
-### Credenciais Padrão
+2. Obtenha suas credenciais:
+   - Vá em: https://www.mercadopago.com.br/developers/panel/app
+   - Copie a **Public Key** (começa com APP_USR-)
+   - Copie o **Access Token** (começa com APP_USR-)
 
-```
-Email: admin@ultragestor.com
-Senha: admin123
-```
+3. Cole no formulário **NA ORDEM**:
+   - **Public Key** (primeiro campo)
+   - **Access Token** (segundo campo)
 
-## 🎨 Funcionalidades Implementadas
+4. Clique em **"Testar Conexão"**
+   - Deve mostrar: ✅ Conexão testada com sucesso!
 
-### ✅ Fase 1 - Autenticação (COMPLETO)
+5. Marque **"Ativar Mercado Pago"**
 
-- [x] Sistema de login com JWT
-- [x] Registro de novos usuários
-- [x] Trial de 3 dias automático
-- [x] Validação de formulários
-- [x] Design profissional (CSS puro)
-- [x] JavaScript vanilla (sem frameworks)
-- [x] Banco de dados MySQL configurado
-- [x] 10 tabelas criadas
+6. Clique em **"Salvar Configurações"**
 
-## 📊 Banco de Dados
+### 5️⃣ Testar Criação de PIX
 
-**Status:** ✅ Conectado e funcionando
+Você pode testar de duas formas:
 
-**Banco:** ultragestor_php  
-**Usuário:** root  
-**Senha:** (vazio)  
-**Porta:** 3306
+**Teste via código PHP:**
+```php
+<?php
+require_once 'app/helpers/MercadoPagoHelper.php';
 
-**Tabelas criadas:**
-- users (usuários/resellers)
-- clients (clientes IPTV)
-- invoices (faturas)
-- payment_methods (métodos de pagamento)
-- payment_transactions (transações PIX)
-- whatsapp_templates (templates de mensagens)
-- whatsapp_logs (logs de envio)
-- panels (painéis Sigma)
-- subscription_plans (planos de assinatura)
-- audit_logs (logs de auditoria)
+$mp = new MercadoPagoHelper();
 
-## 🧪 Testar o Sistema
+$result = $mp->createPixPayment([
+    'amount' => 10.00,
+    'description' => 'Teste de pagamento',
+    'payer_email' => 'teste@email.com',
+    'payer_name' => 'João Teste'
+]);
 
-### 1. Teste de Instalação
-
-Acesse: http://localhost:8000/test.php
-
-Deve mostrar todos os testes em verde ✅
-
-### 2. Criar Nova Conta
-
-1. Acesse: http://localhost:8000/register
-2. Preencha:
-   - Nome: Seu Nome
-   - Email: seu@email.com
-   - Senha: mínimo 6 caracteres
-3. Clique em "Criar Conta Grátis"
-4. Você será logado automaticamente
-5. Trial de 3 dias será ativado
-
-### 3. Fazer Login
-
-1. Acesse: http://localhost:8000/login
-2. Digite email e senha
-3. Clique em "Entrar"
-4. Será redirecionado para /dashboard (ainda não implementado)
-
-## 🔄 Próximas Fases
-
-### ⏳ Fase 4 - Dashboard (Próxima)
-
-- [ ] Dashboard com métricas
-- [ ] Cards de totais (clientes, receitas, lucros)
-- [ ] Gráficos de desempenho
-- [ ] Lista de clientes a vencer
-- [ ] Atualização automática a cada 30s
-
-### ⏳ Fase 5 - Gestão de Clientes
-
-- [ ] Listar clientes
-- [ ] Criar novo cliente
-- [ ] Editar cliente
-- [ ] Excluir cliente
-- [ ] Busca e filtros
-- [ ] Envio automático de WhatsApp
-
-### ⏳ Fase 6 - Sistema de Faturas
-
-- [ ] Listar faturas
-- [ ] Gerar fatura
-- [ ] Link de pagamento PIX
-- [ ] Envio automático por WhatsApp
-- [ ] Confirmação via webhook
-
-## 💡 Dicas
-
-### Parar o Servidor
-
-Pressione `Ctrl + C` no terminal onde o servidor está rodando.
-
-### Ver Logs
-
-Os logs são salvos em:
-```
-storage/logs/error-YYYY-MM-DD.log
+print_r($result);
 ```
 
-### Limpar Cache
-
-```powershell
-Remove-Item storage/cache/* -Force
-```
-
-### Backup do Banco
-
+**Teste via API:**
 ```bash
-mysqldump -u root ultragestor_php > backup.sql
+# Criar arquivo test-pix.php na raiz
+php test-pix.php
 ```
-
-## 🐛 Problemas Comuns
-
-### Erro: "Rota não encontrada"
-
-**Solução:** Certifique-se de acessar com a barra final:
-- ✅ http://localhost:8000/login
-- ❌ http://localhost:8000login
-
-### Erro: "Erro ao conectar ao banco"
-
-**Solução:** Verifique se o MySQL está rodando:
-```bash
-mysql -u root -e "SELECT 'OK' as status;"
-```
-
-### CSS não carrega
-
-**Solução:** Limpe o cache do navegador (Ctrl + Shift + R)
-
-## 📚 Documentação
-
-- **README.md** - Documentação completa
-- **INSTALACAO.md** - Guia de instalação
-- **CHECKLIST.md** - Checklist passo a passo
-- **SOLUCAO-MYSQL.md** - Solução do problema MySQL
-- **.kiro/specs/** - Requisitos e design completo
-
-## 🚀 Deploy para VPS
-
-Quando estiver pronto para produção:
-
-1. Configure Apache/Nginx na VPS
-2. Copie os arquivos do projeto
-3. Configure o banco de dados
-4. Atualize o arquivo `.env`
-5. Configure SSL (Let's Encrypt)
-6. Inicie os processadores Node.js (PM2)
-
-Consulte **README.md** para instruções detalhadas de deploy.
-
-## 🎉 Pronto!
-
-O sistema está funcionando perfeitamente em modo de desenvolvimento!
-
-Agora você pode:
-1. ✅ Fazer login
-2. ✅ Criar novas contas
-3. ✅ Testar a autenticação
-4. ⏳ Aguardar implementação do dashboard
-
-**Próximo passo:** Implementar o Dashboard (Fase 4)
 
 ---
 
-**Desenvolvido com PHP puro + HTML/CSS + JavaScript vanilla**
+## 📋 Arquivos Criados
 
-**Sem frameworks, sem dependências, 100% profissional!**
+✅ **API Principal:**
+- `public/api-payment-methods.php` - Gerenciar configurações
+- `public/api-generate-pix.php` - Gerar PIX para faturas
+- `public/webhook-mercadopago.php` - Receber notificações
+
+✅ **Helper:**
+- `app/helpers/MercadoPagoHelper.php` - Classe para usar MP
+
+✅ **Interface:**
+- `app/views/payment-methods/index.php` - Página admin
+- `public/assets/js/payment-methods.js` - JavaScript
+- `public/assets/css/payment-methods.css` - Estilos
+
+✅ **Banco de Dados:**
+- `database/create-payment-methods-table.sql` - Schema
+- Tabela `payment_methods` já criada ✅
+
+---
+
+## 🎯 Próximos Passos
+
+### Integrar com Faturas
+
+Adicione botão "Gerar PIX" nas faturas:
+
+```javascript
+// No JavaScript de faturas
+async function gerarPix(invoiceId) {
+    const response = await fetch('/api-generate-pix.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ invoice_id: invoiceId })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+        // Mostrar QR Code
+        mostrarQRCode(result.qr_code_base64);
+    }
+}
+```
+
+### Testar Webhook (Produção)
+
+Para testar webhooks, você precisa de uma URL pública. Opções:
+
+1. **Deploy na VPS** (recomendado)
+2. **Usar ngrok** (ver DESENVOLVIMENTO-NGROK.md)
+
+---
+
+## ⚠️ Importante
+
+### Desenvolvimento vs Produção
+
+**Desenvolvimento (agora):**
+- URL: `http://localhost:8000`
+- Credenciais: **Teste** do Mercado Pago
+- Webhooks: Não funcionam (precisa URL pública)
+
+**Produção (VPS):**
+- URL: `https://ultragestor.site`
+- Credenciais: **Produção** do Mercado Pago
+- Webhooks: Funcionam normalmente
+
+### Credenciais de Teste
+
+Use credenciais de **TESTE** para desenvolvimento:
+- Não processam pagamentos reais
+- Não cobram nada
+- Perfeito para testar a integração
+
+### Quando usar Produção
+
+Só use credenciais de **PRODUÇÃO** quando:
+- Estiver na VPS (https://ultragestor.site)
+- Tudo testado e funcionando
+- Pronto para receber pagamentos reais
+
+---
+
+## 🐛 Problemas Comuns
+
+### "Mercado Pago não está configurado"
+
+- Verifique se marcou "Ativar Mercado Pago"
+- Confirme que salvou as configurações
+
+### "Credenciais inválidas"
+
+- Verifique se copiou as credenciais corretas
+- Confirme que não tem espaços extras
+- Teste a conexão antes de salvar
+
+### "Acesso negado"
+
+- Faça login como **admin**
+- Apenas admin pode configurar pagamentos
+
+---
+
+## � Doclumentação Completa
+
+Ver: `MERCADO-PAGO-SETUP.md`
+
+---
+
+**✅ Tudo pronto! Comece configurando em: http://localhost:8000/payment-methods**

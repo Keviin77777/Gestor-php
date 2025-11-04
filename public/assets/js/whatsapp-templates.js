@@ -148,7 +148,49 @@ document.addEventListener('DOMContentLoaded', function () {
     loadUserProfile();
     loadTemplates();
     setupTemplateTypeListener();
+    setupMobileMenu();
 });
+
+/**
+ * Configurar menu mobile
+ */
+function setupMobileMenu() {
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
+
+    if (mobileMenuBtn && sidebar) {
+        mobileMenuBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            sidebar.classList.toggle('active');
+            mobileMenuBtn.classList.toggle('active');
+            
+            // Criar overlay se não existir
+            if (!sidebarOverlay && sidebar.classList.contains('active')) {
+                const overlay = document.createElement('div');
+                overlay.className = 'sidebar-overlay active';
+                overlay.addEventListener('click', function() {
+                    sidebar.classList.remove('active');
+                    mobileMenuBtn.classList.remove('active');
+                    overlay.remove();
+                });
+                document.body.appendChild(overlay);
+            }
+        });
+    }
+
+    // Fechar sidebar ao clicar em um link
+    const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('active');
+                if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
+                if (sidebarOverlay) sidebarOverlay.remove();
+            }
+        });
+    });
+}
 
 /**
  * Carregar perfil do usuário
@@ -224,7 +266,6 @@ async function loadTemplates() {
             showNotification('Erro ao carregar templates: ' + data.error, 'error');
         }
     } catch (error) {
-        console.error('Erro ao carregar templates:', error);
         showNotification('Erro ao carregar templates', 'error');
     }
 }
@@ -577,7 +618,6 @@ async function toggleTemplate(templateId) {
 function viewTemplate(templateId) {
     const template = templates.find(t => t.id === templateId);
     if (!template) {
-        console.error('Template não encontrado:', templateId);
         return;
     }
     
@@ -806,3 +846,5 @@ window.onclick = function(event) {
         closeViewModal();
     }
 }
+
+

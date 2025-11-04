@@ -6,6 +6,7 @@
     <title>Planos de Revendedores - UltraGestor</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="/assets/css/dashboard.css" rel="stylesheet">
+    <link href="/assets/css/admin-responsive.css" rel="stylesheet">
     <style>
         body {
             background: var(--bg-secondary);
@@ -14,18 +15,9 @@
         }
 
         .plans-container {
-            padding: 24px;
+            padding: 0;
             max-width: 1400px;
             margin: 0 auto;
-            margin-left: 280px;
-            transition: margin-left 0.3s ease;
-        }
-
-        @media (max-width: 768px) {
-            .plans-container {
-                margin-left: 0;
-                padding: 16px;
-            }
         }
 
         /* Header */
@@ -537,18 +529,27 @@
     
     <?php include __DIR__ . '/../components/sidebar.php'; ?>
 
-    <div class="plans-container">
-        <!-- Header -->
-        <div class="page-header">
-            <h1 class="page-title">
-                <i class="fas fa-tags"></i>
-                Planos de Revendedores
-            </h1>
-            <button class="btn-new" onclick="openModal()">
-                <i class="fas fa-plus"></i>
-                Novo Plano
-            </button>
-        </div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header Mobile -->
+        <header class="header">
+            <div class="header-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <h2 class="page-title">Planos de Revendedores</h2>
+            </div>
+            <div class="header-right">
+                <button class="btn-new" onclick="openModal()">
+                    <i class="fas fa-plus"></i>
+                    <span class="btn-text">Novo Plano</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="plans-container">
 
         <!-- Loading -->
         <div class="loading" id="loadingSpinner">
@@ -568,7 +569,8 @@
                 Criar Primeiro Plano
             </button>
         </div>
-    </div>
+        </div>
+    </main>
 
     <!-- Modal Plano -->
     <div class="modal" id="planModal">
@@ -620,7 +622,9 @@
         </div>
     </div>
 
+    <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/dashboard.js"></script>
+    <script src="/assets/js/admin-common.js"></script>
     <script>
         let plans = [];
         let editingPlanId = null;
@@ -642,7 +646,6 @@
                     showError(data.error || 'Erro ao carregar planos');
                 }
             } catch (error) {
-                console.error('Erro:', error);
                 showError('Erro ao carregar planos: ' + error.message);
             } finally {
                 hideLoading();
@@ -788,20 +791,22 @@
         }
 
         async function togglePlan(planId, currentStatus) {
-            const action = currentStatus ? 'deactivate' : 'activate';
+            const newStatus = !currentStatus;
             
             try {
-                const response = await fetch(`/api-reseller-plans.php/${planId}/${action}`, {
-                    method: 'PUT'
+                const response = await fetch(`/api-reseller-plans.php/${planId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: newStatus })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    showSuccess(`Plano ${currentStatus ? 'desativado' : 'ativado'}!`);
+                    showSuccess(`Plano ${newStatus ? 'ativado' : 'desativado'}!`);
                     loadPlans();
                 } else {
-                    showError(data.error);
+                    showError(data.error || 'Erro ao alterar status do plano');
                 }
             } catch (error) {
                 showError('Erro: ' + error.message);
@@ -837,30 +842,6 @@
 
         function hideLoading() {
             document.getElementById('loadingSpinner').style.display = 'none';
-        }
-
-        function showSuccess(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed; top: 20px; right: 20px; background: #10b981; color: white;
-                padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-                z-index: 9999; font-weight: 600; animation: slideIn 0.3s ease;
-            `;
-            notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-        }
-
-        function showError(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed; top: 20px; right: 20px; background: #ef4444; color: white;
-                padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-                z-index: 9999; font-weight: 600; animation: slideIn 0.3s ease;
-            `;
-            notification.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 5000);
         }
     </script>
 </body>

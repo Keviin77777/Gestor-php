@@ -2,7 +2,12 @@
     RewriteEngine On
     RewriteBase /
     
-    # Redirecionar tudo para index.php
+    # Não redirecionar arquivos PHP (APIs)
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_FILENAME} \.php$
+    RewriteRule ^(.*)$ - [L]
+    
+    # Redirecionar apenas se não for arquivo ou diretório existente
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php [QSA,L]

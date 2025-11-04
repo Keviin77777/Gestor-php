@@ -247,7 +247,7 @@ CREATE TABLE servers (
     name VARCHAR(255) NOT NULL,
     billing_type ENUM('fixed', 'per_active') NOT NULL DEFAULT 'fixed',
     cost DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-    panel_type VARCHAR(50) NULL,
+    panel_type ENUM('sigma') NULL,
     panel_url VARCHAR(255) NULL,
     reseller_user VARCHAR(100) NULL,
     sigma_token VARCHAR(500) NULL,

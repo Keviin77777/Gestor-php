@@ -75,8 +75,7 @@ async function loadSettings() {
             }
         }
     } catch (error) {
-        console.error('Erro ao carregar configurações:', error);
-    }
+        }
 }
 
 /**
@@ -190,7 +189,6 @@ async function connectWhatsApp() {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('Erro HTTP:', response.status, errorText);
                 throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -229,8 +227,7 @@ async function connectWhatsApp() {
     } catch (error) {
         updateConnectionStatus('error');
         showNotification('❌ Erro ao conectar: ' + error.message, 'error');
-        console.error('Erro na conexão WhatsApp:', error);
-    }
+        }
 }
 
 /**
@@ -320,7 +317,6 @@ async function checkConnectionStatus() {
             }
         }
     } catch (error) {
-        console.error('Erro ao verificar status:', error);
         // Em caso de erro, não alterar o status atual para evitar flickering
     }
 }
@@ -334,7 +330,8 @@ function startQRCheck() {
     }
 
     let attempts = 0;
-    const maxAttempts = 60; // 3 minutos (60 * 3s)
+    const maxAttempts = 100; // 5 minutos (100 * 3s)
+    let lastMessage = '';
 
     qrCheckInterval = setInterval(async () => {
         try {
@@ -344,8 +341,8 @@ function startQRCheck() {
             
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('Erro HTTP ao buscar QR Code:', response.status, errorText);
-                throw new Error(`HTTP ${response.status}`);
+                // Não lançar erro, apenas continuar tentando
+                return;
             }
 
             const data = await response.json();
@@ -363,6 +360,20 @@ function startQRCheck() {
                     // Novo QR Code disponível
                     showQRCode(data.qr_code);
                     attempts = 0; // Resetar tentativas quando receber QR Code
+                    if (lastMessage !== 'qr_ready') {
+                        showNotification('📱 QR Code pronto! Escaneie com seu WhatsApp', 'success');
+                        lastMessage = 'qr_ready';
+                    }
+                } else if (data.message) {
+                    // Mostrar mensagem de progresso
+                    if (lastMessage !== data.message) {
+                        lastMessage = data.message;
+                        
+                        // Mostrar mensagem apenas a cada 10 tentativas para não poluir
+                        if (attempts % 10 === 0) {
+                            showNotification('🔄 ' + data.message, 'info');
+                        }
+                    }
                 }
             } else {
                 console.warn('Erro ao buscar QR Code:', data.error);
@@ -377,21 +388,12 @@ function startQRCheck() {
                 showNotification('⏰ Tempo limite excedido. Tente conectar novamente.', 'warning');
             }
         } catch (error) {
-            console.error('Erro ao verificar QR Code:', error);
-            attempts++;
-            
-            if (attempts >= maxAttempts) {
-                clearInterval(qrCheckInterval);
-                qrCheckInterval = null;
-                hideQRCode();
-                updateConnectionStatus('error');
-                showNotification('❌ Erro na verificação. Tente novamente.', 'error');
-            }
+            // Não incrementar attempts em caso de erro de parsing
         }
     }, 3000);
 
     // Mostrar progresso para o usuário
-    showNotification('🔍 Aguardando QR Code...', 'info');
+    showNotification('🔍 Iniciando conexão...', 'info');
 }
 
 /**
@@ -408,7 +410,7 @@ function showQRCode(qrCode) {
         
         qrCodeImage.innerHTML = `
             <div class="qr-code-wrapper">
-                <img src="${qrSrc}" alt="QR Code WhatsApp" class="qr-image" style="max-width: 100%; height: auto;" onerror="console.error('Erro ao carregar imagem do QR Code')">
+                <img src="${qrSrc}" alt="QR Code WhatsApp" class="qr-image" style="max-width: 100%; height: auto;" onerror="">
                 <div class="qr-overlay">
                     <div class="qr-scanner-line"></div>
                 </div>
@@ -629,11 +631,77 @@ function showNotification(message, type = 'info') {
     }, autoRemoveTime);
 }
 
-// Cleanup ao sair da página
-window.addEventListener('beforeunload', function () {
+/**
+ * Iniciar verificação de QR Code
+ */
+function startQRCheck() {
+    // Limpar intervalo anterior se existir
     if (qrCheckInterval) {
         clearInterval(qrCheckInterval);
     }
+
+    // Verificar QR Code a cada 3 segundos
+    qrCheckInterval = setInterval(async () => {
+        try {
+            const response = await fetch('/api-whatsapp-qr.php');
+            const data = await response.json();
+
+            if (data.success) {
+                if (data.connected) {
+                    // WhatsApp conectado!
+                    clearInterval(qrCheckInterval);
+                    qrCheckInterval = null;
+                    hideQRCode();
+                    updateConnectionStatus('connected');
+                    showNotification('🎉 WhatsApp conectado com sucesso!', 'success');
+                    
+                    // Atualizar informações do perfil
+                    if (data.profile_name) {
+                        const profileName = document.getElementById('profileName');
+                        if (profileName) {
+                            profileName.textContent = data.profile_name;
+                        }
+                    }
+                    if (data.phone_number) {
+                        const phoneNumber = document.getElementById('phoneNumber');
+                        if (phoneNumber) {
+                            phoneNumber.textContent = data.phone_number;
+                        }
+                    }
+                } else if (data.qr_code) {
+                    // Atualizar QR Code
+                    showQRCode(data.qr_code);
+                }
+            }
+        } catch (error) {
+            }
+    }, 3000);
+
+    // Parar verificação após 5 minutos (QR Code expira)
+    setTimeout(() => {
+        if (qrCheckInterval) {
+            clearInterval(qrCheckInterval);
+            qrCheckInterval = null;
+            showNotification('⏰ QR Code expirado. Tente conectar novamente.', 'warning');
+            updateConnectionStatus('disconnected');
+            hideQRCode();
+        }
+    }, 300000); // 5 minutos
+}
+
+/**
+ * Parar verificação de QR Code
+ */
+function stopQRCheck() {
+    if (qrCheckInterval) {
+        clearInterval(qrCheckInterval);
+        qrCheckInterval = null;
+    }
+}
+
+// Cleanup ao sair da página
+window.addEventListener('beforeunload', function () {
+    stopQRCheck();
     if (statusCheckInterval) {
         clearInterval(statusCheckInterval);
     }

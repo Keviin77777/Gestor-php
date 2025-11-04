@@ -1,11 +1,20 @@
 <?php
-header('Content-Type: application/json');
+// Desabilitar exibição de erros para evitar HTML na resposta JSON
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Iniciar output buffering para capturar qualquer output inesperado
+ob_start();
+
+header('Content-Type: application/json; charset=UTF-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
+    ob_end_clean();
     exit();
 }
 
@@ -20,6 +29,9 @@ try {
     // Verificar autenticação
     require_once __DIR__ . '/../app/helpers/auth-helper.php';
     $user = getAuthenticatedUser();
+    
+    // Limpar qualquer output que possa ter sido gerado antes
+    ob_clean();
     
     $method = $_SERVER['REQUEST_METHOD'];
     $path = $_SERVER['REQUEST_URI'];
@@ -64,6 +76,7 @@ try {
         
         if ($stmt->execute([$invoiceId, $user['id']])) {
             $clientRenewed = false;
+            $sigmaResult = null;
             
             // Se o status mudou para "paid", renovar o cliente
             if ($oldStatus !== 'paid') {
@@ -109,6 +122,36 @@ try {
                     
                     $clientRenewed = true;
                     
+                    // Sincronizar renovação com Sigma
+                    try {
+                        error_log("🔄 INICIANDO SINCRONIZAÇÃO SIGMA - RENOVAÇÃO POR PAGAMENTO");
+                        error_log("Cliente ID: {$clientId}");
+                        error_log("Fatura ID: {$invoiceId}");
+                        
+                        require_once __DIR__ . '/../app/helpers/clients-sync-sigma.php';
+                        
+                        // Buscar dados completos do cliente
+                        $clientData = Database::fetch(
+                            "SELECT * FROM clients WHERE id = ? AND reseller_id = ?",
+                            [$clientId, $user['id']]
+                        );
+                        
+                        if ($clientData) {
+                            $sigmaResult = syncClientWithSigmaAfterSave($clientData, $user['id']);
+                            
+                            if ($sigmaResult['success']) {
+                                error_log("✅ Cliente renovado no Sigma com sucesso: " . $sigmaResult['message']);
+                            } else {
+                                error_log("❌ Erro ao renovar cliente no Sigma: " . $sigmaResult['message']);
+                            }
+                        } else {
+                            error_log("⚠️ Cliente não encontrado para sincronização Sigma");
+                            $sigmaResult = ['success' => false, 'message' => 'Cliente não encontrado'];
+                        }
+                    } catch (Exception $e) {
+                        error_log("❌ Exceção na sincronização Sigma: " . $e->getMessage());
+                    }
+                    
                     // Enviar mensagem WhatsApp de renovação
                     try {
                         error_log("=== INICIANDO ENVIO DE WHATSAPP DE RENOVAÇÃO (FATURA) ===");
@@ -133,11 +176,23 @@ try {
                 }
             }
             
-            echo json_encode([
+            $response = [
                 'success' => true,
                 'message' => 'Fatura marcada como paga com sucesso',
                 'client_renewed' => $clientRenewed
-            ]);
+            ];
+            
+            // Adicionar informação sobre sincronização Sigma se disponível
+            if ($clientRenewed && isset($sigmaResult)) {
+                $response['sigma_sync'] = $sigmaResult;
+                if ($sigmaResult['success']) {
+                    $response['message'] .= ' - Cliente renovado no Sigma';
+                } else {
+                    $response['message'] .= ' - Erro na sincronização Sigma: ' . $sigmaResult['message'];
+                }
+            }
+            
+            echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         } else {
             throw new Exception('Erro ao atualizar fatura');
         }
@@ -155,7 +210,7 @@ try {
             echo json_encode([
                 'success' => true,
                 'message' => 'Fatura excluída com sucesso'
-            ]);
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         } else {
             throw new Exception('Erro ao excluir fatura');
         }
@@ -197,13 +252,26 @@ try {
         'success' => true,
         'invoices' => $invoices,
         'summary' => $summary
-    ]);
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     
 } catch (Exception $e) {
+    // Limpar qualquer output antes de enviar erro
+    ob_clean();
     http_response_code(400);
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage()
-    ]);
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+} catch (Error $e) {
+    // Capturar erros fatais também
+    ob_clean();
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Erro interno do servidor: ' . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
+
+// Garantir que não há output extra
+ob_end_flush();
 ?>

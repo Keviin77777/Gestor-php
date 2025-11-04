@@ -4,10 +4,14 @@
  */
 
 // Desabilitar exibição de erros para evitar HTML na resposta JSON
-error_reporting(0);
+error_reporting(E_ALL);
 ini_set('display_errors', 0);
+ini_set('log_errors', 1);
 
-header('Content-Type: application/json');
+// Iniciar output buffering para capturar qualquer output inesperado
+ob_start();
+
+header('Content-Type: application/json; charset=UTF-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -15,33 +19,20 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
+    ob_end_clean();
     exit();
 }
 
-require_once '../app/core/Database.php';
-require_once '../app/helpers/functions.php';
+require_once __DIR__ . '/../app/core/Database.php';
+require_once __DIR__ . '/../app/helpers/functions.php';
 
 try {
-    // Verificar autenticação - método compatível com todos os servidores
-    $authHeader = '';
-    
-    // Tentar diferentes métodos para obter o header Authorization
-    if (function_exists('getallheaders')) {
-        $headers = getallheaders();
-        $authHeader = $headers['Authorization'] ?? '';
-    } else {
-        // Fallback para servidores que não suportam getallheaders()
-        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-    }
-    
-    // Se ainda não encontrou, tentar com header em minúsculas
-    if (empty($authHeader)) {
-        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
-    }
-    
     // Verificar autenticação usando o helper
     require_once __DIR__ . '/../app/helpers/auth-helper.php';
     $user = getAuthenticatedUser();
+    
+    // Limpar qualquer output que possa ter sido gerado antes
+    ob_clean();
 
     $pdo = Database::connect();
     
@@ -74,7 +65,7 @@ try {
                 echo json_encode([
                     'success' => true,
                     'application' => $application
-                ]);
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             } else {
                 // Listar todos os aplicativos
                 $stmt = $pdo->prepare("
@@ -89,7 +80,7 @@ try {
                 echo json_encode([
                     'success' => true,
                     'applications' => $applications
-                ]);
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             }
             break;
 
@@ -141,7 +132,7 @@ try {
                     'success' => true,
                     'message' => 'Aplicativo criado com sucesso',
                     'application' => $application
-                ]);
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             } else {
                 throw new Exception('Erro ao criar aplicativo');
             }
@@ -209,7 +200,7 @@ try {
                     'success' => true,
                     'message' => 'Aplicativo atualizado com sucesso',
                     'application' => $application
-                ]);
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             } else {
                 throw new Exception('Erro ao atualizar aplicativo');
             }
@@ -242,7 +233,7 @@ try {
                 echo json_encode([
                     'success' => true,
                     'message' => 'Aplicativo excluído com sucesso'
-                ]);
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             } else {
                 throw new Exception('Erro ao excluir aplicativo');
             }
@@ -253,11 +244,23 @@ try {
     }
 
 } catch (Exception $e) {
+    // Limpar qualquer output antes de enviar erro
+    ob_clean();
     http_response_code(400);
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage()
-    ]);
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+} catch (Error $e) {
+    // Capturar erros fatais também
+    ob_clean();
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Erro interno do servidor: ' . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
+// Garantir que não há output extra
+ob_end_flush();
 ?>

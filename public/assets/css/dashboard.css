@@ -817,6 +817,86 @@ svg.submenu-arrow,
 /* Table */
 .table-container {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+}
+
+.table-container .table {
+    min-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .table-container .table {
+        min-width: 1000px;
+        width: max-content;
+    }
+    
+    .table-container .table th,
+    .table-container .table td {
+        white-space: nowrap;
+        min-width: 120px;
+    }
+    
+    .table-container .table th:first-child,
+    .table-container .table td:first-child {
+        min-width: 150px;
+        position: sticky;
+        left: 0;
+        background: var(--bg-primary);
+        z-index: 2;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .table-container .table thead th:first-child {
+        z-index: 3;
+    }
+}
+
+/* Scroll Hint */
+.scroll-hint {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    animation: pulse 2s infinite;
+}
+
+.scroll-hint svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.scroll-hint.hidden {
+    display: none !important;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+@media (max-width: 768px) {
+    .scroll-hint {
+        display: flex;
+    }
+    
+    .table-container {
+        border-radius: 8px;
+        box-shadow: inset 0 0 0 1px var(--border);
+    }
 }
 
 .table {
@@ -1487,10 +1567,7 @@ svg.submenu-arrow,
 
     .search-box {
         height: 36px;
-    }
-
-    .search-box {
-        max-width: 200px;
+        max-width: 180px;
     }
 
     .search-icon {
@@ -1545,14 +1622,19 @@ svg.submenu-arrow,
     .btn {
         padding: 0.5rem 1rem;
         font-size: 0.8rem;
+        min-height: 44px; /* Área de toque adequada */
     }
 
     .btn-icon {
         padding: 0.375rem;
+        min-width: 44px;
+        min-height: 44px;
     }
 
     .btn-action {
         padding: 0.375rem;
+        min-width: 44px;
+        min-height: 44px;
     }
 
     /* Table Ultra Compacto */
@@ -1566,6 +1648,7 @@ svg.submenu-arrow,
     .modal-content {
         width: 98%;
         margin: 0.5rem;
+        max-height: calc(100vh - 1rem);
     }
 
     .modal-header h3 {
@@ -1582,6 +1665,68 @@ svg.submenu-arrow,
         left: 0.75rem;
         width: 16px;
         height: 16px;
+    }
+}
+
+/* Mobile Extra Pequeno - 360px e abaixo */
+@media (max-width: 360px) {
+    .main-content {
+        padding: 0.375rem;
+    }
+
+    .header {
+        padding: 0.375rem;
+        gap: 0.375rem;
+    }
+
+    .page-title {
+        font-size: 0.9rem;
+    }
+
+    .mobile-menu-btn,
+    .notification-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0.25rem;
+    }
+
+    .search-box {
+        height: 32px;
+        max-width: 150px;
+    }
+
+    .search-box input {
+        padding: 0.375rem 0.5rem 0.375rem 2rem;
+        font-size: 0.75rem;
+    }
+
+    .search-icon {
+        left: 0.5rem;
+        width: 14px;
+        height: 14px;
+    }
+
+    .stat-card {
+        padding: 0.5rem;
+        gap: 0.375rem;
+    }
+
+    .stat-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .stat-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
     }
 }
 
@@ -1650,15 +1795,120 @@ svg.submenu-arrow,
     }
 }
 
+/* Estilos específicos para dispositivos touch */
+.touch-device .sidebar {
+    -webkit-overflow-scrolling: touch;
+}
+
+.touch-device .btn:hover,
+.touch-device .btn-action:hover,
+.touch-device .nav-item:hover {
+    transform: none;
+}
+
+.touch-device .btn:active,
+.touch-device .btn-action:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+}
+
+/* Prevenir zoom em inputs no iOS */
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="search"],
+    select,
+    textarea {
+        font-size: 16px !important;
+        -webkit-appearance: none;
+        appearance: none;
+        border-radius: 0;
+    }
+}
+
+/* Melhorar visibilidade em telas pequenas */
+@media (max-width: 480px) {
+    /* Garantir que elementos importantes sejam sempre visíveis */
+    .sidebar-footer {
+        position: sticky;
+        bottom: 0;
+        background: var(--bg-primary);
+        border-top: 2px solid var(--border);
+        z-index: 10;
+    }
+    
+    .btn-logout {
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+        background: rgba(239, 68, 68, 0.15) !important;
+        border: 2px solid rgba(239, 68, 68, 0.3) !important;
+        font-weight: 600;
+    }
+    
+    .btn-logout:hover {
+        background: #ef4444 !important;
+        color: white !important;
+        border-color: #ef4444 !important;
+    }
+}
+
+/* Landscape mobile específico */
+@media (max-width: 768px) and (orientation: landscape) and (max-height: 500px) {
+    .sidebar {
+        max-width: 280px;
+    }
+    
+    .sidebar-header {
+        padding: 0.5rem;
+    }
+    
+    .logo {
+        font-size: 1rem;
+    }
+    
+    .nav-item {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+        min-height: 40px;
+    }
+    
+    .submenu-item {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.8rem;
+        min-height: 36px;
+    }
+    
+    .sidebar-footer {
+        padding: 0.5rem;
+    }
+    
+    .user-info {
+        padding: 0.375rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .btn-logout {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+        min-height: 40px;
+    }
+}
+
 /* Sidebar Responsiva Aprimorada */
 @media (max-width: 768px) {
     .sidebar {
         width: 100%;
         max-width: 320px;
+        height: 100vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
     }
 
     .sidebar-header {
         padding: 1rem;
+        flex-shrink: 0;
     }
 
     .logo {
@@ -1667,11 +1917,17 @@ svg.submenu-arrow,
 
     .sidebar-nav {
         padding: 0.75rem;
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .nav-item {
         padding: 0.75rem;
         font-size: 0.9rem;
+        min-height: 48px; /* Área de toque adequada */
+        display: flex;
+        align-items: center;
     }
 
     .nav-icon {
@@ -1682,11 +1938,23 @@ svg.submenu-arrow,
     .submenu-item {
         padding: 0.625rem 0.75rem;
         font-size: 0.85rem;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
+    .sidebar-footer {
+        flex-shrink: 0;
+        padding: 0.75rem;
+        border-top: 1px solid var(--border);
+        background: var(--bg-primary);
+        margin-top: auto;
     }
 
     .user-info {
         padding: 0.625rem;
         gap: 0.5rem;
+        margin-bottom: 0.5rem;
     }
 
     .user-avatar {
@@ -1704,8 +1972,162 @@ svg.submenu-arrow,
     }
 
     .btn-logout {
+        padding: 0.75rem;
+        font-size: 0.85rem;
+        min-height: 48px;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-logout:hover {
+        background: #ef4444;
+        color: white;
+        border-color: #ef4444;
+    }
+
+    .btn-logout svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* Mobile pequeno - sidebar ainda mais compacta */
+@media (max-width: 480px) {
+    .sidebar {
+        max-width: 280px;
+    }
+
+    .sidebar-header {
+        padding: 0.75rem;
+    }
+
+    .logo {
+        font-size: 1.1rem;
+    }
+
+    .sidebar-nav {
+        padding: 0.5rem;
+    }
+
+    .nav-item {
         padding: 0.625rem;
         font-size: 0.85rem;
+        min-height: 44px;
+    }
+
+    .nav-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    .submenu-item {
+        padding: 0.5rem 0.625rem;
+        font-size: 0.8rem;
+        min-height: 40px;
+    }
+
+    .sidebar-footer {
+        padding: 0.5rem;
+    }
+
+    .user-info {
+        padding: 0.5rem;
+        margin-bottom: 0.375rem;
+    }
+
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+
+    .user-name {
+        font-size: 0.75rem;
+    }
+
+    .user-email {
+        font-size: 0.65rem;
+    }
+
+    .btn-logout {
+        padding: 0.625rem;
+        font-size: 0.8rem;
+        min-height: 44px;
+    }
+
+    .btn-logout svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+/* Mobile extra pequeno */
+@media (max-width: 360px) {
+    .sidebar {
+        max-width: 260px;
+    }
+
+    .sidebar-header {
+        padding: 0.625rem;
+    }
+
+    .logo {
+        font-size: 1rem;
+    }
+
+    .nav-item {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+        min-height: 42px;
+    }
+
+    .nav-icon {
+        width: 14px;
+        height: 14px;
+    }
+
+    .submenu-item {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.75rem;
+        min-height: 38px;
+    }
+
+    .user-info {
+        padding: 0.375rem;
+    }
+
+    .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 0.7rem;
+    }
+
+    .user-name {
+        font-size: 0.7rem;
+    }
+
+    .user-email {
+        font-size: 0.6rem;
+    }
+
+    .btn-logout {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+        min-height: 42px;
+    }
+
+    .btn-logout svg {
+        width: 14px;
+        height: 14px;
     }
 }
 
@@ -1865,6 +2287,29 @@ svg.submenu-arrow,
     display: flex;
     gap: 1rem;
     flex: 1;
+    flex-wrap: wrap;
+}
+
+.search-box-filter {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 250px;
+}
+
+.search-box-filter .search-icon {
+    position: absolute;
+    left: 1rem;
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.search-box-filter .search-input {
+    width: 100%;
+    padding-left: 3rem;
 }
 
 .filter-select,
@@ -1876,6 +2321,14 @@ svg.submenu-arrow,
     color: var(--text-primary);
     font-size: 0.875rem;
     min-width: 150px;
+    transition: all 0.2s ease;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .filter-actions {
@@ -4948,12 +5401,26 @@ reções para evitar linhas indesejadas no scroll */
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    min-width: 180px;
 }
 
 .period-select:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.period-select optgroup {
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 0.5rem 0;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+}
+
+.period-select option {
+    padding: 0.5rem;
+    font-size: 0.875rem;
 }
 
 .analytics-metrics {
@@ -9454,5 +9921,252 @@ ORREÇÃO ESPECÍFICA - SALDO LÍQUIDO MOBILE ===== */
     .action-buttons-bar .btn {
         width: 100%;
         padding: 0.875rem 1rem;
+    }
+}
+
+/*
+ ========================================
+   RESPONSIVIDADE MODAL HISTÓRICO DE PAGAMENTOS
+   ======================================== */
+
+/* Tablet - 1024px e abaixo */
+@media (max-width: 1024px) {
+    .payment-history-modal {
+        max-width: 90%;
+        max-height: 85vh;
+    }
+    
+    .payment-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+}
+
+/* Mobile Grande - 768px e abaixo */
+@media (max-width: 768px) {
+    .payment-history-modal {
+        width: 100%;
+        max-width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        margin: 0;
+        border-radius: 0;
+    }
+    
+    .modern-modal.active {
+        align-items: flex-start;
+    }
+    
+    .payment-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .payment-stat-card {
+        padding: 0.75rem;
+    }
+    
+    .payment-stat-label {
+        font-size: 0.7rem;
+    }
+    
+    .payment-stat-value {
+        font-size: 1.25rem;
+    }
+    
+    .payment-stat-sublabel {
+        font-size: 0.7rem;
+    }
+    
+    .payment-filters {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .payment-filter-group {
+        width: 100%;
+    }
+    
+    .payment-filter-group select,
+    .payment-filter-group input {
+        width: 100%;
+    }
+    
+    .payment-actions-header {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .payment-actions-header button {
+        width: 100%;
+    }
+    
+    /* Tabela responsiva - scroll horizontal */
+    .payment-history-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .payment-history-table {
+        min-width: 800px;
+    }
+    
+    .payment-history-table th,
+    .payment-history-table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .payment-action-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0.5rem;
+    }
+    
+    .payment-action-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .modern-modal-footer {
+        padding: 1rem;
+        gap: 0.75rem;
+    }
+}
+
+/* Mobile Médio - 480px e abaixo */
+@media (max-width: 480px) {
+    .modern-modal-header {
+        padding: 1rem;
+    }
+    
+    .modern-modal-title {
+        font-size: 1.125rem;
+    }
+    
+    .modern-modal-subtitle {
+        font-size: 0.8rem;
+    }
+    
+    .modern-modal-close {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .modern-modal-body {
+        padding: 1rem;
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+    }
+    
+    .payment-stat-card {
+        padding: 0.875rem;
+    }
+    
+    .payment-stat-label {
+        font-size: 0.7rem;
+    }
+    
+    .payment-stat-value {
+        font-size: 1.25rem;
+    }
+    
+    .payment-stat-sublabel {
+        font-size: 0.7rem;
+    }
+    
+    .payment-history-table th,
+    .payment-history-table td {
+        padding: 0.625rem 0.375rem;
+        font-size: 0.75rem;
+    }
+    
+    .payment-status {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .payment-method {
+        font-size: 0.75rem;
+    }
+    
+    .payment-method-icon {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .payment-actions {
+        gap: 0.25rem;
+    }
+    
+    .payment-action-btn {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .payment-action-btn svg {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+/* Mobile Pequeno - 360px e abaixo */
+@media (max-width: 360px) {
+    .modern-modal-header {
+        padding: 0.875rem;
+    }
+    
+    .modern-modal-title {
+        font-size: 1rem;
+    }
+    
+    .modern-modal-body {
+        padding: 0.875rem;
+    }
+    
+    .payment-stat-card {
+        padding: 0.75rem;
+    }
+    
+    .payment-stat-value {
+        font-size: 1.125rem;
+    }
+    
+    .payment-history-table {
+        min-width: 700px;
+    }
+    
+    .modern-modal-footer {
+        padding: 0.875rem;
+    }
+    
+    .btn-modern {
+        padding: 0.625rem 1rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Landscape Mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .payment-history-modal {
+        height: 100vh;
+        max-height: 100vh;
+    }
+    
+    .modern-modal-body {
+        max-height: calc(100vh - 140px);
+    }
+    
+    .payment-stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .payment-stat-card {
+        padding: 0.5rem;
+    }
+    
+    .payment-stat-value {
+        font-size: 1rem;
     }
 }

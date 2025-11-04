@@ -3,6 +3,9 @@
  * Endpoints do Dashboard
  */
 
+// Carregar classes necessárias
+require_once __DIR__ . '/../../core/Response.php';
+
 /**
  * Obter métricas do dashboard
  */
@@ -80,23 +83,23 @@ function getMetrics() {
             $params
         )['total'] ?? 0;
         
-        // Clientes a vencer nos próximos 7 dias
+        // Clientes que expiram HOJE
         $expiringClients = Database::fetch(
             "SELECT COUNT(*) as total 
              FROM clients 
              $whereClause 
              AND status = 'active' 
-             AND renewal_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)",
+             AND DATE(renewal_date) = CURDATE()",
             $params
         )['total'] ?? 0;
         
-        // Lista de clientes a vencer
+        // Lista de clientes que expiram hoje
         $expiringClientsList = Database::fetchAll(
             "SELECT id, name, renewal_date, status 
              FROM clients 
              $whereClause 
              AND status = 'active' 
-             AND renewal_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
+             AND DATE(renewal_date) = CURDATE()
              ORDER BY renewal_date ASC 
              LIMIT 5",
             $params
@@ -141,3 +144,6 @@ function getMetrics() {
         Response::error('Erro ao carregar métricas', 500);
     }
 }
+
+// Executar a função
+getMetrics();

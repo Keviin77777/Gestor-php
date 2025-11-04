@@ -7,11 +7,16 @@ const API_URL = window.location.origin;
 
 // Elementos do DOM
 const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
 const messageDiv = document.getElementById('message');
 
 // Event Listeners
 if (loginForm) {
     loginForm.addEventListener('submit', handleLogin);
+}
+
+if (registerForm) {
+    registerForm.addEventListener('submit', handleRegister);
 }
 
 /**
@@ -36,15 +41,34 @@ async function handleLogin(e) {
     hideMessage();
     
     try {
-        const response = await fetch(`${API_URL}/api/auth/login`, {
+        const response = await fetch('/api-auth.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ 
+                action: 'login',
+                email, 
+                password 
+            })
         });
         
-        const data = await response.json();
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
+        const text = await response.text();
+        console.log('Response text:', text);
+        
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('JSON parse error:', e);
+            showMessage('Erro na resposta do servidor', 'error');
+            return;
+        }
+        
+        console.log('Response data:', data);
         
         if (response.ok && data.token) {
             // Salvar token
@@ -63,11 +87,105 @@ async function handleLogin(e) {
             showMessage(data.error || 'Erro ao fazer login', 'error');
         }
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('Login error:', error);
         showMessage('Erro ao conectar com o servidor', 'error');
     } finally {
         submitBtn.disabled = false;
         submitBtn.classList.remove('loading');
+    }
+}
+
+/**
+ * Manipular registro
+ */
+async function handleRegister(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('name').value;
+    const email = document.getElementById('email').value;
+    const whatsapp = document.getElementById('whatsapp').value;
+    const password = document.getElementById('password').value;
+    const passwordConfirm = document.getElementById('password_confirm').value;
+    const terms = document.getElementById('terms').checked;
+    const planId = document.getElementById('plan_id').value;
+    const submitBtn = registerForm.querySelector('button[type="submit"]');
+    
+    // Validação básica
+    if (!name || !email || !whatsapp || !password || !passwordConfirm) {
+        showMessage('Preencha todos os campos obrigatórios', 'error');
+        return;
+    }
+    
+    if (password !== passwordConfirm) {
+        showMessage('As senhas não coincidem', 'error');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showMessage('A senha deve ter no mínimo 6 caracteres', 'error');
+        return;
+    }
+    
+    if (!terms) {
+        showMessage('Você deve aceitar os termos de uso', 'error');
+        return;
+    }
+    
+    // Loading state
+    submitBtn.disabled = true;
+    submitBtn.classList.add('loading');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"></circle></svg> Criando conta...';
+    hideMessage();
+    
+    try {
+        const response = await fetch('/api-auth.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                action: 'register',
+                name, 
+                email, 
+                whatsapp: whatsapp || null,
+                password,
+                plan_id: planId || null
+            })
+        });
+        
+        const text = await response.text();
+        let data;
+        
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('JSON parse error:', e);
+            console.error('Response text:', text);
+            showMessage('Erro na resposta do servidor', 'error');
+            return;
+        }
+        
+        if (response.ok && data.success && data.token) {
+            // Salvar token
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            
+            showMessage(data.message || 'Conta criada com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1000);
+        } else {
+            const errorMsg = data.error || data.message || 'Erro ao criar conta';
+            showMessage(errorMsg, 'error');
+        }
+    } catch (error) {
+        console.error('Register error:', error);
+        showMessage('Erro ao conectar com o servidor', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('loading');
+        submitBtn.innerHTML = originalText;
     }
 }
 
@@ -114,18 +232,26 @@ function getUser() {
  */
 async function logout() {
     try {
-        await fetch(`${API_URL}/api/auth/logout`, {
+        // Chamar API de logout para destruir sessão
+        await fetch('/api-auth.php', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${getToken()}`
-            }
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'logout'
+            })
         });
     } catch (error) {
-        console.error('Erro ao fazer logout:', error);
+        console.error('Erro no logout:', error);
     }
     
+    // Limpar dados locais independente da resposta da API
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionStorage.clear();
+    
+    // Redirecionar para login
     window.location.href = '/login';
 }
 

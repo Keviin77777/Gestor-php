@@ -6,6 +6,10 @@
     <title>Dashboard - UltraGestor</title>
     <link rel="stylesheet" href="/assets/css/dashboard.css">
     <link rel="stylesheet" href="/assets/css/top-servers.css">
+    <link rel="stylesheet" href="/assets/css/metric-cards.css">
+    <link rel="stylesheet" href="/assets/css/header-menu.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <!-- Sidebar Overlay -->
@@ -15,34 +19,8 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Menu">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <h2 class="page-title">Dashboard</h2>
-            </div>
-            <div class="header-right">
-                <div class="search-box" id="searchBox">
-                    <input type="text" placeholder="Buscar..." id="searchInput">
-                    <svg class="search-icon" id="searchIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.35-4.35"></path>
-                    </svg>
-                </div>
-                
-                <button class="notification-btn" id="notificationBtn" type="button" aria-label="Notificações">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                    <span class="notification-badge">3</span>
-                </button>
-            </div>
-        </header>
+        <!-- Header Menu -->
+        <?php include __DIR__ . '/../components/header-menu.php'; ?>
 
         <!-- Estatísticas -->
         <div class="statistics-section">
@@ -183,33 +161,49 @@
                     </div>
                     <div class="analytics-period">
                         <select id="clientsPeriod" class="period-select">
-                            <option value="7">Últimos 7 dias</option>
-                            <option value="15">Últimos 15 dias</option>
-                            <option value="30" selected>Outubro 2025</option>
+                            <optgroup label="📅 Períodos Rápidos">
+                                <option value="today">Hoje</option>
+                                <option value="yesterday">Ontem</option>
+                                <option value="this-week">Esta Semana</option>
+                                <option value="last-week">Semana Passada</option>
+                                <option value="this-month" selected><?php
+                                    $meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                                    echo $meses[date('n') - 1] . ' ' . date('Y');
+                                ?></option>
+                                <option value="last-month">Mês Passado</option>
+                            </optgroup>
+                            <optgroup label="🏳️ Por Quantidade de Dias">
+                                <option value="7">Últimos 7 Dias</option>
+                                <option value="15">Últimos 15 Dias</option>
+                                <option value="30">Últimos 30 Dias</option>
+                                <option value="60">Últimos 60 Dias</option>
+                                <option value="90">Últimos 90 Dias</option>
+                                <option value="180">Últimos 6 Meses</option>
+                            </optgroup>
+                            <optgroup label="📊 Períodos Longos">
+                                <option value="this-quarter">Trimestre Atual</option>
+                                <option value="last-quarter">Trimestre Passado</option>
+                                <option value="this-year">Ano Atual</option>
+                                <option value="last-year">Ano Passado</option>
+                            </optgroup>
                         </select>
                     </div>
                 </div>
                 
-                <div class="analytics-metrics">
-                    <div class="metric-item">
-                        <div class="metric-label">Total</div>
-                        <div class="metric-value" id="totalNewClients">1</div>
-                        <div class="metric-subtitle">clientes</div>
+                <div class="analytics-metrics-grid">
+                    <div class="metric-card metric-card-green">
+                        <div class="metric-card-value" id="totalNewClients">0</div>
+                        <div class="metric-card-label">Total - Mês Atual</div>
                     </div>
-                    <div class="metric-item">
-                        <div class="metric-label">Média/Dia</div>
-                        <div class="metric-value" id="avgNewClients">0.0</div>
-                        <div class="metric-subtitle">últimos 7 dias</div>
+                    
+                    <div class="metric-card metric-card-blue">
+                        <div class="metric-card-value" id="avgNewClients">0.0</div>
+                        <div class="metric-card-label">Média por Dia</div>
                     </div>
-                    <div class="metric-item">
-                        <div class="metric-label">Hoje</div>
-                        <div class="metric-value" id="todayNewClients">0</div>
-                        <div class="metric-subtitle">100.0%</div>
-                    </div>
-                    <div class="metric-item">
-                        <div class="metric-label">Melhor Dia</div>
-                        <div class="metric-value" id="bestDayClients">1</div>
-                        <div class="metric-subtitle">1 de outubro</div>
+                    
+                    <div class="metric-card metric-card-purple">
+                        <div class="metric-card-value" id="bestDayClients">0</div>
+                        <div class="metric-card-label">Melhor Dia</div>
                     </div>
                 </div>
                 
@@ -234,33 +228,49 @@
                     </div>
                     <div class="analytics-period">
                         <select id="paymentsPeriod" class="period-select">
-                            <option value="7">Últimos 7 dias</option>
-                            <option value="15">Últimos 15 dias</option>
-                            <option value="30" selected>Outubro 2025</option>
+                            <optgroup label="📅 Períodos Rápidos">
+                                <option value="today">Hoje</option>
+                                <option value="yesterday">Ontem</option>
+                                <option value="this-week">Esta Semana</option>
+                                <option value="last-week">Semana Passada</option>
+                                <option value="this-month" selected><?php
+                                    $meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                                    echo $meses[date('n') - 1] . ' ' . date('Y');
+                                ?></option>
+                                <option value="last-month">Mês Passado</option>
+                            </optgroup>
+                            <optgroup label="🏳️ Por Quantidade de Dias">
+                                <option value="7">Últimos 7 Dias</option>
+                                <option value="15">Últimos 15 Dias</option>
+                                <option value="30">Últimos 30 Dias</option>
+                                <option value="60">Últimos 60 Dias</option>
+                                <option value="90">Últimos 90 Dias</option>
+                                <option value="180">Últimos 6 Meses</option>
+                            </optgroup>
+                            <optgroup label="📊 Períodos Longos">
+                                <option value="this-quarter">Trimestre Atual</option>
+                                <option value="last-quarter">Trimestre Passado</option>
+                                <option value="this-year">Ano Atual</option>
+                                <option value="last-year">Ano Passado</option>
+                            </optgroup>
                         </select>
                     </div>
                 </div>
                 
-                <div class="analytics-metrics">
-                    <div class="metric-item">
-                        <div class="metric-label">Total</div>
-                        <div class="metric-value" id="totalPayments">R$ 0</div>
-                        <div class="metric-subtitle">recebido</div>
+                <div class="analytics-metrics-grid">
+                    <div class="metric-card metric-card-yellow">
+                        <div class="metric-card-value" id="totalPayments">R$ 0</div>
+                        <div class="metric-card-label">Total - Mês Atual</div>
                     </div>
-                    <div class="metric-item">
-                        <div class="metric-label">Média/Dia</div>
-                        <div class="metric-value" id="avgPayments">R$ 0</div>
-                        <div class="metric-subtitle">últimos 7 dias</div>
+                    
+                    <div class="metric-card metric-card-cyan">
+                        <div class="metric-card-value" id="avgPayments">R$ 0</div>
+                        <div class="metric-card-label">Média por Dia</div>
                     </div>
-                    <div class="metric-item">
-                        <div class="metric-label">Hoje</div>
-                        <div class="metric-value" id="todayPayments">0</div>
-                        <div class="metric-subtitle">0.0%</div>
-                    </div>
-                    <div class="metric-item">
-                        <div class="metric-label">Melhor Dia</div>
-                        <div class="metric-value" id="bestDayPayments">R$ 0</div>
-                        <div class="metric-subtitle">N/A</div>
+                    
+                    <div class="metric-card metric-card-pink">
+                        <div class="metric-card-value" id="bestDayPayments">R$ 0</div>
+                        <div class="metric-card-label">Melhor Dia</div>
                     </div>
                 </div>
                 
@@ -456,7 +466,10 @@
             <!-- Recent Clients -->
             <div class="card">
                 <div class="card-header">
-                    <h3>Clientes a Vencer</h3>
+                    <div>
+                        <h3>Clientes a Vencer</h3>
+                        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">Próximos 7 dias</p>
+                    </div>
                     <a href="/clients" class="btn-link">Ver todos</a>
                 </div>
                 <div class="card-body">
@@ -486,7 +499,6 @@
     <!-- Garantir que sidebar está fechada antes de carregar qualquer script -->
     <script>
         (function() {
-            console.log('Forçando sidebar fechada imediatamente...');
             const sidebar = document.getElementById('sidebar');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -514,20 +526,19 @@
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/auth.js"></script>
     <script src="/assets/js/theme-global.js"></script>
+    <script src="/assets/js/dashboard-periods.js"></script>
+    <script src="/assets/js/dashboard-charts.js"></script>
     <script src="/assets/js/dashboard.js"></script>
     
     <script>
         // Inicialização completa do dashboard mobile
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Dashboard principal: Inicializando funcionalidades mobile...');
-            
             // Mobile Menu Toggle
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
             const sidebar = document.getElementById('sidebar');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
             
             function openSidebar() {
-                console.log('Abrindo sidebar mobile...');
                 if (sidebar) sidebar.classList.add('active');
                 if (sidebarOverlay) sidebarOverlay.classList.add('active');
                 if (mobileMenuBtn) mobileMenuBtn.classList.add('active');
@@ -535,7 +546,6 @@
             }
             
             function closeSidebar() {
-                console.log('Fechando sidebar mobile...');
                 if (sidebar) sidebar.classList.remove('active');
                 if (sidebarOverlay) sidebarOverlay.classList.remove('active');
                 if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
@@ -555,7 +565,6 @@
                 mobileMenuBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Mobile menu button clicado');
                     toggleSidebar();
                 });
                 
@@ -563,7 +572,6 @@
                 mobileMenuBtn.addEventListener('touchend', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Mobile menu touch end');
                     toggleSidebar();
                 });
             }
@@ -612,11 +620,8 @@
             function setupSearchBox() {
                 if (!searchIcon || !searchBox || !searchInput) return;
                 
-                console.log('Configurando search box mobile...');
-                
                 function performSearch() {
                     if (searchInput.value.trim()) {
-                        console.log('Fazendo busca por:', searchInput.value);
                         window.location.href = '/clients?search=' + encodeURIComponent(searchInput.value);
                     } else {
                         searchInput.focus();
@@ -657,8 +662,6 @@
                 notificationBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Notificações clicadas');
-                    
                     // Implementar modal de notificações ou redirecionamento
                     alert('Você tem 3 notificações pendentes!\n\n• Cliente João Silva vence hoje\n• Pagamento recebido: R$ 150,00\n• Novo cliente cadastrado');
                 });
@@ -691,17 +694,13 @@
                 }
             });
             
-            console.log('Dashboard mobile inicializado com sucesso!');
-        });
+            });
         
         // Forçar inicialização do dashboard se necessário
         setTimeout(function() {
-            console.log('Verificando inicialização do dashboard...');
             if (typeof initializeDashboard === 'function') {
-                console.log('Função encontrada, inicializando...');
                 initializeDashboard();
             } else {
-                console.log('Função initializeDashboard não encontrada, carregando dados básicos...');
                 // Carregar dados básicos se a função principal não estiver disponível
                 if (typeof loadUserData === 'function') {
                     loadUserData();

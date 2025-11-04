@@ -402,3 +402,37 @@
     visibility: visible !important;
     opacity: 1 !important;
 }
+
+/* An
+imação de rotação para sincronização */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Estilo para botão de sincronização Sigma */
+#syncSigmaBtn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    display: none; /* Oculto por padrão, será mostrado via JavaScript se houver servidor Sigma */
+}
+
+#syncSigmaBtn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #5568d3 0%, #63408a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+#syncSigmaBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

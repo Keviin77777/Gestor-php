@@ -1,16 +1,26 @@
 <?php
 /**
  * Script para Automação de WhatsApp via Cron Job
- * Execute este script diariamente para enviar lembretes automáticos
+ * 
+ * IMPORTANTE: Execute este script A CADA HORA para que os agendamentos funcionem corretamente
  * 
  * Configuração recomendada do cron job:
- * # Executar 2 vezes por dia (09:00 e 18:00)
- * 0 9,18 * * * /usr/bin/php /caminho/para/o/projeto/scripts/whatsapp-automation-cron.php
+ * # Linux/Mac - Executar a cada hora
+ * 0 * * * * /usr/bin/php /caminho/para/o/projeto/scripts/whatsapp-automation-cron.php
  * 
  * Para Windows (Task Scheduler):
  * - Programa: php.exe
  * - Argumentos: C:\caminho\para\o\projeto\scripts\whatsapp-automation-cron.php
- * - Executar: Diariamente às 09:00 e 18:00
+ * - Gatilho: Diariamente às 00:00
+ * - Repetir a cada: 1 hora
+ * - Duração: 1 dia
+ * 
+ * Como funciona:
+ * 1. Executa a cada hora (00:00, 01:00, 02:00... 23:00)
+ * 2. Verifica se há templates agendados para o horário atual (tolerância de 5 minutos)
+ * 3. Verifica clientes que precisam receber lembretes de vencimento
+ * 4. Envia as mensagens necessárias
+ * 5. Registra tudo no log
  */
 
 // Definir timezone
@@ -62,33 +72,77 @@ function writeLog($message) {
 }
 
 try {
+    $currentHour = date('H:i');
+    $currentDay = strtolower(date('l'));
+    
     writeLog("=== INICIANDO AUTOMAÇÃO WHATSAPP ===");
+    writeLog("Hora atual: $currentHour | Dia: $currentDay");
     
-    // Executar agendamentos personalizados
+    // 1. Executar agendamentos personalizados (templates configurados pelo usuário)
+    writeLog("--- Verificando Templates Agendados ---");
     $scheduledReport = runScheduledTemplates();
-    writeLog("Agendamentos personalizados: {$scheduledReport['messages_sent']} mensagens enviadas");
     
-    // Executar automação de lembretes
+    // Escrever logs de debug
+    if (!empty($scheduledReport['debug'])) {
+        foreach ($scheduledReport['debug'] as $debugMsg) {
+            writeLog("  [DEBUG] $debugMsg");
+        }
+    }
+    
+    if ($scheduledReport['messages_sent'] > 0) {
+        writeLog("✅ Templates agendados: {$scheduledReport['messages_sent']} mensagens enviadas");
+        foreach ($scheduledReport['templates_processed'] as $item) {
+            writeLog("  → Template ID {$item['template_id']} enviado para cliente {$item['client_id']}");
+        }
+    } else {
+        writeLog("ℹ️  Nenhum template agendado para este horário");
+    }
+    
+    // 2. Executar automação de lembretes de vencimento
+    writeLog("--- Verificando Lembretes de Vencimento ---");
+    writeLog("ℹ️  Nota: Lembretes só são enviados se:");
+    writeLog("   • auto_send_reminders = TRUE nas configurações");
+    writeLog("   • Template NÃO tem agendamento ativo (is_scheduled = 0)");
     $report = runWhatsAppReminderAutomation();
-    writeLog("Lembretes enviados: " . $report['reminders_sent']);
-    writeLog("Clientes processados: " . count($report['clients_processed']));
-    writeLog("Erros: " . count($report['errors']));
     
-    // Log detalhado dos clientes processados
-    foreach ($report['clients_processed'] as $client) {
-        writeLog("Cliente: {$client['client_name']} - Template: {$client['template_type']} - Dias: {$client['days_until_renewal']}");
+    if ($report['reminders_sent'] > 0) {
+        writeLog("✅ Lembretes de vencimento: {$report['reminders_sent']} enviados");
+        foreach ($report['clients_processed'] as $client) {
+            writeLog("  → {$client['client_name']} ({$client['template_type']}) - {$client['days_until_renewal']} dias");
+        }
+    } else {
+        writeLog("ℹ️  Nenhum lembrete de vencimento necessário");
     }
     
-    // Log dos erros
-    foreach ($report['errors'] as $error) {
-        writeLog("ERRO - Cliente: {$error['client_name']} - Erro: {$error['error']}");
-    }
-    
+    // Consolidar resultados
     $totalMessages = $scheduledReport['messages_sent'] + $report['reminders_sent'];
-    writeLog("=== AUTOMAÇÃO WHATSAPP FINALIZADA - Total: {$totalMessages} mensagens ===");
+    $totalErrors = count($scheduledReport['errors']) + count($report['errors']);
+    
+    writeLog("--- Resumo ---");
+    writeLog("📊 Total de mensagens enviadas: {$totalMessages}");
+    writeLog("📊 Total de erros: {$totalErrors}");
+    
+    // Log de erros detalhado
+    if ($totalErrors > 0) {
+        writeLog("--- Erros Encontrados ---");
+        
+        foreach ($scheduledReport['errors'] as $error) {
+            if (isset($error['global'])) {
+                writeLog("❌ [Global] {$error['global']}");
+            } else {
+                writeLog("❌ [Template {$error['template_id']}] Cliente {$error['client_id']}: {$error['error']}");
+            }
+        }
+        
+        foreach ($report['errors'] as $error) {
+            writeLog("❌ [Lembrete] {$error['client_name']}: {$error['error']}");
+        }
+    }
+    
+    writeLog("=== AUTOMAÇÃO FINALIZADA ===\n");
     
 } catch (Exception $e) {
-    writeLog("ERRO CRÍTICO: " . $e->getMessage());
+    writeLog("❌ ERRO CRÍTICO: " . $e->getMessage());
     writeLog("Stack trace: " . $e->getTraceAsString());
 } finally {
     // Remover lock

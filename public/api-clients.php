@@ -13,6 +13,12 @@ require_once __DIR__ . '/../app/core/Auth.php';
 // Carregar automação de faturas
 require_once __DIR__ . '/../app/helpers/invoice-automation.php';
 
+// Carregar automação de WhatsApp
+require_once __DIR__ . '/../app/helpers/whatsapp-automation.php';
+
+// Carregar integração Sigma
+require_once __DIR__ . '/../app/helpers/clients-sync-sigma.php';
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Verificar autenticação
@@ -110,11 +116,26 @@ try {
             $clientData = [
                 'id' => $clientId,
                 'name' => $data['name'],
+                'email' => $data['email'] ?? '',
+                'phone' => $data['phone'] ?? '',
+                'username' => $data['username'] ?? '',
+                'iptv_password' => $data['iptv_password'] ?? '',
                 'value' => $data['value'],
-                'renewal_date' => $data['renewal_date']
+                'renewal_date' => $data['renewal_date'],
+                'status' => 'active',
+                'notes' => $data['notes'] ?? ''
             ];
             
+            // 1. Verificar se precisa enviar lembrete de WhatsApp imediatamente (PRIMEIRO!)
+            $whatsappResult = checkAndSendReminderForNewClient($clientId);
+            
+            // 2. Verificar se precisa gerar fatura automática (DEPOIS)
+            error_log("API Clients - Verificando fatura automática para cliente: " . $clientId);
             $invoiceResult = checkAndGenerateInvoiceForClient($clientData);
+            error_log("API Clients - Resultado da fatura: " . json_encode($invoiceResult));
+            
+            // 3. Tentar sincronizar com Sigma automaticamente
+            $sigmaResult = syncClientWithSigmaAfterSave($clientData, $user['id']);
             
             $response = [
                 'success' => true,
@@ -128,6 +149,34 @@ try {
                 $response['invoice_id'] = $invoiceResult['invoice_id'];
                 $response['message'] .= ' - Fatura gerada automaticamente';
             }
+            
+            // Adicionar informação sobre lembrete WhatsApp se foi enviado
+            if ($whatsappResult && $whatsappResult['success']) {
+                $response['whatsapp_sent'] = true;
+                $response['whatsapp_template'] = $whatsappResult['template_type'];
+                $response['message'] .= ' - Lembrete WhatsApp enviado';
+            }
+            
+            // Adicionar informação sobre sincronização Sigma
+            if ($sigmaResult) {
+                $response['sigma_sync'] = $sigmaResult;
+                if ($sigmaResult['success']) {
+                    $response['message'] .= ' - Sincronizado com Sigma';
+                    
+                    // Se foram geradas credenciais, incluir na resposta
+                    if (isset($sigmaResult['username'])) {
+                        $response['sigma_username'] = $sigmaResult['username'];
+                    }
+                    if (isset($sigmaResult['password'])) {
+                        $response['sigma_password'] = $sigmaResult['password'];
+                    }
+                } else {
+                    $response['message'] .= ' - Erro na sincronização Sigma: ' . $sigmaResult['message'];
+                }
+            }
+            
+            // Log para debug
+            error_log("Cliente criado - ID: " . $clientId . " - Sigma Result: " . json_encode($sigmaResult));
             
             echo json_encode($response);
             break;
@@ -167,11 +216,23 @@ try {
                 $clientData = [
                     'id' => $id,
                     'name' => $data['name'],
+                    'email' => $data['email'] ?? '',
+                    'phone' => $data['phone'] ?? '',
+                    'username' => $data['username'] ?? '',
+                    'iptv_password' => $data['iptv_password'] ?? '',
                     'value' => $data['value'],
-                    'renewal_date' => $data['renewal_date']
+                    'renewal_date' => $data['renewal_date'],
+                    'status' => $data['status'] ?? 'active',
+                    'notes' => $data['notes'] ?? ''
                 ];
                 
                 $invoiceResult = checkAndGenerateInvoiceForClient($clientData);
+                
+                // NÃO sincronizar com Sigma na edição para evitar renovações indesejadas
+                // A sincronização acontece apenas:
+                // 1. Na criação do cliente (primeira vez)
+                // 2. Quando uma fatura é marcada como paga (renovação real)
+                // Isso evita que mudanças de data no gestor causem renovações no Sigma
                 
                 $response = [
                     'success' => true,
@@ -184,6 +245,9 @@ try {
                     $response['invoice_id'] = $invoiceResult['invoice_id'];
                     $response['message'] .= ' - Fatura gerada automaticamente';
                 }
+                
+                // Log para debug
+                error_log("Cliente atualizado - ID: " . $id);
                 
                 echo json_encode($response);
             } catch (Exception $e) {
