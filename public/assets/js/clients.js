@@ -30,6 +30,7 @@ function initClients() {
     setupEventListeners();
     loadClients();
     loadPlansAndServers(); // Carregar planos e servidores
+    loadApplications(); // Carregar aplicativos
     loadWhatsAppTemplates(); // Carregar templates do WhatsApp
     checkSigmaServerAndShowButton(); // Verificar se tem servidor Sigma
 }
@@ -155,6 +156,8 @@ async function loadClients() {
 
         if (result.success) {
             clients = result.clients || [];
+            // Após carregar clientes, atualizar o filtro de planos para incluir planos dos clientes
+            populatePlanFilter();
         } else {
             throw new Error('API retornou erro: ' + (result.error || 'Erro desconhecido'));
         }
@@ -183,7 +186,7 @@ function renderClients() {
     if (pageClients.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="11" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <td colspan="12" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                         <circle cx="9" cy="7" r="4"></circle>
@@ -227,6 +230,9 @@ function renderClients() {
                     </td>
                     <td class="col-server">
                         <span class="pro-server-badge">${client.server || 'Principal'}</span>
+                    </td>
+                    <td class="col-application">
+                        <span class="pro-application-badge">${client.application_name || 'N/A'}</span>
                     </td>
                     <td class="col-mac">
                         <div class="pro-mac">${client.mac || 'N/A'}</div>
@@ -288,7 +294,7 @@ function renderClients() {
         } catch (error) {
             return `
                 <tr>
-                    <td colspan="11" style="color: red;">Erro ao carregar cliente: ${client.name}</td>
+                    <td colspan="12" style="color: red;">Erro ao carregar cliente: ${client.name}</td>
                 </tr>
             `;
         }
@@ -323,7 +329,10 @@ function getFilteredClients() {
     // Filtro de plano
     const planFilter = document.getElementById('planFilter')?.value;
     if (planFilter) {
-        filtered = filtered.filter(client => client.plan.toLowerCase() === planFilter);
+        filtered = filtered.filter(client => {
+            const clientPlan = client.plan ? client.plan.trim() : '';
+            return clientPlan.toLowerCase() === planFilter.toLowerCase();
+        });
     }
 
     return filtered;
@@ -403,6 +412,7 @@ function clearFilters() {
  */
 let availablePlans = [];
 let availableServers = [];
+let availableApplications = [];
 
 async function loadPlansAndServers() {
     try {
@@ -413,8 +423,15 @@ async function loadPlansAndServers() {
         const plansResponse = await fetch('/api-plans.php');
         const plansResult = await plansResponse.json();
 
-        if (plansResult.success) {
+        if (plansResult.success && plansResult.plans) {
             availablePlans = plansResult.plans || [];
+            // Preencher filtro de planos após carregar
+            populatePlanFilter();
+        } else {
+            console.error('Erro ao carregar planos:', plansResult.error || 'Resposta inválida');
+            availablePlans = [];
+            // Mesmo com erro, tentar preencher o filtro com planos vazios
+            populatePlanFilter();
         }
 
         // Carregar servidores - usar a rota correta
@@ -441,11 +458,14 @@ async function loadPlansAndServers() {
     } catch (error) {
         console.error('Erro ao carregar planos/servidores:', error);
         availableServers = [];
+        availablePlans = [];
+        // Mesmo com erro, tentar preencher o filtro
+        populatePlanFilter();
     }
 }
 
 /**
- * Preencher dropdown de planos
+ * Preencher dropdown de planos no modal
  */
 function populatePlansDropdown() {
     const planSelect = document.getElementById('clientPlan');
@@ -470,6 +490,42 @@ function populatePlansDropdown() {
     customOption.value = 'Personalizado';
     customOption.textContent = 'Personalizado';
     planSelect.appendChild(customOption);
+}
+
+/**
+ * Preencher filtro de planos na barra de filtros
+ */
+function populatePlanFilter() {
+    const planFilter = document.getElementById('planFilter');
+    if (!planFilter) return;
+
+    // Limpar opções existentes, mantendo apenas "Todos os planos"
+    planFilter.innerHTML = '<option value="">Todos os planos</option>';
+
+    // Coletar planos únicos de duas fontes:
+    // 1. Planos disponíveis na API
+    const planNamesFromAPI = availablePlans && availablePlans.length > 0 
+        ? [...new Set(availablePlans.map(plan => plan.name).filter(name => name))] 
+        : [];
+    
+    // 2. Planos já usados pelos clientes (para incluir planos antigos que podem não estar mais na lista)
+    const planNamesFromClients = clients && clients.length > 0
+        ? [...new Set(clients.map(client => client.plan).filter(plan => plan && plan.trim() !== ''))]
+        : [];
+    
+    // Combinar e remover duplicatas
+    const allUniquePlanNames = [...new Set([...planNamesFromAPI, ...planNamesFromClients])];
+    
+    // Ordenar alfabeticamente
+    allUniquePlanNames.sort();
+    
+    // Adicionar ao filtro
+    allUniquePlanNames.forEach(planName => {
+        const option = document.createElement('option');
+        option.value = planName;
+        option.textContent = planName;
+        planFilter.appendChild(option);
+    });
 }
 
 /**
@@ -511,6 +567,75 @@ async function populateServersDropdown() {
 }
 
 /**
+ * Carregar aplicativos do banco de dados
+ */
+async function loadApplications() {
+    try {
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch('/api-applications.php', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            availableApplications = result.applications || [];
+        } else {
+            console.error('Erro ao carregar aplicativos:', result.error);
+            availableApplications = [];
+        }
+    } catch (error) {
+        console.error('Erro ao carregar aplicativos:', error);
+        availableApplications = [];
+    }
+}
+
+/**
+ * Preencher dropdown de aplicativos
+ */
+async function populateApplicationsDropdown() {
+    const applicationSelect = document.getElementById('clientApplication');
+    if (!applicationSelect) return;
+
+    // Limpar opções existentes
+    applicationSelect.innerHTML = '<option value="">Carregando aplicativos...</option>';
+
+    // Se não há aplicativos carregados, tentar carregar novamente
+    if (!availableApplications || availableApplications.length === 0) {
+        await loadApplications();
+    }
+
+    // Limpar e adicionar opção padrão
+    applicationSelect.innerHTML = '<option value="">Selecionar aplicativo</option>';
+
+    // Adicionar aplicativos do banco de dados
+    if (availableApplications && availableApplications.length > 0) {
+        availableApplications.forEach(application => {
+            const option = document.createElement('option');
+            option.value = application.id;
+            option.textContent = application.name;
+            applicationSelect.appendChild(option);
+        });
+    } else {
+        // Se ainda não há aplicativos, mostrar mensagem
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Nenhum aplicativo disponível';
+        option.disabled = true;
+        applicationSelect.appendChild(option);
+    }
+}
+
+/**
  * Abrir modal de adicionar cliente
  */
 async function openAddClientModal() {
@@ -528,6 +653,7 @@ async function openAddClientModal() {
     // Preencher dropdowns com dados reais
     populatePlansDropdown();
     await populateServersDropdown();
+    await populateApplicationsDropdown();
 
     document.getElementById('clientModal').classList.add('active');
 }
@@ -578,6 +704,7 @@ async function editClient(clientId) {
     // Preencher dropdowns com dados reais primeiro
     populatePlansDropdown();
     await populateServersDropdown();
+    await populateApplicationsDropdown();
 
     // Usar setTimeout para garantir que os dropdowns foram preenchidos
     setTimeout(() => {
@@ -588,9 +715,10 @@ async function editClient(clientId) {
         document.getElementById('clientUsername').value = client.username || '';
         document.getElementById('clientIptvPassword').value = client.iptv_password || '';
 
-        // Preencher plano e servidor
+        // Preencher plano, servidor e aplicativo
         const planSelect = document.getElementById('clientPlan');
         const serverSelect = document.getElementById('clientServer');
+        const applicationSelect = document.getElementById('clientApplication');
 
         if (planSelect) {
             planSelect.value = client.plan || '';
@@ -598,6 +726,11 @@ async function editClient(clientId) {
 
         if (serverSelect) {
             serverSelect.value = client.server || '';
+        }
+
+        if (applicationSelect) {
+            // O client.application_id pode estar no formato numérico ou string
+            applicationSelect.value = client.application_id || '';
         }
 
         document.getElementById('clientValue').value = client.value || '';
@@ -837,7 +970,7 @@ function showNotification(message, type = 'info') {
 
  * Editar cliente
  */
-function editClient(clientId) {
+async function editClient(clientId) {
     const client = clients.find(c => c.id == clientId);
     if (!client) {
         alert('Cliente não encontrado!');
@@ -850,7 +983,8 @@ function editClient(clientId) {
 
     // Preencher dropdowns com dados reais primeiro
     populatePlansDropdown();
-    populateServersDropdown();
+    await populateServersDropdown();
+    await populateApplicationsDropdown();
 
     // Usar setTimeout para garantir que os dropdowns foram preenchidos
     setTimeout(() => {
@@ -861,9 +995,10 @@ function editClient(clientId) {
         document.getElementById('clientUsername').value = client.username || '';
         document.getElementById('clientIptvPassword').value = client.iptv_password || '';
 
-        // Preencher plano e servidor
+        // Preencher plano, servidor e aplicativo
         const planSelect = document.getElementById('clientPlan');
         const serverSelect = document.getElementById('clientServer');
+        const applicationSelect = document.getElementById('clientApplication');
 
         if (planSelect) {
             planSelect.value = client.plan || '';
@@ -871,6 +1006,11 @@ function editClient(clientId) {
 
         if (serverSelect) {
             serverSelect.value = client.server || '';
+        }
+
+        if (applicationSelect) {
+            // O client.application_id pode estar no formato numérico ou string
+            applicationSelect.value = client.application_id || '';
         }
 
         document.getElementById('clientValue').value = client.value || '';
@@ -1084,6 +1224,7 @@ async function openClientModal() {
     // Preencher dropdowns com dados reais
     populatePlansDropdown();
     await populateServersDropdown();
+    await populateApplicationsDropdown();
 
     // Abrir modal
     const modal = document.getElementById('clientModal');

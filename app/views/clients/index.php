@@ -87,9 +87,7 @@
                 
                 <select class="filter-select" id="planFilter">
                     <option value="">Todos os planos</option>
-                    <option value="basic">Básico</option>
-                    <option value="premium">Premium</option>
-                    <option value="vip">VIP</option>
+                    <!-- Planos serão carregados dinamicamente via JavaScript -->
                 </select>
                 
                 <input type="date" class="filter-input" id="dateFilter" placeholder="Data de vencimento">
@@ -121,6 +119,7 @@
                                 <th>WHATSAPP</th>
                                 <th>VENCIMENTO</th>
                                 <th>SERVIDOR</th>
+                                <th>APLICATIVO</th>
                                 <th>MAC</th>
                                 <th>NOTIFICAÇÕES</th>
                                 <th>PLANO</th>
@@ -421,6 +420,14 @@
                             </select>
                         </div>
 
+                        <!-- Aplicativo -->
+                        <div class="modern-form-group">
+                            <label for="clientApplication">Aplicativo</label>
+                            <select id="clientApplication" name="application_id">
+                                <option value="">Carregando aplicativos...</option>
+                            </select>
+                        </div>
+
                         <!-- MAC -->
                         <div class="modern-form-group">
                             <label for="clientMac">MAC</label>
@@ -554,5 +561,8 @@
     <script src="/assets/js/theme-global.js"></script>
     <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/clients.js"></script>
+
+    <!-- Protection Script -->
+    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

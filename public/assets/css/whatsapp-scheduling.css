@@ -1,0 +1,260 @@
+/* WhatsApp Scheduling - Estilos Específicos */
+
+/* Garantir que os botões do modal tenham os estilos corretos */
+#schedulingModal .modal-footer .btn {
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    border: none !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    transition: all 0.2s ease !important;
+    text-decoration: none !important;
+    min-width: 100px !important;
+    justify-content: center !important;
+}
+
+#schedulingModal .modal-footer .btn-primary {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+}
+
+#schedulingModal .modal-footer .btn-primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4) !important;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+}
+
+#schedulingModal .modal-footer .btn-secondary {
+    background: #334155 !important;
+    color: #f1f5f9 !important;
+    border: 1px solid #475569 !important;
+    box-shadow: none !important;
+}
+
+#schedulingModal .modal-footer .btn-secondary:hover {
+    background: #1e293b !important;
+    border-color: #6366f1 !important;
+    color: #f1f5f9 !important;
+}
+
+/* Garantir que o modal seja exibido corretamente */
+#schedulingModal {
+    display: none !important;
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(4px) !important;
+    z-index: 99999 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 2rem !important;
+}
+
+#schedulingModal[style*="display: flex"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+#schedulingModal .modal-content {
+    background: #1e293b !important;
+    border-radius: 20px !important;
+    width: 100% !important;
+    max-width: 900px !important;
+    max-height: 90vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid #334155 !important;
+}
+
+#schedulingModal .modal-footer {
+    padding: 1.5rem 2rem !important;
+    border-top: 1px solid #334155 !important;
+    background: #0f172a !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 1rem !important;
+}
+
+/* Estilos para os checkboxes de dias */
+.day-checkbox-modern {
+    display: flex !important;
+    align-items: center !important;
+    cursor: pointer !important;
+    user-select: none !important;
+}
+
+.day-checkbox-modern input[type="checkbox"] {
+    display: none !important;
+}
+
+.day-box {
+    flex: 1 !important;
+    padding: 0.75rem 1rem !important;
+    background: #0f172a !important;
+    border: 2px solid #334155 !important;
+    border-radius: 8px !important;
+    text-align: center !important;
+    font-size: 0.8125rem !important;
+    font-weight: 600 !important;
+    color: #cbd5e1 !important;
+    transition: all 0.3s ease !important;
+}
+
+.day-checkbox-modern input[type="checkbox"]:checked + .day-box {
+    background: rgba(99, 102, 241, 0.1) !important;
+    border-color: #6366f1 !important;
+    color: #6366f1 !important;
+}
+
+.day-checkbox-modern:hover .day-box {
+    background: #334155 !important;
+    border-color: #6366f1 !important;
+}
+
+/* Estilos para o formulário */
+.form-label {
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    color: #f1f5f9 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.form-control {
+    width: 100% !important;
+    padding: 0.75rem 1rem !important;
+    background: #0f172a !important;
+    border: 2px solid #334155 !important;
+    border-radius: 8px !important;
+    color: #f1f5f9 !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+}
+
+.form-control:focus {
+    outline: none !important;
+    border-color: #6366f1 !important;
+    background: #334155 !important;
+}
+
+.time-input {
+    width: 100% !important;
+    padding: 0.75rem 1rem !important;
+    background: #0f172a !important;
+    border: 2px solid #334155 !important;
+    border-radius: 8px !important;
+    color: #f1f5f9 !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+}
+
+.time-input:focus {
+    outline: none !important;
+    border-color: #6366f1 !important;
+    background: #334155 !important;
+}
+
+/* Melhorar visibilidade do ícone nativo do input time */
+.time-input::-webkit-calendar-picker-indicator {
+    background-color: #6366f1 !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    padding: 4px !important;
+    filter: invert(1) !important;
+}
+
+.time-input::-webkit-calendar-picker-indicator:hover {
+    background-color: #4f46e5 !important;
+}
+
+/* Para Firefox */
+.time-input::-moz-calendar-picker-indicator {
+    background-color: #6366f1 !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    padding: 4px !important;
+    filter: invert(1) !important;
+}
+
+.time-input-wrapper {
+    position: relative !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #schedulingModal .modal-footer {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+    }
+    
+    #schedulingModal .modal-footer .btn {
+        width: 100% !important;
+    }
+}
+
+/* Estilos adicionais para melhor visibilidade do input time */
+.time-input {
+    /* Garantir que o texto seja visível */
+    color: #f1f5f9 !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: textfield !important;
+    appearance: none !important;
+}
+
+/* Estilizar o texto do input time */
+.time-input::-webkit-datetime-edit {
+    color: #f1f5f9 !important;
+    padding: 0 !important;
+}
+
+.time-input::-webkit-datetime-edit-fields-wrapper {
+    background: transparent !important;
+}
+
+.time-input::-webkit-datetime-edit-text {
+    color: #cbd5e1 !important;
+    padding: 0 4px !important;
+}
+
+.time-input::-webkit-datetime-edit-hour-field,
+.time-input::-webkit-datetime-edit-minute-field {
+    background: rgba(99, 102, 241, 0.1) !important;
+    border-radius: 4px !important;
+    padding: 2px 4px !important;
+    color: #f1f5f9 !important;
+    font-weight: 600 !important;
+}
+
+.time-input::-webkit-datetime-edit-hour-field:focus,
+.time-input::-webkit-datetime-edit-minute-field:focus {
+    background: rgba(99, 102, 241, 0.2) !important;
+    outline: none !important;
+}
+
+/* Melhorar contraste para melhor visibilidade */
+.form-section .form-label {
+    color: #e2e8f0 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+
+.time-input-wrapper {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border-radius: 8px !important;
+    padding: 2px !important;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+}
+
+.time-input-wrapper:hover {
+    border-color: rgba(99, 102, 241, 0.5) !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
+}

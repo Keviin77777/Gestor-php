@@ -169,5 +169,8 @@
     <script src="/assets/js/common.js"></script>
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/whatsapp-templates.js"></script>
+
+    <!-- Protection Script -->
+    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

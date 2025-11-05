@@ -39,8 +39,8 @@ $isAdmin = ($userRole === 'admin');
 
         <!-- Plan Expiry (apenas revendedores) -->
         <?php if (!$isAdmin): ?>
-        <div class="header-status-item plan-item">
-            <div class="status-icon active">
+        <div class="header-status-item plan-item" id="planExpiryHeader">
+            <div class="status-icon active" id="planExpiryIcon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                     <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -48,8 +48,8 @@ $isAdmin = ($userRole === 'admin');
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
             </div>
-            <span class="status-text">
-                Vencimento do Acesso: <strong>30 dias</strong>
+            <span class="status-text" id="planExpiryText">
+                Vencimento do Acesso: <strong id="planExpiryDays">Carregando...</strong>
             </span>
         </div>
         <?php endif; ?>
@@ -122,14 +122,6 @@ $isAdmin = ($userRole === 'admin');
                         <circle cx="12" cy="7" r="4"></circle>
                     </svg>
                     Meu Perfil
-                </a>
-
-                <a href="/settings" class="dropdown-menu-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M12 1v6m0 6v6"></path>
-                    </svg>
-                    Configurações
                 </a>
 
                 <?php if (!$isAdmin): ?>
@@ -416,4 +408,93 @@ loadNotifications();
 
 // Atualizar notificações a cada 2 minutos
 setInterval(loadNotifications, 120000);
+
+// Função para atualizar vencimento do plano no header
+async function updatePlanExpiry() {
+    const planExpiryDays = document.getElementById('planExpiryDays');
+    const planExpiryIcon = document.getElementById('planExpiryIcon');
+    const planExpiryHeader = document.getElementById('planExpiryHeader');
+    
+    if (!planExpiryDays || !planExpiryIcon || !planExpiryHeader) {
+        return; // Elementos não existem (usuário é admin)
+    }
+    
+    try {
+        const response = await fetch('/api-profile.php', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Erro ao buscar dados do plano');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.plan) {
+            const days = data.plan.days_remaining || 0;
+            const isExpired = data.plan.is_expired || false;
+            const isTrial = data.plan.is_trial || false;
+            
+            // Atualizar texto dos dias
+            if (days < 0) {
+                planExpiryDays.textContent = `Vencido há ${Math.abs(days)} ${Math.abs(days) === 1 ? 'dia' : 'dias'}`;
+            } else if (days === 0) {
+                planExpiryDays.textContent = 'Vence hoje';
+            } else if (days === 1) {
+                planExpiryDays.textContent = '1 dia';
+            } else {
+                planExpiryDays.textContent = `${days} dias`;
+            }
+            
+            // Atualizar ícone e cor baseado no status
+            planExpiryIcon.className = 'status-icon';
+            
+            if (isExpired || days < 0) {
+                planExpiryIcon.classList.add('expired');
+            } else if (days <= 7) {
+                planExpiryIcon.classList.add('warning');
+            } else if (isTrial) {
+                planExpiryIcon.classList.add('warning');
+            } else {
+                planExpiryIcon.classList.add('active');
+            }
+        } else {
+            // Sem plano ou erro
+            planExpiryDays.textContent = 'Sem plano';
+            planExpiryIcon.className = 'status-icon warning';
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar vencimento do plano:', error);
+        planExpiryDays.textContent = 'Erro ao carregar';
+        planExpiryIcon.className = 'status-icon warning';
+    }
+}
+
+// Atualizar vencimento imediatamente ao carregar
+updatePlanExpiry();
+
+// Atualizar vencimento a cada minuto (60000ms) para refletir mudanças de dias
+setInterval(updatePlanExpiry, 60000);
+
+// Atualizar quando a página ganha foco (quando o usuário volta para a aba)
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        updatePlanExpiry();
+    }
+});
+
+// Atualizar também quando a página fica visível após um tempo
+let lastUpdateTime = Date.now();
+setInterval(function() {
+    const now = Date.now();
+    // Se passou mais de 5 minutos desde a última atualização e a página está visível
+    if (now - lastUpdateTime > 300000 && !document.hidden) {
+        updatePlanExpiry();
+        lastUpdateTime = now;
+    }
+}, 60000);
 </script>

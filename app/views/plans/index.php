@@ -158,5 +158,8 @@
     <script src="/assets/js/theme-global.js"></script>
     <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/plans.js"></script>
+
+    <!-- Protection Script -->
+    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

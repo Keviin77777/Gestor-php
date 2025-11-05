@@ -86,6 +86,17 @@
     border: 1px solid var(--border);
 }
 
+.header-status-item .status-text {
+    font-size: 0.875rem !important;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.header-status-item .status-text strong {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 /* Ícone de status no header - mais específico para sobrescrever whatsapp.css */
 .top-header-menu .header-status-item .status-icon {
     width: 32px !important;
@@ -141,6 +152,37 @@
 
 .status-icon.expired {
     background: #ef4444;
+}
+
+/* Garantir que o ícone do plano tenha sempre o mesmo estilo */
+.header-status-item.plan-item .status-icon {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0;
+    background: #3b82f6 !important;
+    transition: background-color 0.3s ease;
+}
+
+.header-status-item.plan-item .status-icon.active {
+    background: #3b82f6 !important;
+}
+
+.header-status-item.plan-item .status-icon.warning {
+    background: #f59e0b !important;
+}
+
+.header-status-item.plan-item .status-icon.expired {
+    background: #ef4444 !important;
+}
+
+.header-status-item.plan-item .status-icon svg {
+    width: 16px !important;
+    height: 16px !important;
+    color: white !important;
 }
 
 .status-text {

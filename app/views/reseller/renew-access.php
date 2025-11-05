@@ -6,22 +6,20 @@
     <title>Renovar Acesso - UltraGestor</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="/assets/css/dashboard.css" rel="stylesheet">
+    <link href="/assets/css/header-menu.css" rel="stylesheet">
     <style>
         /* Renovar Acesso - Design Profissional Melhorado */
         .renew-container {
             padding: 2rem;
             max-width: 1400px;
             margin: 0 auto;
-            margin-left: var(--sidebar-width);
-            transition: margin-left 0.3s ease;
-            min-height: 100vh;
+            min-height: calc(100vh - var(--header-height));
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
         }
         
         @media (max-width: 768px) {
             .renew-container {
-                margin-left: 0;
                 padding: 1rem;
             }
         }
@@ -127,6 +125,43 @@
         .days-remaining.danger {
             background: rgba(239, 68, 68, 0.9);
             color: white;
+        }
+
+        /* Botão Renovar no Card Atual */
+        .btn-renew-current {
+            margin-top: 1.5rem;
+            padding: 0.625rem 1.75rem;
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--primary);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-renew-current:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn-renew-current:active {
+            transform: translateY(0);
+        }
+
+        .btn-renew-current i {
+            font-size: 1rem;
         }
 
         /* Plans Section Melhorada */
@@ -428,7 +463,7 @@
             font-size: 1.125rem;
         }
 
-        /* Loading Melhorado */
+        /* Loading Melhorado - Centralizado */
         .loading-spinner {
             display: flex;
             flex-direction: column;
@@ -436,6 +471,9 @@
             align-items: center;
             padding: 4rem 2rem;
             text-align: center;
+            min-height: 60vh;
+            width: 100%;
+            margin: 0 auto;
         }
 
         .spinner {
@@ -522,6 +560,16 @@
             .days-remaining {
                 padding: 0.375rem 0.75rem;
                 font-size: 0.8rem;
+            }
+
+            .btn-renew-current {
+                margin-top: 1rem;
+                padding: 0.625rem 1.25rem;
+                font-size: 0.8125rem;
+            }
+
+            .btn-renew-current i {
+                font-size: 0.9375rem;
             }
 
             /* Plans Grid Mobile */
@@ -669,6 +717,16 @@
                 gap: 0.25rem;
             }
 
+            .btn-renew-current {
+                margin-top: 0.75rem;
+                padding: 0.5rem 1rem;
+                font-size: 0.75rem;
+            }
+
+            .btn-renew-current i {
+                font-size: 0.875rem;
+            }
+
             /* Section Title */
             .section-title {
                 font-size: 1.25rem;
@@ -763,6 +821,8 @@
             /* Loading Mobile */
             .loading-spinner {
                 padding: 2rem;
+                min-height: 40vh;
+                margin: 0 auto;
             }
 
             .spinner {
@@ -809,6 +869,17 @@
                 padding: 0.5rem;
                 font-size: 0.75rem;
             }
+
+            .btn-renew-current {
+                margin-top: 0.5rem;
+                padding: 0.5rem 0.875rem;
+                font-size: 0.7rem;
+                gap: 0.375rem;
+            }
+
+            .btn-renew-current i {
+                font-size: 0.8rem;
+            }
         }
     </style>
 </head>
@@ -818,7 +889,13 @@
     
     <?php include __DIR__ . '/../components/sidebar.php'; ?>
     
-    <div class="renew-container">
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header Menu -->
+        <?php include __DIR__ . '/../components/header-menu.php'; ?>
+        
+        <!-- Page Content -->
+        <div class="renew-container">
         <!-- Header -->
         <div class="page-header">
             <h1 class="page-title">
@@ -879,9 +956,13 @@
                 </div>
             </div>
         </div>
-    </div>
+        </div>
+    </main>
 
     <!-- Scripts -->
+    <script src="/assets/js/common.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/theme-global.js"></script>
     <script src="/assets/js/dashboard.js"></script>
     <script src="/assets/js/mobile-responsive.js"></script>
     <script>
@@ -1040,6 +1121,18 @@
                 planName = 'Trial 3 Dias';
             }
             
+            // Verificar se o plano atual é trial
+            const isTrialPlan = currentUser.current_plan_id === 'plan-trial' || 
+                               (availablePlans && availablePlans.find(p => p.id === currentUser.current_plan_id)?.is_trial);
+            
+            // Botão de renovação (apenas para planos não-trial)
+            const renewButton = !isTrialPlan ? `
+                <button class="btn-renew-current" onclick="renewCurrentPlan()">
+                    <i class="fas fa-sync-alt"></i>
+                    Renovar Plano
+                </button>
+            ` : '';
+            
             content.innerHTML = `
                 <div class="current-plan-title">Seu Plano Atual</div>
                 <div class="current-plan-name">${planName}</div>
@@ -1050,7 +1143,32 @@
                     ${daysIcon}
                     ${daysText}
                 </div>
+                ${renewButton}
             `;
+        }
+        
+        // Renovar plano atual
+        async function renewCurrentPlan() {
+            if (!currentUser || !availablePlans) {
+                showError('Dados não carregados. Tente novamente.');
+                return;
+            }
+            
+            // Buscar o plano atual nos planos disponíveis
+            const currentPlan = availablePlans.find(p => p.id === currentUser.current_plan_id);
+            
+            if (!currentPlan) {
+                showError('Plano atual não encontrado. Entre em contato com o suporte.');
+                return;
+            }
+            
+            if (currentPlan.is_trial) {
+                showInfo('O plano trial não pode ser renovado. Escolha um plano pago abaixo.');
+                return;
+            }
+            
+            // Gerar PIX para renovação do mesmo plano
+            await generatePixPayment(currentPlan);
         }
 
         // Renderizar grid de planos
@@ -1568,5 +1686,8 @@
         `;
         document.head.appendChild(style);
     </script>
+
+    <!-- Protection Script -->
+    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

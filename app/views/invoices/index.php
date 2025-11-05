@@ -191,5 +191,8 @@
             }
         }
     </script>
+
+    <!-- Protection Script -->
+    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

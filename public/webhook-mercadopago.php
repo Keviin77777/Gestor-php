@@ -37,8 +37,54 @@ try {
         exit;
     }
     
-    // Processar notificação
-    $mp = new MercadoPagoHelper();
+    // Extrair payment ID do webhook
+    $paymentId = $data['data']['id'] ?? null;
+    
+    if (!$paymentId) {
+        file_put_contents($logFile, "Erro: Payment ID não encontrado no webhook\n", FILE_APPEND);
+        http_response_code(200);
+        exit;
+    }
+    
+    // Primeiro, tentar identificar o revendedor através do external_reference
+    // Para isso, vamos buscar na tabela invoice_payments
+    $stmt = $db->prepare("
+        SELECT ip.*, i.reseller_id 
+        FROM invoice_payments ip
+        JOIN invoices i ON ip.invoice_id = i.id
+        WHERE ip.payment_id = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$paymentId]);
+    $paymentRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $resellerId = null;
+    $mpCredentials = null;
+    
+    if ($paymentRecord) {
+        // Encontrou o pagamento na nossa base, usar credenciais do revendedor
+        $resellerId = $paymentRecord['reseller_id'];
+        
+        $stmt = $db->prepare("
+            SELECT public_key, access_token 
+            FROM payment_methods 
+            WHERE reseller_id = ? AND provider = 'mercadopago' AND is_active = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$resellerId]);
+        $mpCredentials = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    // Se não encontrou credenciais específicas, usar configuração global como fallback
+    if (!$mpCredentials) {
+        file_put_contents($logFile, "Usando configuração global do Mercado Pago como fallback\n", FILE_APPEND);
+        $mp = new MercadoPagoHelper();
+    } else {
+        file_put_contents($logFile, "Usando credenciais do revendedor: {$resellerId}\n", FILE_APPEND);
+        $mp = new MercadoPagoHelper($mpCredentials['public_key'], $mpCredentials['access_token']);
+    }
+    
+    // Processar webhook
     $result = $mp->processWebhook($data);
     
     if (!$result['success']) {
@@ -82,8 +128,7 @@ try {
                 UPDATE invoices 
                 SET 
                     status = 'paid',
-                    paid_at = NOW(),
-                    payment_method = 'pix_mercadopago',
+                    payment_date = NOW(),
                     updated_at = NOW()
                 WHERE id = ?
             ");
@@ -93,7 +138,7 @@ try {
             
             // Buscar dados do cliente para renovar acesso
             $stmt = $db->prepare("
-                SELECT c.*, i.value, i.due_date
+                SELECT c.*, i.value, i.due_date, c.reseller_id
                 FROM invoices i
                 JOIN clients c ON i.client_id = c.id
                 WHERE i.id = ?
@@ -114,7 +159,7 @@ try {
                 // Adicionar 30 dias (ou período da fatura)
                 $currentRenewal->modify('+30 days');
                 
-                // Atualizar cliente
+                // Atualizar cliente no gestor
                 $stmt = $db->prepare("
                     UPDATE clients 
                     SET 
@@ -128,7 +173,37 @@ try {
                     $client['id']
                 ]);
                 
-                file_put_contents($logFile, "✅ Cliente #{$client['id']} renovado até {$currentRenewal->format('Y-m-d')}\n", FILE_APPEND);
+                file_put_contents($logFile, "✅ Cliente #{$client['id']} renovado no gestor até {$currentRenewal->format('Y-m-d')}\n", FILE_APPEND);
+                
+                // Sincronizar com Sigma se configurado
+                try {
+                    require_once __DIR__ . '/../app/helpers/clients-sync-sigma.php';
+                    
+                    $sigmaResult = syncClientWithSigmaAfterSave($client, $client['reseller_id']);
+                    
+                    if ($sigmaResult['success']) {
+                        file_put_contents($logFile, "✅ Cliente sincronizado com Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                    } else {
+                        file_put_contents($logFile, "⚠️ Erro na sincronização Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                    }
+                } catch (Exception $e) {
+                    file_put_contents($logFile, "⚠️ Erro ao sincronizar com Sigma: " . $e->getMessage() . "\n", FILE_APPEND);
+                }
+                
+                // Enviar mensagem WhatsApp de renovação
+                try {
+                    require_once __DIR__ . '/../app/helpers/whatsapp-helper.php';
+                    
+                    $whatsappResult = sendRenewalMessage($client['id'], $invoiceId);
+                    
+                    if ($whatsappResult['success']) {
+                        file_put_contents($logFile, "✅ Mensagem WhatsApp de renovação enviada\n", FILE_APPEND);
+                    } else {
+                        file_put_contents($logFile, "⚠️ Erro ao enviar WhatsApp: {$whatsappResult['error']}\n", FILE_APPEND);
+                    }
+                } catch (Exception $e) {
+                    file_put_contents($logFile, "⚠️ Erro ao enviar mensagem WhatsApp: " . $e->getMessage() . "\n", FILE_APPEND);
+                }
             }
         } elseif ($status === 'rejected' || $status === 'cancelled') {
             file_put_contents($logFile, "❌ Pagamento da fatura #$invoiceId rejeitado/cancelado\n", FILE_APPEND);
@@ -198,8 +273,13 @@ try {
     elseif (preg_match('/INVOICE_(\d+)/', $externalRef, $matches)) {
         $invoiceId = $matches[1];
         
-        // Buscar fatura
-        $stmt = $db->prepare("SELECT * FROM invoices WHERE id = ?");
+        // Buscar fatura com dados do cliente
+        $stmt = $db->prepare("
+            SELECT i.*, c.*, c.id as client_id
+            FROM invoices i
+            JOIN clients c ON i.client_id = c.id
+            WHERE i.id = ?
+        ");
         $stmt->execute([$invoiceId]);
         $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -211,13 +291,12 @@ try {
         
         // Atualizar status conforme pagamento
         if ($status === 'approved') {
-            // Pagamento aprovado
+            // Pagamento aprovado - marcar fatura como paga
             $stmt = $db->prepare("
                 UPDATE invoices 
                 SET 
                     status = 'paid',
-                    paid_at = NOW(),
-                    payment_method = 'pix_mercadopago',
+                    payment_date = NOW(),
                     updated_at = NOW()
                 WHERE id = ?
             ");
@@ -225,8 +304,77 @@ try {
             
             file_put_contents($logFile, "✅ Fatura #$invoiceId marcada como PAGA\n", FILE_APPEND);
             
-            // TODO: Enviar email de confirmação
-            // TODO: Ativar serviços do cliente
+            // Renovar cliente automaticamente (adicionar 30 dias)
+            $currentRenewal = new DateTime($invoice['renewal_date']);
+            $now = new DateTime();
+            
+            // Se já venceu, começar de hoje
+            if ($currentRenewal < $now) {
+                $currentRenewal = $now;
+            }
+            
+            // Adicionar 30 dias
+            $currentRenewal->modify('+30 days');
+            
+            // Atualizar cliente no gestor
+            $stmt = $db->prepare("
+                UPDATE clients 
+                SET 
+                    renewal_date = ?,
+                    status = 'active',
+                    updated_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $currentRenewal->format('Y-m-d'),
+                $invoice['client_id']
+            ]);
+            
+            file_put_contents($logFile, "✅ Cliente #{$invoice['client_id']} renovado no gestor até {$currentRenewal->format('Y-m-d')}\n", FILE_APPEND);
+            
+            // Sincronizar com Sigma se configurado
+            try {
+                require_once __DIR__ . '/../app/helpers/clients-sync-sigma.php';
+                
+                // Preparar dados do cliente para sincronização
+                $clientData = [
+                    'id' => $invoice['client_id'],
+                    'name' => $invoice['name'],
+                    'email' => $invoice['email'],
+                    'phone' => $invoice['phone'],
+                    'username' => $invoice['username'],
+                    'iptv_password' => $invoice['iptv_password'],
+                    'password' => $invoice['password'],
+                    'notes' => $invoice['notes'],
+                    'status' => 'active',
+                    'renewal_date' => $currentRenewal->format('Y-m-d')
+                ];
+                
+                $sigmaResult = syncClientWithSigmaAfterSave($clientData, $invoice['reseller_id']);
+                
+                if ($sigmaResult['success']) {
+                    file_put_contents($logFile, "✅ Cliente sincronizado com Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                } else {
+                    file_put_contents($logFile, "⚠️ Erro na sincronização Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                }
+            } catch (Exception $e) {
+                file_put_contents($logFile, "⚠️ Erro ao sincronizar com Sigma: " . $e->getMessage() . "\n", FILE_APPEND);
+            }
+            
+            // Enviar mensagem WhatsApp de renovação
+            try {
+                require_once __DIR__ . '/../app/helpers/whatsapp-helper.php';
+                
+                $whatsappResult = sendRenewalMessage($invoice['client_id'], $invoiceId);
+                
+                if ($whatsappResult['success']) {
+                    file_put_contents($logFile, "✅ Mensagem WhatsApp de renovação enviada\n", FILE_APPEND);
+                } else {
+                    file_put_contents($logFile, "⚠️ Erro ao enviar WhatsApp: {$whatsappResult['error']}\n", FILE_APPEND);
+                }
+            } catch (Exception $e) {
+                file_put_contents($logFile, "⚠️ Erro ao enviar mensagem WhatsApp: " . $e->getMessage() . "\n", FILE_APPEND);
+            }
             
         } elseif ($status === 'rejected' || $status === 'cancelled') {
             // Pagamento rejeitado/cancelado

@@ -4,95 +4,115 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - UltraGestor</title>
+    <meta name="description" content="Faça login no UltraGestor - Sistema Profissional de Gestão IPTV">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- CSS -->
     <link rel="stylesheet" href="/assets/css/auth-modern.css">
 </head>
-<body>
-    <div class="login-container">
+<body class="login-page">
+    <!-- Back to Landing -->
+    <div class="back-to-landing">
+        <a href="/" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            Voltar ao Site
+        </a>
+    </div>
+
+    <div class="auth-container">
         <!-- Lado Esquerdo - Informações -->
-        <div class="login-left">
+        <div class="auth-left">
             <div class="brand">
                 <div class="brand-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                        <path d="M2 17l10 5 10-5"></path>
-                        <path d="M2 12l10 5 10-5"></path>
-                    </svg>
+                    <i class="fas fa-tv"></i>
                 </div>
                 <h1>UltraGestor</h1>
                 <p>Sistema Profissional de Gestão IPTV</p>
             </div>
 
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                        </svg>
+            <div class="features-showcase">
+                <div class="showcase-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">500+</div>
+                        <div class="stat-label">Clientes Ativos</div>
                     </div>
-                    <h3>Gestão de Clientes</h3>
-                    <p>Controle completo de clientes e assinaturas</p>
+                    <div class="stat-item">
+                        <div class="stat-number">99.9%</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">Suporte</div>
+                    </div>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-                            <line x1="6" y1="6" x2="6.01" y2="6"></line>
-                            <line x1="6" y1="18" x2="6.01" y2="18"></line>
-                        </svg>
+                <div class="features-grid">
+                    <div class="feature-card featured">
+                        <div class="feature-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3>Gestão Completa</h3>
+                        <p>Controle total de clientes, servidores e assinaturas em uma plataforma unificada</p>
                     </div>
-                    <h3>Servidores IPTV</h3>
-                    <p>Gerencie múltiplos servidores</p>
+
+                    <div class="feature-card featured">
+                        <div class="feature-icon">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <h3>Automação WhatsApp</h3>
+                        <p>Mensagens automáticas, lembretes e notificações inteligentes para seus clientes</p>
+                    </div>
+
+                    <div class="feature-card featured">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3>Dashboard Avançado</h3>
+                        <p>Relatórios em tempo real, métricas detalhadas e insights para seu negócio</p>
+                    </div>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
+                <div class="trust-compact">
+                    <div class="trust-row">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>100% Seguro • Cloud Backup • Suporte 24/7</span>
                     </div>
-                    <h3>Automação WhatsApp</h3>
-                    <p>Mensagens e notificações automáticas</p>
                 </div>
             </div>
 
-            <div class="login-footer">
+            <div class="auth-footer">
                 <p>&copy; 2025 UltraGestor. Todos os direitos reservados.</p>
             </div>
         </div>
 
         <!-- Lado Direito - Formulário -->
-        <div class="login-right">
-            <div class="login-form-container">
-                <form id="loginForm" class="login-form">
-                    <div class="form-header">
-                        <div class="user-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                            </svg>
-                        </div>
-                        <h2>Bem-vindo de volta!</h2>
-                        <p>Faça login para acessar sua conta</p>
+        <div class="auth-right">
+            <div class="auth-form-container">
+                <div class="form-header">
+                    <div class="user-icon">
+                        <i class="fas fa-user"></i>
                     </div>
+                    <h2>Bem-vindo de volta!</h2>
+                    <p>Faça login para acessar sua conta</p>
+                </div>
 
+                <div id="message" class="message" style="display: none;"></div>
+
+                <form id="loginForm" class="auth-form">
                     <div class="form-group">
-                        <label for="email">Usuário</label>
+                        <label for="email">Email ou Usuário</label>
                         <input 
                             type="email" 
                             id="email" 
                             name="email" 
-                            placeholder="Digite seu usuário" 
+                            placeholder="Digite seu email ou usuário" 
                             required 
                             autocomplete="email"
                         >
-                        <small>Digite seu usuário para fazer login</small>
+                        <small>Digite suas credenciais para fazer login</small>
                     </div>
 
                     <div class="form-group">
@@ -107,10 +127,7 @@
                                 autocomplete="current-password"
                             >
                             <button type="button" class="toggle-password" id="togglePassword">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
+                                <i class="fas fa-eye"></i>
                             </button>
                         </div>
                     </div>
@@ -118,16 +135,13 @@
                     <div class="form-options">
                         <label class="checkbox-label">
                             <input type="checkbox" id="remember" name="remember">
-                            <span>🔒 Lembrar credenciais</span>
+                            <span>Lembrar-me</span>
                         </label>
+                        <a href="#" class="forgot-link">Esqueceu a senha?</a>
                     </div>
 
-                    <button type="submit" class="btn-login">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-                            <polyline points="10 17 15 12 10 7"></polyline>
-                            <line x1="15" y1="12" x2="3" y2="12"></line>
-                        </svg>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i>
                         Entrar no Sistema
                     </button>
 
@@ -135,16 +149,16 @@
                         <span>ou</span>
                     </div>
 
-                    <a href="/register" class="btn-register">
-                        Registrar-se
+                    <a href="/register" class="btn btn-outline">
+                        <i class="fas fa-user-plus"></i>
+                        Criar Nova Conta
                     </a>
 
                     <div class="security-badge">
-                        🔒 Sistema seguro e profissional
+                        <i class="fas fa-shield-alt"></i>
+                        Conexão segura e criptografada
                     </div>
                 </form>
-
-                <div id="message" class="message"></div>
             </div>
         </div>
     </div>
@@ -154,9 +168,36 @@
         // Toggle password visibility
         document.getElementById('togglePassword')?.addEventListener('click', function() {
             const passwordInput = document.getElementById('password');
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
+            const icon = this.querySelector('i');
+            
+            if (passwordInput.getAttribute('type') === 'password') {
+                passwordInput.setAttribute('type', 'text');
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.setAttribute('type', 'password');
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+
+        // Form animation on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const formElements = document.querySelectorAll('.form-group, .form-options, .btn, .form-divider, .security-badge');
+            formElements.forEach((element, index) => {
+                element.style.opacity = '0';
+                element.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    element.style.transition = 'all 0.6s ease';
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
         });
     </script>
+
+    <!-- Protection Script -->
+    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

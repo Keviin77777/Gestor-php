@@ -163,9 +163,7 @@ function renderSchedulingList() {
     }
     
     container.innerHTML = templates.map(template => createSchedulingListItem(template)).join('');
-}
-
-function createSchedulingListItem(template) {
+}function createSchedulingListItem(template) {
     const isScheduled = template.is_scheduled || false;
     const scheduledDays = template.scheduled_days ? JSON.parse(template.scheduled_days) : [];
     const scheduledTime = template.scheduled_time || '09:00';
@@ -356,8 +354,6 @@ function toggleAllDays() {
     });
 }
 
-// Função removida - não é mais necessária com o novo layout
-
 function updateDaysDisplay() {
     // Esta função pode ser usada para atualizar a exibição em tempo real
     // Por enquanto, não é necessária
@@ -383,17 +379,26 @@ function closeSchedulingModal() {
 }
 
 async function saveScheduling() {
-    if (!currentSchedulingId) return;
+    console.log('saveScheduling chamada, currentSchedulingId:', currentSchedulingId);
+    
+    if (!currentSchedulingId) {
+        console.error('currentSchedulingId não definido');
+        showNotification('Erro: Template não selecionado', 'error');
+        return;
+    }
     
     try {
         showLoading('Salvando agendamento...');
         
-        const enabled = document.getElementById('schedulingEnabled').checked;
         const time = document.getElementById('schedulingTime').value;
         const selectedDays = Array.from(document.querySelectorAll('.day-input:checked')).map(input => input.value);
         
-        // Validação: se ativado, deve ter pelo menos um dia selecionado
-        if (enabled && selectedDays.length === 0) {
+        console.log('Dados coletados:', { time, selectedDays });
+        
+        // Validação: deve ter pelo menos um dia selecionado se estiver ativando
+        const enabled = selectedDays.length > 0;
+        
+        if (!enabled) {
             showNotification('⚠️ Selecione pelo menos um dia da semana', 'warning');
             hideLoading();
             return;
@@ -401,9 +406,11 @@ async function saveScheduling() {
         
         const schedulingData = {
             is_scheduled: enabled,
-            scheduled_days: enabled ? selectedDays : [],
-            scheduled_time: enabled ? time : null
+            scheduled_days: selectedDays,
+            scheduled_time: time
         };
+        
+        console.log('Enviando dados:', { id: currentSchedulingId, ...schedulingData });
         
         const response = await fetch('/api-whatsapp-templates.php', {
             method: 'PUT',
@@ -416,7 +423,9 @@ async function saveScheduling() {
             })
         });
         
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', data);
         
         if (data.success) {
             showNotification('Agendamento salvo com sucesso!', 'success');
@@ -430,6 +439,16 @@ async function saveScheduling() {
     } finally {
         hideLoading();
     }
+}
+
+function deleteScheduling(templateId) {
+    if (!confirm('Deseja realmente desativar este agendamento?')) {
+        return;
+    }
+    
+    // Implementar lógica de desativação
+    // Por enquanto, apenas recarregar a lista
+    loadTemplates();
 }
 
 function refreshScheduling() {

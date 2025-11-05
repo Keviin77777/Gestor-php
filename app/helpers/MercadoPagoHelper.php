@@ -13,8 +13,16 @@ class MercadoPagoHelper {
     /**
      * Construtor - carrega configurações do banco
      */
-    public function __construct() {
-        $this->loadConfig();
+    public function __construct($publicKey = null, $accessToken = null) {
+        if ($publicKey && $accessToken) {
+            // Usar credenciais fornecidas diretamente
+            $this->publicKey = $publicKey;
+            $this->accessToken = $accessToken;
+            $this->enabled = true;
+        } else {
+            // Carregar do banco (método antigo para compatibilidade)
+            $this->loadConfig();
+        }
     }
     
     /**
@@ -114,7 +122,13 @@ class MercadoPagoHelper {
             
             // Adicionar campos opcionais apenas se fornecidos
             if (!empty($data['notification_url'])) {
-                $payload['notification_url'] = $data['notification_url'];
+                // Validar se a URL é válida e não é localhost
+                $notificationUrl = $data['notification_url'];
+                if (filter_var($notificationUrl, FILTER_VALIDATE_URL) && 
+                    strpos($notificationUrl, 'localhost') === false && 
+                    strpos($notificationUrl, '127.0.0.1') === false) {
+                    $payload['notification_url'] = $notificationUrl;
+                }
             }
             
             if (!empty($data['external_reference'])) {

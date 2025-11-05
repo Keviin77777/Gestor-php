@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/assets/css/dashboard.css">
     <link rel="stylesheet" href="/assets/css/header-menu.css">
     <link rel="stylesheet" href="/assets/css/whatsapp.css">
+    <link rel="stylesheet" href="/assets/css/whatsapp-scheduling.css">
 </head>
 <body>
     <div class="app-container">
@@ -63,10 +64,6 @@
                             <label class="form-label">Horário do envio!</label>
                             <div class="time-input-wrapper">
                                 <input type="time" id="schedulingTime" class="form-control time-input" value="09:00">
-                                <svg class="time-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <polyline points="12 6 12 12 16 14"></polyline>
-                                </svg>
                             </div>
                         </div>
                         
@@ -144,5 +141,8 @@
     <script src="/assets/js/common.js"></script>
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/whatsapp-scheduling.js"></script>
+
+    <!-- Protection Script -->
+    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

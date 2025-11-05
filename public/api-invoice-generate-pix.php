@@ -82,7 +82,8 @@ try {
         'description' => "Fatura #{$invoice['id']} - {$clientName}",
         'payer_email' => $invoice['client_email'] ?: 'cliente@email.com',
         'payer_name' => $nameParts[0],
-        'external_reference' => "INVOICE_{$invoice['id']}_CLIENT_{$invoice['client_id']}"
+        'external_reference' => "INVOICE_{$invoice['id']}_CLIENT_{$invoice['client_id']}",
+        'notification_url' => env('APP_URL') . '/webhook-mercadopago.php'
     ];
 
     // Gerar pagamento PIX

@@ -34,11 +34,14 @@ try {
         case 'GET':
             // Buscar todos os clientes do reseller autenticado
             $clients = Database::fetchAll(
-                "SELECT id, name, email, phone, username, password, iptv_password, start_date, renewal_date, 
-                        status, value, notes, server, mac, notifications, screens, plan, created_at
-                 FROM clients 
-                 WHERE reseller_id = ?
-                 ORDER BY created_at DESC",
+                "SELECT c.id, c.name, c.email, c.phone, c.username, c.password, c.iptv_password, 
+                        c.start_date, c.renewal_date, c.status, c.value, c.notes, c.server, c.mac, 
+                        c.notifications, c.screens, c.plan, c.application_id, c.created_at,
+                        a.name as application_name
+                 FROM clients c
+                 LEFT JOIN applications a ON c.application_id = a.id
+                 WHERE c.reseller_id = ?
+                 ORDER BY c.created_at DESC",
                 [$user['id']]
             );
             
@@ -61,6 +64,8 @@ try {
                     'mac' => $client['mac'] ?? '',
                     'notifications' => $client['notifications'] ?? 'sim',
                     'screens' => (int)($client['screens'] ?? 1),
+                    'application_id' => $client['application_id'] ? (int)$client['application_id'] : null,
+                    'application_name' => $client['application_name'] ?? 'Nenhum',
                     'created_at' => $client['created_at'] ?? null
                 ];
             }, $clients);
@@ -90,8 +95,8 @@ try {
             $clientId = 'client-' . uniqid();
             
             $id = Database::insert(
-                "INSERT INTO clients (id, reseller_id, name, email, phone, username, iptv_password, renewal_date, status, value, notes, server, mac, notifications, screens, plan) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO clients (id, reseller_id, name, email, phone, username, iptv_password, renewal_date, status, value, notes, server, mac, notifications, screens, plan, application_id) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     $clientId,
                     $user['id'],
@@ -108,7 +113,8 @@ try {
                     $data['mac'] ?? '',
                     $data['notifications'] ?? 'sim',
                     $data['screens'] ?? 1,
-                    $data['plan'] ?? 'Personalizado'
+                    $data['plan'] ?? 'Personalizado',
+                    !empty($data['application_id']) ? (int)$data['application_id'] : null
                 ]
             );
             
@@ -206,7 +212,8 @@ try {
                     'mac' => $data['mac'] ?? '',
                     'notifications' => $data['notifications'] ?? 'sim',
                     'screens' => $data['screens'] ?? 1,
-                    'plan' => $data['plan'] ?? 'Personalizado'
+                    'plan' => $data['plan'] ?? 'Personalizado',
+                    'application_id' => !empty($data['application_id']) ? (int)$data['application_id'] : null
                 ];
                 
                 // Usar o método update da classe Database

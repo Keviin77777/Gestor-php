@@ -305,5 +305,8 @@
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/whatsapp-parear.js"></script>
+
+    <!-- Protection Script -->
+    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

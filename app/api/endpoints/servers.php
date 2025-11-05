@@ -32,7 +32,7 @@ function getServers() {
 
         $db = Database::connect();
         
-        // Consulta simplificada para debug
+        // Consulta com contagem de clientes conectados
         $stmt = $db->prepare("
             SELECT 
                 s.id,
@@ -43,9 +43,13 @@ function getServers() {
                 s.panel_url,
                 s.reseller_user,
                 s.status,
-                s.created_at
+                s.created_at,
+                COUNT(CASE WHEN c.status = 'active' THEN 1 END) as connected_clients,
+                COUNT(c.id) as total_clients
             FROM servers s
+            LEFT JOIN clients c ON c.server = s.name AND c.reseller_id = s.user_id
             WHERE s.user_id = ? 
+            GROUP BY s.id, s.name, s.billing_type, s.cost, s.panel_type, s.panel_url, s.reseller_user, s.status, s.created_at
             ORDER BY s.created_at DESC
         ");
         
@@ -70,11 +74,20 @@ function getServers() {
         error_log("Found " . count($servers) . " servers for user " . $user['id']);
         error_log("Servers data: " . json_encode($servers));
 
-        // Simplificar para debug - apenas converter cost para float
+        // Processar dados dos servidores
         foreach ($servers as &$server) {
             $server['cost'] = (float)$server['cost'];
-            $server['connected_clients'] = 0; // Temporário para debug
-            $server['total_cost'] = $server['cost'];
+            $server['connected_clients'] = (int)$server['connected_clients'];
+            $server['total_clients'] = (int)$server['total_clients'];
+            
+            // Calcular custo total baseado no tipo de cobrança
+            if ($server['billing_type'] === 'per_active') {
+                // Cobrança por cliente ativo
+                $server['total_cost'] = $server['cost'] * $server['connected_clients'];
+            } else {
+                // Cobrança fixa
+                $server['total_cost'] = $server['cost'];
+            }
         }
 
         Response::json([

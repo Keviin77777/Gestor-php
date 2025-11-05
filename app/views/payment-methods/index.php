@@ -138,5 +138,8 @@
 
     <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/payment-methods.js"></script>
+
+    <!-- Protection Script -->
+    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

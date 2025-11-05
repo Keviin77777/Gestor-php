@@ -342,14 +342,7 @@ function renderEmptyState() {
                 </svg>
             </div>
             <h3>Nenhum plano encontrado</h3>
-            <p>${currentServerFilter ? 'Este servidor não possui planos cadastrados.' : 'Crie seu primeiro plano para começar.'}</p>
-            <button class="btn btn-primary" onclick="openPlanModal()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 0.5rem;">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Criar Primeiro Plano
-            </button>
+            <p>${currentServerFilter ? 'Este servidor não possui planos cadastrados.' : 'Use o botão "Novo Plano" no canto superior direito para criar seu primeiro plano.'}</p>
         </div>
     `;
 }

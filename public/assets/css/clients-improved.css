@@ -241,6 +241,56 @@
     background: #1e293b !important;
 }
 
+/* Dark theme para badges de aplicativo */
+[data-theme="dark"] .pro-application-badge {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    color: white !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
+}
+
+[data-theme="dark"] .pro-application-badge .app-icon {
+    color: white !important;
+}
+
+[data-theme="dark"] .pro-application-badge .app-name {
+    color: white !important;
+}
+
+[data-theme="dark"] .pro-application-badge:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+    color: white !important;
+    border-color: #1e40af !important;
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.4) !important;
+}
+
+[data-theme="dark"] .pro-application-badge[data-app="nenhum"] {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%) !important;
+    color: #6b7280 !important;
+    border-color: #374151 !important;
+}
+
+[data-theme="dark"] .pro-application-badge[data-app="nenhum"]:hover {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%) !important;
+    color: white !important;
+    border-color: #4b5563 !important;
+    box-shadow: 0 4px 12px rgba(75, 85, 99, 0.3) !important;
+}
+
+.dark-theme .pro-application-badge {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    color: white !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
+}
+
+.dark-theme .pro-application-badge:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+    color: white !important;
+    border-color: #1e40af !important;
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.4) !important;
+}
+
 /* Botões de WhatsApp */
 .pro-btn-action.whatsapp-enabled {
     background: #25D366;
@@ -381,6 +431,92 @@
     border-top: 8px solid transparent;
     border-bottom: 8px solid transparent;
     border-right: 8px solid #25D366;
+}
+
+/* Badge de aplicativo - estilo profissional com cor azul padrão */
+.pro-application-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
+    padding: 0.4rem 0.8rem !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    border: 1px solid #2563eb !important;
+    transition: all 0.2s ease !important;
+    min-width: 90px !important;
+    text-align: left !important;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25) !important;
+}
+
+.pro-application-badge .app-icon {
+    width: 14px !important;
+    height: 14px !important;
+    flex-shrink: 0 !important;
+    stroke-width: 2 !important;
+    color: white !important;
+}
+
+.pro-application-badge .app-name {
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    color: white !important;
+}
+
+.pro-application-badge:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+    color: white !important;
+    border-color: #1e40af !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35) !important;
+}
+
+.pro-application-badge:hover .app-icon {
+    color: white !important;
+}
+
+.pro-application-badge:hover .app-name {
+    color: white !important;
+}
+
+/* Estilo especial para "Nenhum" */
+.pro-application-badge[data-app="nenhum"] {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+    color: #94a3b8 !important;
+    border-color: #cbd5e1 !important;
+}
+
+.pro-application-badge[data-app="nenhum"] .app-icon {
+    color: #94a3b8 !important;
+}
+
+.pro-application-badge[data-app="nenhum"] .app-name {
+    color: #94a3b8 !important;
+}
+
+.pro-application-badge[data-app="nenhum"]:hover {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+    color: white !important;
+    border-color: #475569 !important;
+    box-shadow: 0 4px 12px rgba(100, 116, 139, 0.25) !important;
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 768px) {
+    .pro-application-badge {
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.7rem !important;
+        min-width: 70px !important;
+        gap: 0.3rem !important;
+    }
+    
+    .pro-application-badge .app-icon {
+        width: 12px !important;
+        height: 12px !important;
+    }
 }
 
 /* Garantir que o modal WhatsApp seja visível */

@@ -67,11 +67,17 @@ function hasPermission($path) {
 // Roteamento
 switch ($path) {
     case '/':
-        // Página inicial - redirecionar baseado na autenticação
-        if (isAuthenticated()) {
-            header('Location: /dashboard');
+        // Página inicial - mostrar landing page
+        $landingFile = __DIR__ . '/landing.php';
+        if (file_exists($landingFile)) {
+            include $landingFile;
         } else {
-            header('Location: /login');
+            // Fallback para redirecionamento baseado na autenticação
+            if (isAuthenticated()) {
+                header('Location: /dashboard');
+            } else {
+                header('Location: /login');
+            }
         }
         exit;
         
@@ -342,6 +348,22 @@ switch ($path) {
         $renewAccessFile = __DIR__ . '/../app/views/reseller/renew-access.php';
         if (file_exists($renewAccessFile)) {
             include $renewAccessFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/profile':
+        // Página de perfil do usuário
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $profileFile = __DIR__ . '/../app/views/profile/index.php';
+        if (file_exists($profileFile)) {
+            include $profileFile;
         } else {
             http_response_code(404);
             echo "Página não encontrada.";

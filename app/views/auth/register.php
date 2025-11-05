@@ -4,94 +4,165 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro - UltraGestor</title>
+    <meta name="description" content="Crie sua conta no UltraGestor - Sistema Profissional de Gestão IPTV">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- CSS -->
     <link rel="stylesheet" href="/assets/css/auth-modern.css">
+    
+    <style>
+        /* Estilos específicos para registro */
+        .register-page .auth-container {
+            max-width: 1400px;
+        }
+        
+        .register-page .auth-form-container {
+            max-width: 500px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+        
+        .checkbox-label a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .checkbox-label a:hover {
+            text-decoration: underline;
+        }
+        
+        .plan-selected {
+            background: var(--bg-glass);
+            border: 1px solid var(--primary);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .plan-selected h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .plan-selected p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
 </head>
-<body>
-    <div class="login-container register-page">
+<body class="register-page">
+    <!-- Back to Landing -->
+    <div class="back-to-landing">
+        <a href="/" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            Voltar ao Site
+        </a>
+    </div>
+
+    <div class="auth-container register-page">
         <!-- Lado Esquerdo - Informações -->
-        <div class="login-left">
+        <div class="auth-left">
             <div class="brand">
                 <div class="brand-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                        <path d="M2 17l10 5 10-5"></path>
-                        <path d="M2 12l10 5 10-5"></path>
-                    </svg>
+                    <i class="fas fa-tv"></i>
                 </div>
                 <h1>UltraGestor</h1>
                 <p>Sistema Profissional de Gestão IPTV</p>
             </div>
 
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                        </svg>
+            <div class="features-showcase">
+                <div class="trial-highlight">
+                    <div class="trial-badge">
+                        <i class="fas fa-gift"></i>
+                        <span>3 DIAS GRÁTIS</span>
                     </div>
-                    <h3>Gestão de Clientes</h3>
-                    <p>Controle completo de clientes e assinaturas</p>
+                    <h3>Teste Todas as Funcionalidades</h3>
+                    <p>Sem compromisso • Cancele quando quiser</p>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-                            <line x1="6" y1="6" x2="6.01" y2="6"></line>
-                            <line x1="6" y1="18" x2="6.01" y2="18"></line>
-                        </svg>
+                <div class="features-grid">
+                    <div class="feature-card featured">
+                        <div class="feature-icon">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <h3>Setup em Minutos</h3>
+                        <p>Configure seu sistema completo rapidamente com nossa interface intuitiva</p>
                     </div>
-                    <h3>Servidores IPTV</h3>
-                    <p>Gerencie múltiplos servidores</p>
+
+                    <div class="feature-card featured">
+                        <div class="feature-icon">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                        <h3>Suporte Especializado</h3>
+                        <p>Equipe técnica dedicada para ajudar você em cada passo da configuração</p>
+                    </div>
+
+                    <div class="feature-card featured">
+                        <div class="feature-icon">
+                            <i class="fas fa-shield-check"></i>
+                        </div>
+                        <h3>Segurança Total</h3>
+                        <p>Dados protegidos com criptografia avançada e backup automático na nuvem</p>
+                    </div>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
+                <div class="benefits-compact">
+                    <div class="benefit-row">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Setup gratuito • Treinamento incluído • Migração sem custo</span>
                     </div>
-                    <h3>Automação WhatsApp</h3>
-                    <p>Mensagens e notificações automáticas</p>
                 </div>
             </div>
 
-            <div class="login-footer">
+            <div class="auth-footer">
                 <p>&copy; 2025 UltraGestor. Todos os direitos reservados.</p>
             </div>
         </div>
 
         <!-- Lado Direito - Formulário -->
-        <div class="login-right">
-            <div class="login-form-container register-expanded">
-                <form id="registerForm" class="login-form register-form-expanded">
-                    <div class="form-header">
-                        <div class="user-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="8.5" cy="7" r="4"></circle>
-                                <path d="M20 8v6M23 11h-6"></path>
-                            </svg>
-                        </div>
-                        <h2>Criar Conta</h2>
-                        <p>Preencha os dados para criar sua conta</p>
+        <div class="auth-right">
+            <div class="auth-form-container">
+                <div class="form-header">
+                    <div class="user-icon">
+                        <i class="fas fa-user-plus"></i>
                     </div>
+                    <h2>Criar Conta</h2>
+                    <p>Preencha os dados para começar seu trial gratuito</p>
+                </div>
 
+                <div id="message" class="message" style="display: none;"></div>
+
+                <!-- Plano Selecionado -->
+                <div id="planSelected" class="plan-selected" style="display: none;">
+                    <h4 id="selectedPlanName">Plano Selecionado</h4>
+                    <p id="selectedPlanDescription">Descrição do plano</p>
+                </div>
+
+                <form id="registerForm" class="auth-form">
                     <!-- Primeira linha: Nome e E-mail -->
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="name">Nome</label>
+                            <label for="name">Nome Completo</label>
                             <input 
                                 type="text" 
                                 id="name" 
                                 name="name" 
-                                placeholder="Digite seu nome" 
+                                placeholder="Digite seu nome completo" 
                                 required 
                                 autocomplete="name"
                             >
@@ -110,7 +181,7 @@
                         </div>
                     </div>
 
-                    <!-- Segunda linha: WhatsApp (campo único, centralizado) -->
+                    <!-- Segunda linha: WhatsApp -->
                     <div class="form-group">
                         <label for="whatsapp">WhatsApp</label>
                         <input 
@@ -121,7 +192,7 @@
                             required
                             autocomplete="tel"
                         >
-                        <small>Formato: (00) 00000-0000</small>
+                        <small>Usado para suporte e notificações importantes</small>
                     </div>
 
                     <!-- Terceira linha: Senha e Confirmar Senha -->
@@ -139,10 +210,7 @@
                                     autocomplete="new-password"
                                 >
                                 <button type="button" class="toggle-password" id="togglePassword">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                        <circle cx="12" cy="12" r="3"></circle>
-                                    </svg>
+                                    <i class="fas fa-eye"></i>
                                 </button>
                             </div>
                             <small>Mínimo de 6 caracteres</small>
@@ -161,10 +229,7 @@
                                     autocomplete="new-password"
                                 >
                                 <button type="button" class="toggle-password" id="togglePasswordConfirm">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                        <circle cx="12" cy="12" r="3"></circle>
-                                    </svg>
+                                    <i class="fas fa-eye"></i>
                                 </button>
                             </div>
                         </div>
@@ -175,33 +240,29 @@
                     <div class="form-options">
                         <label class="checkbox-label">
                             <input type="checkbox" id="terms" name="terms" required>
-                            <span>Eu aceito os <a href="/terms" target="_blank">termos de uso</a> e <a href="/privacy" target="_blank">política de privacidade</a></span>
+                            <span>Eu aceito os <a href="#" target="_blank">termos de uso</a> e <a href="#" target="_blank">política de privacidade</a></span>
                         </label>
                     </div>
 
-                    <button type="submit" class="btn-login">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="8.5" cy="7" r="4"></circle>
-                            <path d="M20 8v6M23 11h-6"></path>
-                        </svg>
-                        Criar Conta
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-rocket"></i>
+                        Criar Conta e Começar Trial
                     </button>
 
                     <div class="form-divider">
                         <span>ou</span>
                     </div>
 
-                    <a href="/login" class="btn-register">
+                    <a href="/login" class="btn btn-outline">
+                        <i class="fas fa-sign-in-alt"></i>
                         Já tenho uma conta
                     </a>
 
                     <div class="security-badge">
-                        🔒 Trial de 3 dias grátis
+                        <i class="fas fa-gift"></i>
+                        3 dias grátis • Sem compromisso • Cancele quando quiser
                     </div>
                 </form>
-
-                <div id="message" class="message"></div>
             </div>
         </div>
     </div>
@@ -209,23 +270,62 @@
     <script src="/assets/js/auth.js"></script>
     <script>
         // Toggle password visibility
-        document.getElementById('togglePassword')?.addEventListener('click', function() {
-            const passwordInput = document.getElementById('password');
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-        });
+        function setupPasswordToggle(toggleId, inputId) {
+            const toggle = document.getElementById(toggleId);
+            const input = document.getElementById(inputId);
+            
+            if (toggle && input) {
+                toggle.addEventListener('click', function() {
+                    const icon = this.querySelector('i');
+                    
+                    if (input.getAttribute('type') === 'password') {
+                        input.setAttribute('type', 'text');
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        input.setAttribute('type', 'password');
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
+                });
+            }
+        }
 
-        document.getElementById('togglePasswordConfirm')?.addEventListener('click', function() {
-            const passwordInput = document.getElementById('password_confirm');
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-        });
+        setupPasswordToggle('togglePassword', 'password');
+        setupPasswordToggle('togglePasswordConfirm', 'password_confirm');
 
         // Obter plan_id da URL se existir
         const urlParams = new URLSearchParams(window.location.search);
         const planId = urlParams.get('plan');
         if (planId) {
             document.getElementById('plan_id').value = planId;
+            // Aqui você pode fazer uma requisição para buscar os detalhes do plano
+            // e exibir na seção "Plano Selecionado"
+            showSelectedPlan(planId);
+        }
+
+        function showSelectedPlan(planId) {
+            // Simular busca do plano (substitua por requisição real)
+            const planNames = {
+                'trial': 'Trial Gratuito',
+                'monthly': 'Plano Mensal',
+                'quarterly': 'Plano Trimestral',
+                'annual': 'Plano Anual'
+            };
+            
+            const planDescriptions = {
+                'trial': '3 dias grátis para testar todas as funcionalidades',
+                'monthly': 'Acesso completo por 30 dias',
+                'quarterly': 'Acesso completo por 90 dias',
+                'annual': 'Acesso completo por 365 dias'
+            };
+            
+            const planName = planNames[planId] || 'Plano Selecionado';
+            const planDescription = planDescriptions[planId] || 'Plano personalizado';
+            
+            document.getElementById('selectedPlanName').textContent = planName;
+            document.getElementById('selectedPlanDescription').textContent = planDescription;
+            document.getElementById('planSelected').style.display = 'block';
         }
 
         // Máscara para WhatsApp
@@ -245,6 +345,41 @@
                 e.target.value = value;
             });
         }
+
+        // Validação de senha
+        const passwordInput = document.getElementById('password');
+        const passwordConfirmInput = document.getElementById('password_confirm');
+        
+        function validatePasswords() {
+            if (passwordInput.value && passwordConfirmInput.value) {
+                if (passwordInput.value !== passwordConfirmInput.value) {
+                    passwordConfirmInput.setCustomValidity('As senhas não coincidem');
+                } else {
+                    passwordConfirmInput.setCustomValidity('');
+                }
+            }
+        }
+        
+        passwordInput?.addEventListener('input', validatePasswords);
+        passwordConfirmInput?.addEventListener('input', validatePasswords);
+
+        // Form animation on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const formElements = document.querySelectorAll('.form-group, .form-row, .form-options, .btn, .form-divider, .security-badge');
+            formElements.forEach((element, index) => {
+                element.style.opacity = '0';
+                element.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    element.style.transition = 'all 0.6s ease';
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
     </script>
+
+    <!-- Protection Script -->
+    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

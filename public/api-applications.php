@@ -24,12 +24,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/../app/core/Database.php';
+require_once __DIR__ . '/../app/core/Auth.php';
 require_once __DIR__ . '/../app/helpers/functions.php';
 
 try {
-    // Verificar autenticação usando o helper
-    require_once __DIR__ . '/../app/helpers/auth-helper.php';
-    $user = getAuthenticatedUser();
+    // Verificar autenticação
+    $user = Auth::user();
+    if (!$user) {
+        ob_clean();
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Não autorizado']);
+        exit;
+    }
     
     // Limpar qualquer output que possa ter sido gerado antes
     ob_clean();
