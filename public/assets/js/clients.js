@@ -141,7 +141,7 @@ function setupEventListeners() {
  */
 async function loadClients() {
     try {
-        const response = await fetch('http://localhost:8000/api-clients.php', {
+        const response = await fetch('/api-clients.php', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -1165,7 +1165,7 @@ async function deleteClient(clientId) {
 async function processClientDeletion(clientId, client) {
     // Fazer chamada para a API
     try {
-        const response = await fetch(`http://localhost:8000/api-clients.php?id=${clientId}`, {
+        const response = await fetch(`/api-clients.php?id=${clientId}`, {
             method: 'DELETE'
         });
 
@@ -1308,7 +1308,7 @@ async function saveClient(event) {
             // Editar cliente existente
             const clientId = form.dataset.editing;
 
-            const response = await fetch(`http://localhost:8000/api-clients.php?id=${clientId}`, {
+            const response = await fetch(`/api-clients.php?id=${clientId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1337,7 +1337,7 @@ async function saveClient(event) {
             }
         } else {
             // Criar novo cliente
-            const response = await fetch('http://localhost:8000/api-clients.php', {
+            const response = await fetch('/api-clients.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

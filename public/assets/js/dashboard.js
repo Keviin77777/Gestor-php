@@ -17,17 +17,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // Forçar sidebar fechada IMEDIATAMENTE
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
-    
+
     if (sidebar) {
         sidebar.classList.remove('active');
     }
     if (sidebarOverlay) {
         sidebarOverlay.classList.remove('active');
     }
-    
+
     // Fechar sidebar imediatamente no mobile
     ensureSidebarClosedOnMobile();
-    
+
     // Aguardar um pouco para garantir que o CSS foi carregado
     setTimeout(() => {
         // Verificar se estamos na página do dashboard
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
 function initializeDashboard() {
     // 0. Garantir que sidebar inicie fechada no mobile
     ensureSidebarClosedOnMobile();
-    
+
     // 1. Configurar eventos PRIMEIRO
     setupDashboardEvents();
 
@@ -63,7 +63,7 @@ function ensureSidebarClosedOnMobile() {
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    
+
     // Se for mobile (largura menor que 768px) ou sempre em desktop inicial
     if (window.innerWidth <= 768) {
         if (sidebar) {
@@ -183,7 +183,7 @@ async function updateDashboardWithRealData(data) {
     updateCard('monthRevenue', formatCurrency(data.monthRevenue || 0));
     updateCard('inadimplentesValue', formatCurrency(data.inadimplentesValue || 0));
     updateCard('expiringClients', data.expiringClients || 0);
-    
+
     // Atualizar label de inadimplentes com contagem
     const inadimplentesLabel = document.getElementById('inadimplentesLabel');
     if (inadimplentesLabel) {
@@ -227,7 +227,7 @@ async function showFallbackData() {
     updateCard('monthRevenue', formatCurrency(0));
     updateCard('inadimplentesValue', formatCurrency(0));
     updateCard('expiringClients', 0);
-    
+
     // Atualizar label de inadimplentes com contagem zero
     const inadimplentesLabel = document.getElementById('inadimplentesLabel');
     if (inadimplentesLabel) {
@@ -322,25 +322,25 @@ function calculateDaysUntil(dateString) {
  */
 function formatDate(dateString) {
     if (!dateString) return '-';
-    
+
     try {
         // Se a data já está no formato brasileiro (dd/mm/yyyy), retornar como está
         if (dateString.includes('/')) {
             return dateString;
         }
-        
+
         // Se está no formato ISO (yyyy-mm-dd), converter para brasileiro
         if (dateString.includes('-')) {
             const [year, month, day] = dateString.split(' ')[0].split('-');
             return `${day}/${month}/${year}`;
         }
-        
+
         // Fallback para new Date
         const date = new Date(dateString);
         if (isNaN(date.getTime())) {
             return dateString;
         }
-        
+
         return date.toLocaleDateString('pt-BR');
     } catch (error) {
         console.warn('Erro ao formatar data:', dateString, error);
@@ -465,7 +465,7 @@ function setupDashboardEvents() {
             e.stopPropagation();
             toggleSidebar();
         });
-        
+
         // Touch events para melhor responsividade mobile
         mobileMenuBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
@@ -518,7 +518,7 @@ function setupDashboardEvents() {
             closeSidebar();
         }
     });
-    
+
     // Fechar sidebar ao redimensionar para mobile
     window.addEventListener('resize', () => {
         if (window.innerWidth <= 768) {
@@ -537,8 +537,8 @@ function setupDashboardEvents() {
     document.addEventListener('click', (e) => {
         if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('active')) {
             // Se clicou fora da sidebar, overlay e botão menu
-            if (!sidebar.contains(e.target) && 
-                e.target !== sidebarOverlay && 
+            if (!sidebar.contains(e.target) &&
+                e.target !== sidebarOverlay &&
                 e.target !== mobileMenuBtn &&
                 !mobileMenuBtn.contains(e.target)) {
                 closeSidebar();
@@ -560,12 +560,12 @@ function setupDashboardEvents() {
                         action: 'logout'
                     })
                 });
-                
+
                 // Limpar dados locais independente da resposta da API
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 sessionStorage.clear();
-                
+
                 // Redirecionar para login
                 window.location.href = '/login';
             } catch (error) {
@@ -578,8 +578,8 @@ function setupDashboardEvents() {
             }
         }
     };
-    
-    }
+
+}
 
 // Adicionar estilos para badges se não existirem
 if (!document.querySelector('#badge-styles')) {
@@ -827,7 +827,7 @@ async function initializeAnalyticsCharts() {
     } else {
         drawClientsChart(clientsData);
     }
-    
+
     if (typeof drawPaymentsChartJS === 'function') {
         drawPaymentsChartJS(paymentsData);
     } else {
@@ -850,10 +850,10 @@ async function generateClientsData() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
     // Calcular número de dias no mês atual
     const days = new Date(currentYear, currentMonth + 1, 0).getDate();
-    
+
     const data = [];
     const labels = [];
 
@@ -881,9 +881,9 @@ async function generateClientsData() {
                 if (client.created_at) {
                     const createdDate = new Date(client.created_at);
                     const day = createdDate.getDate();
-                    
+
                     // Se o cliente foi criado no mês e ano atual
-                    if (createdDate.getMonth() === currentMonth && 
+                    if (createdDate.getMonth() === currentMonth &&
                         createdDate.getFullYear() === currentYear) {
                         if (day >= 1 && day <= days) {
                             data[day - 1] = (data[day - 1] || 0) + 1;
@@ -917,10 +917,10 @@ function generatePaymentsData() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
     // Calcular número de dias no mês atual
     const days = new Date(currentYear, currentMonth + 1, 0).getDate();
-    
+
     const data = [];
     const labels = [];
 
@@ -1280,7 +1280,7 @@ function updateClientsMetrics(chartData) {
     const today = data[data.length - 1] || 0;
     const maxValue = Math.max(...data);
     const bestDayIndex = data.indexOf(maxValue);
-    
+
     // Calcular porcentagem de hoje
     const todayPercent = total > 0 ? ((today / total) * 100).toFixed(1) : 0;
 
@@ -1289,7 +1289,7 @@ function updateClientsMetrics(chartData) {
     updateElement('avgNewClients', avg);
     updateElement('todayNewClients', today);
     updateElement('bestDayClients', maxValue);
-    
+
     // Atualizar porcentagem de hoje
     const todayPercentElement = document.getElementById('todayNewClientsPercent');
     if (todayPercentElement) {
@@ -1318,7 +1318,7 @@ function updatePaymentsMetrics(chartData) {
     const today = data[data.length - 1] || 0;
     const maxValue = Math.max(...data);
     const bestDayIndex = data.indexOf(maxValue);
-    
+
     // Calcular porcentagem de hoje
     const todayPercent = total > 0 ? ((today / total) * 100).toFixed(1) : 0;
 
@@ -1327,13 +1327,13 @@ function updatePaymentsMetrics(chartData) {
     updateElement('avgPayments', formatCurrency(avg));
     updateElement('todayPayments', formatCurrency(today));
     updateElement('bestDayPayments', formatCurrency(maxValue));
-    
+
     // Atualizar porcentagem de hoje
     const todayPercentElement = document.getElementById('todayPaymentsPercent');
     if (todayPercentElement) {
         todayPercentElement.textContent = `${todayPercent}% do total`;
     }
-    
+
     // Atualizar subtítulo do melhor dia
     const bestDayElement = document.querySelector('#bestDayPayments')?.parentElement?.querySelector('.metric-card-subtitle');
     if (bestDayElement && maxValue > 0) {
@@ -1355,7 +1355,7 @@ function setupAnalyticsEvents() {
     if (clientsPeriodSelect) {
         clientsPeriodSelect.addEventListener('change', async function () {
             const period = this.value;
-            
+
             // Usar função de período se disponível
             let newData;
             if (typeof generateClientsDataByPeriod === 'function') {
@@ -1363,7 +1363,7 @@ function setupAnalyticsEvents() {
             } else {
                 newData = await generateClientsData();
             }
-            
+
             if (typeof drawClientsChartJS === 'function') {
                 drawClientsChartJS(newData);
             } else {
@@ -1376,7 +1376,7 @@ function setupAnalyticsEvents() {
     if (paymentsPeriodSelect) {
         paymentsPeriodSelect.addEventListener('change', function () {
             const period = this.value;
-            
+
             // Usar função de período se disponível
             let newData;
             if (typeof generatePaymentsDataByPeriod === 'function') {
@@ -1384,7 +1384,7 @@ function setupAnalyticsEvents() {
             } else {
                 newData = generatePaymentsData();
             }
-            
+
             if (typeof drawPaymentsChartJS === 'function') {
                 drawPaymentsChartJS(newData);
             } else {
@@ -1434,22 +1434,22 @@ async function initializeTopServers() {
 async function loadServersData() {
     try {
         const response = await fetch('/api-servers-stats.php');
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         if (data.success) {
             serversData = data;
-            } else {
+        } else {
             throw new Error(data.error || 'Erro ao carregar dados dos servidores');
         }
     } catch (error) {
         // Usar dados de fallback em caso de erro
         serversData = generateFallbackServersData();
-        }
+    }
 }
 
 /**
@@ -1459,12 +1459,12 @@ function setupServersEventListeners() {
     // Tabs de visualização
     const viewTabs = document.querySelectorAll('.view-tab');
     viewTabs.forEach(tab => {
-        tab.addEventListener('click', function() {
+        tab.addEventListener('click', function () {
             const view = this.dataset.view;
             switchServersView(view);
         });
     });
-    
+
     // Hover no gráfico para tooltip
     const canvas = document.getElementById('serversChart');
     if (canvas) {
@@ -1478,13 +1478,13 @@ function setupServersEventListeners() {
  */
 function switchServersView(view) {
     currentView = view;
-    
+
     // Atualizar tabs
     document.querySelectorAll('.view-tab').forEach(tab => {
         tab.classList.remove('active');
     });
     document.querySelector(`[data-view="${view}"]`).classList.add('active');
-    
+
     // Re-renderizar gráfico
     renderServersChart();
 }
@@ -1495,9 +1495,9 @@ function switchServersView(view) {
 function renderServersChart() {
     const canvas = document.getElementById('serversChart');
     if (!canvas || !serversData.servers) return;
-    
+
     const ctx = canvas.getContext('2d');
-    
+
     // Configurar tamanho do canvas baseado na tela
     let size = 400;
     if (window.innerWidth <= 480) {
@@ -1505,20 +1505,20 @@ function renderServersChart() {
     } else if (window.innerWidth <= 768) {
         size = 300;
     }
-    
+
     canvas.width = size;
     canvas.height = size;
     canvas.style.width = size + 'px';
     canvas.style.height = size + 'px';
-    
+
     // Limpar canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     if (serversData.servers.length === 0) {
         drawEmptyServersChart(ctx, canvas);
         return;
     }
-    
+
     if (currentView === 'chart') {
         drawPieChart(ctx, canvas);
     } else {
@@ -1534,14 +1534,14 @@ function drawPieChart(ctx, canvas) {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const radius = Math.min(centerX, centerY) - 40;
-    
+
     let currentAngle = -Math.PI / 2; // Começar do topo
     const total = servers.reduce((sum, server) => sum + server.client_count, 0);
-    
+
     // Desenhar fatias
     servers.forEach((server, index) => {
         const sliceAngle = (server.client_count / total) * 2 * Math.PI;
-        
+
         // Fatia
         ctx.beginPath();
         ctx.moveTo(centerX, centerY);
@@ -1549,12 +1549,12 @@ function drawPieChart(ctx, canvas) {
         ctx.closePath();
         ctx.fillStyle = server.color;
         ctx.fill();
-        
+
         // Borda
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 2;
         ctx.stroke();
-        
+
         // Armazenar dados para hover
         server.chartData = {
             centerX,
@@ -1563,22 +1563,22 @@ function drawPieChart(ctx, canvas) {
             startAngle: currentAngle,
             endAngle: currentAngle + sliceAngle
         };
-        
+
         currentAngle += sliceAngle;
     });
-    
+
     // Círculo central para efeito donut
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius * 0.4, 0, 2 * Math.PI);
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-secondary');
     ctx.fill();
-    
+
     // Texto central
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-primary');
     ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(total.toString(), centerX, centerY - 5);
-    
+
     ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary');
     ctx.fillText('Total Clientes', centerX, centerY + 20);
@@ -1594,13 +1594,13 @@ function drawBarChart(ctx, canvas) {
     const chartHeight = canvas.height - padding * 2;
     const barWidth = chartWidth / servers.length * 0.8;
     const barSpacing = chartWidth / servers.length * 0.2;
-    
+
     const maxClients = Math.max(...servers.map(s => s.client_count));
-    
+
     // Cores do tema
     const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary');
     const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border');
-    
+
     // Grid horizontal
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
@@ -1611,34 +1611,34 @@ function drawBarChart(ctx, canvas) {
         ctx.lineTo(canvas.width - padding, y);
         ctx.stroke();
     }
-    
+
     // Barras
     servers.forEach((server, index) => {
         const barHeight = (server.client_count / maxClients) * chartHeight;
         const x = padding + (barWidth + barSpacing) * index + barSpacing / 2;
         const y = canvas.height - padding - barHeight;
-        
+
         // Barra
         ctx.fillStyle = server.color;
         ctx.fillRect(x, y, barWidth, barHeight);
-        
+
         // Label do servidor
         ctx.fillStyle = textColor;
         ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'center';
-        
+
         // Nome do servidor (truncado se necessário)
         let serverName = server.name;
         if (serverName.length > 10) {
             serverName = serverName.substring(0, 10) + '...';
         }
         ctx.fillText(serverName, x + barWidth / 2, canvas.height - padding + 20);
-        
+
         // Valor
         ctx.fillStyle = textColor;
         ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.fillText(server.client_count.toString(), x + barWidth / 2, y - 10);
-        
+
         // Armazenar dados para hover
         server.chartData = {
             x: x,
@@ -1655,12 +1655,12 @@ function drawBarChart(ctx, canvas) {
 function drawEmptyServersChart(ctx, canvas) {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    
+
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary');
     ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Nenhum servidor encontrado', centerX, centerY - 10);
-    
+
     ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillText('Adicione servidores para ver as estatísticas', centerX, centerY + 15);
 }
@@ -1671,7 +1671,7 @@ function drawEmptyServersChart(ctx, canvas) {
 function renderServersList() {
     const container = document.getElementById('serversListContent');
     if (!container || !serversData.servers) return;
-    
+
     if (serversData.servers.length === 0) {
         container.innerHTML = `
             <div class="servers-empty-state">
@@ -1687,7 +1687,7 @@ function renderServersList() {
         `;
         return;
     }
-    
+
     container.innerHTML = serversData.servers.map(server => `
         <div class="server-item" data-server-id="${server.id}">
             <div class="server-rank rank-${server.rank}">${server.rank}</div>
@@ -1711,9 +1711,9 @@ function renderServersList() {
  */
 function updateServersStats() {
     if (!serversData.stats) return;
-    
+
     const stats = serversData.stats;
-    
+
     // Estatísticas gerais
     updateElement('totalClientsInTop', stats.top_stats.total_clients);
     updateElement('totalRevenueInTop', formatMoney(stats.top_stats.total_revenue));
@@ -1726,12 +1726,12 @@ function updateServersStats() {
  */
 function handleChartHover(event) {
     if (!serversData.servers || currentView !== 'chart') return;
-    
+
     const canvas = event.target;
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    
+
     // Verificar se o mouse está sobre alguma fatia
     for (const server of serversData.servers) {
         if (server.chartData && isPointInPieSlice(x, y, server.chartData)) {
@@ -1739,7 +1739,7 @@ function handleChartHover(event) {
             return;
         }
     }
-    
+
     hideServersTooltip();
 }
 
@@ -1748,24 +1748,24 @@ function handleChartHover(event) {
  */
 function isPointInPieSlice(x, y, chartData) {
     const { centerX, centerY, radius, startAngle, endAngle } = chartData;
-    
+
     // Calcular distância do centro
     const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-    
+
     // Verificar se está dentro do raio
     if (distance > radius || distance < radius * 0.4) return false;
-    
+
     // Calcular ângulo
     let angle = Math.atan2(y - centerY, x - centerX);
     if (angle < 0) angle += 2 * Math.PI;
-    
+
     // Ajustar para começar do topo
     angle = (angle + Math.PI / 2) % (2 * Math.PI);
-    
+
     // Verificar se está dentro do ângulo da fatia
     let start = (startAngle + Math.PI / 2) % (2 * Math.PI);
     let end = (endAngle + Math.PI / 2) % (2 * Math.PI);
-    
+
     if (start > end) {
         return angle >= start || angle <= end;
     } else {
@@ -1779,7 +1779,7 @@ function isPointInPieSlice(x, y, chartData) {
 function showServersTooltip(event, server) {
     const tooltip = document.getElementById('serversTooltip');
     if (!tooltip) return;
-    
+
     // Atualizar conteúdo
     tooltip.querySelector('.server-color').style.backgroundColor = server.color;
     tooltip.querySelector('.server-name').textContent = server.name;
@@ -1787,12 +1787,12 @@ function showServersTooltip(event, server) {
     tooltip.querySelector('.revenue-value').textContent = formatMoney(server.total_revenue);
     tooltip.querySelector('.clients-percentage').textContent = `${server.client_percentage}%`;
     tooltip.querySelector('.revenue-percentage').textContent = `${server.revenue_percentage}%`;
-    
+
     // Posicionar tooltip
     const rect = event.target.getBoundingClientRect();
     tooltip.style.left = `${event.clientX - rect.left + 15}px`;
     tooltip.style.top = `${event.clientY - rect.top - 15}px`;
-    
+
     // Mostrar tooltip
     tooltip.classList.add('visible');
 }
@@ -1851,7 +1851,7 @@ function generateFallbackServersData() {
 }
 
 // Adicionar inicialização do Top 5 Servidores ao dashboard
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Aguardar um pouco para garantir que outros componentes foram inicializados
     setTimeout(() => {
         if (window.location.pathname === '/dashboard' || window.location.pathname === '/') {
@@ -1861,7 +1861,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Redimensionar gráfico quando a janela for redimensionada
-window.addEventListener('resize', function() {
+window.addEventListener('resize', function () {
     if (serversData && serversData.servers) {
         setTimeout(() => {
             renderServersChart();
