@@ -22,6 +22,10 @@ $currentPath = $_SERVER['REQUEST_URI'] ?? '';
 $currentPath = parse_url($currentPath, PHP_URL_PATH);
 
 try {
+    // Carregar .env se ainda não foi carregado
+    if (!getenv('DB_HOST')) {
+        loadEnv(__DIR__ . '/../../.env');
+    }
     
     // Obter usuário autenticado
     $currentUser = Auth::user();
@@ -76,7 +80,7 @@ try {
     }
     
 } catch (Exception $e) {
-    error_log("Erro no sidebar: " . $e->getMessage());
+    // error_log("Erro no sidebar: " . $e->getMessage());
     // Em caso de erro, assumir como não autenticado
     $currentUser = null;
     $isAdmin = false;
