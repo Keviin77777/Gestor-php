@@ -89,13 +89,9 @@ async function loadApplications() {
             LoadingManager.show('Carregando aplicativos...');
         }
         
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('Token não encontrado');
-        }
-
         const response = await fetch('/api/applications', {
             method: 'GET',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -356,6 +352,7 @@ async function saveApplication() {
         
         const response = await fetch(url, {
             method: method,
+            credentials: 'include',
             headers: headers,
             body: JSON.stringify(data)
         });
@@ -411,6 +408,7 @@ async function loadApplicationData(applicationId, form) {
         
         const response = await fetch(`/api/applications/${applicationId}`, {
             method: 'GET',
+            credentials: 'include',
             headers: headers
         });
 
@@ -481,6 +479,7 @@ async function deleteApplication(applicationId) {
         
         const response = await fetch(`/api/applications/${applicationId}`, {
             method: 'DELETE',
+            credentials: 'include',
             headers: headers
         });
 

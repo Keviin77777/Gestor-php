@@ -297,7 +297,9 @@ function loadNotifications() {
     if (!notificationsList) return;
     
     // Buscar clientes vencendo hoje e nos próximos 7 dias
-    fetch('/api-clients.php')
+    fetch('/api-clients.php', {
+        credentials: 'include'
+    })
         .then(r => r.json())
         .then(data => {
             if (!data.success || !data.clients) {
