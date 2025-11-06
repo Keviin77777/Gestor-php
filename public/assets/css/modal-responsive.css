@@ -1,0 +1,523 @@
+/**
+ * Modal Responsive - Melhorias para responsividade mobile
+ * Estilos específicos para garantir que todos os modais funcionem perfeitamente em dispositivos móveis
+ */
+
+/* Estilos base para modais modernos */
+.modern-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modern-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modern-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.modern-modal-content {
+    background: var(--bg-primary);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+    border: 1px solid var(--border);
+}
+
+.modern-modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.modal-title-section {
+    flex: 1;
+    min-width: 0;
+}
+
+.modal-title-section h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.modal-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.modern-modal-close {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    flex-shrink: 0;
+}
+
+.modern-modal-close:hover {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+}
+
+.modern-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.modern-modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+/* Estilos para formulários dentro de modais */
+.modern-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.modern-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.modern-form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.modern-form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modern-form-group input,
+.modern-form-group select,
+.modern-form-group textarea {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.modern-form-group input:focus,
+.modern-form-group select:focus,
+.modern-form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.modern-form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Botões modernos */
+.btn-modern {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+}
+
+.btn-modern.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-modern.btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-modern.btn-secondary:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--text-secondary);
+}
+
+/* Input com ações */
+.input-with-actions {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-actions input {
+    padding-right: 3rem;
+}
+
+.input-action-btn {
+    position: absolute;
+    right: 8px;
+    background: var(--primary);
+    border: none;
+    border-radius: 6px;
+    padding: 0.375rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+}
+
+.input-action-btn:hover {
+    background: var(--primary-dark);
+}
+
+/* Responsividade Mobile */
+@media (max-width: 768px) {
+    .modern-modal {
+        align-items: flex-start;
+        padding: 0;
+        overflow-y: auto;
+    }
+    
+    .modern-modal-content {
+        width: 100%;
+        max-width: 100%;
+        max-height: none;
+        min-height: 100vh;
+        border-radius: 0;
+        margin: 0;
+        border: none;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .modern-modal-header {
+        position: sticky;
+        top: 0;
+        background: var(--bg-primary);
+        z-index: 10;
+        border-bottom: 1px solid var(--border);
+        padding: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .modern-modal-body {
+        padding: 1rem;
+        padding-top: 1rem;
+        padding-bottom: 8rem;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        flex: 1;
+        max-height: calc(100vh - 140px);
+    }
+    
+    .modern-modal-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--bg-primary);
+        border-top: 1px solid var(--border);
+        z-index: 1001;
+        padding: 1rem;
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+        display: flex;
+        gap: 0.75rem;
+    }
+    
+    .modern-modal-footer .btn-modern {
+        flex: 1;
+        min-height: 48px;
+    }
+    
+    /* Grid do formulário em coluna única */
+    .modern-form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    /* Melhorar campos do formulário */
+    .modern-form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .modern-form-group label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .modern-form-group input,
+    .modern-form-group select,
+    .modern-form-group textarea {
+        padding: 0.875rem;
+        font-size: 1rem;
+        min-height: 48px;
+        border-radius: 8px;
+    }
+    
+    /* Botão de fechar maior */
+    .modern-modal-close {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.75rem;
+    }
+    
+    /* Input com ações */
+    .input-action-btn {
+        min-width: 36px;
+        min-height: 36px;
+        padding: 0.5rem;
+        right: 8px;
+    }
+}
+
+/* Mobile pequeno */
+@media (max-width: 480px) {
+    .modern-modal-header {
+        padding: 1rem;
+    }
+    
+    .modal-title-section h2 {
+        font-size: 1.125rem;
+        line-height: 1.3;
+    }
+    
+    .modal-subtitle {
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+    
+    .modern-modal-body {
+        padding: 1rem;
+        padding-top: 1.5rem;
+        padding-bottom: 7rem;
+    }
+    
+    .modern-modal-footer {
+        padding: 1rem;
+        gap: 0.75rem;
+    }
+    
+    .modern-form-group label {
+        font-size: 0.875rem;
+        margin-bottom: 0.375rem;
+    }
+    
+    .modern-form-group input,
+    .modern-form-group select,
+    .modern-form-group textarea {
+        font-size: 1rem;
+        padding: 0.875rem;
+        min-height: 48px;
+    }
+    
+    .btn-modern {
+        padding: 0.875rem 1rem;
+        font-size: 1rem;
+        min-height: 48px;
+        font-weight: 600;
+    }
+    
+    /* Melhorar espaçamento entre campos */
+    .modern-form-group {
+        margin-bottom: 1.25rem;
+    }
+    
+    /* Ajustar textarea */
+    .modern-form-group textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
+}
+
+/* Mobile extra pequeno */
+@media (max-width: 360px) {
+    .modern-modal-header {
+        padding: 0.875rem;
+    }
+    
+    .modal-title-section h2 {
+        font-size: 1rem;
+    }
+    
+    .modal-subtitle {
+        font-size: 0.75rem;
+    }
+    
+    .modern-modal-body {
+        padding: 0.875rem;
+        padding-top: 1.25rem;
+        padding-bottom: 7rem;
+    }
+    
+    .modern-modal-footer {
+        padding: 0.875rem;
+        gap: 0.5rem;
+    }
+    
+    .modern-form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .modern-form-group label {
+        font-size: 0.8125rem;
+    }
+    
+    .modern-form-group input,
+    .modern-form-group select,
+    .modern-form-group textarea {
+        padding: 0.75rem;
+        font-size: 0.9375rem;
+    }
+    
+    .btn-modern {
+        padding: 0.75rem 0.875rem;
+        font-size: 0.9375rem;
+    }
+    
+    .modern-modal-close {
+        min-width: 40px;
+        min-height: 40px;
+        padding: 0.625rem;
+    }
+}
+
+/* Prevenir zoom em inputs no iOS */
+@media (max-width: 768px) {
+    .modern-form-group input[type="text"],
+    .modern-form-group input[type="email"],
+    .modern-form-group input[type="number"],
+    .modern-form-group input[type="tel"],
+    .modern-form-group input[type="date"],
+    .modern-form-group select,
+    .modern-form-group textarea {
+        font-size: 16px !important;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+}
+
+/* Melhorar acessibilidade em touch devices */
+@media (max-width: 768px) {
+    .btn-modern,
+    .modern-modal-close,
+    .input-action-btn {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+    
+    /* Focus states mais visíveis */
+    .btn-modern:focus,
+    .modern-modal-close:focus,
+    .modern-form-group input:focus,
+    .modern-form-group select:focus,
+    .modern-form-group textarea:focus {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+    }
+}
+
+/* Animações suaves */
+.modern-modal-content {
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.modern-modal.active .modern-modal-content {
+    transform: scale(1);
+}
+
+@media (max-width: 768px) {
+    .modern-modal-content {
+        transform: translateY(20px);
+    }
+    
+    .modern-modal.active .modern-modal-content {
+        transform: translateY(0);
+    }
+}
+
+/* Garantir que o modal seja sempre visível */
+.modern-modal[style*="display: flex"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Prevenir scroll do body quando modal está aberto */
+body.modal-open {
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    body.modal-open {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+    }
+}

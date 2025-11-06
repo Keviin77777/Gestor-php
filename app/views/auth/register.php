@@ -17,6 +17,13 @@
         /* Estilos específicos para registro */
         .register-page .auth-container {
             max-width: 1400px;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+        
+        .register-page .auth-right {
+            max-height: none !important;
+            overflow: visible !important;
         }
         
         .register-page .auth-form-container {
@@ -33,6 +40,14 @@
             .form-row {
                 grid-template-columns: 1fr;
                 gap: 1.5rem;
+            }
+            
+            .register-page .auth-container {
+                overflow: visible !important;
+            }
+            
+            .register-page .auth-right {
+                overflow: visible !important;
             }
         }
         
@@ -379,7 +394,5 @@
         });
     </script>
 
-    <!-- Protection Script -->
-    <script src="/assets/js/protection.js"></script>
 </body>
 </html>

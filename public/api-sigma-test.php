@@ -35,11 +35,42 @@ try {
     if ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
         
-        if (!$data || !isset($data['panel_url']) || !isset($data['sigma_token']) || !isset($data['reseller_user'])) {
-            throw new Exception('Dados obrigatórios: panel_url, sigma_token, reseller_user');
+        // Se usar token salvo, buscar do banco de dados
+        if (!empty($data['use_saved_token']) && !empty($data['server_id'])) {
+            require_once __DIR__ . '/../app/core/Database.php';
+            
+            $db = Database::connect();
+            
+            // Buscar dados do servidor
+            $stmt = $db->prepare("SELECT panel_url, sigma_token, reseller_user FROM servers WHERE id = ? AND user_id = ?");
+            $stmt->execute([$data['server_id'], $user['id']]);
+            $server = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$server) {
+                throw new Exception('Servidor não encontrado');
+            }
+            
+            // Usar dados do banco, mas permitir override da URL e usuário se fornecidos
+            $panelUrl = !empty($data['panel_url']) ? $data['panel_url'] : $server['panel_url'];
+            $resellerUser = !empty($data['reseller_user']) ? $data['reseller_user'] : $server['reseller_user'];
+            $sigmaToken = $server['sigma_token'];
+            
+            if (empty($panelUrl) || empty($sigmaToken) || empty($resellerUser)) {
+                throw new Exception('Dados de integração incompletos no servidor salvo');
+            }
+            
+        } else {
+            // Validação normal
+            if (!$data || !isset($data['panel_url']) || !isset($data['sigma_token']) || !isset($data['reseller_user'])) {
+                throw new Exception('Dados obrigatórios: panel_url, sigma_token, reseller_user');
+            }
+            
+            $panelUrl = $data['panel_url'];
+            $sigmaToken = $data['sigma_token'];
+            $resellerUser = $data['reseller_user'];
         }
         
-        $result = testSigmaConnectionHelper($data['panel_url'], $data['sigma_token'], $data['reseller_user']);
+        $result = testSigmaConnectionHelper($panelUrl, $sigmaToken, $resellerUser);
         
         echo json_encode($result);
     } else {

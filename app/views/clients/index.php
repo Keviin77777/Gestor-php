@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/assets/css/header-menu.css">
     <link rel="stylesheet" href="/assets/css/clients-improved.css">
     <link rel="stylesheet" href="/assets/css/payment-history.css">
+    <link rel="stylesheet" href="/assets/css/modal-responsive.css">
     <style>
         .field-error {
             border-color: #e74c3c !important;
@@ -16,6 +17,23 @@
         .field-error:focus {
             border-color: #e74c3c !important;
             box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.3) !important;
+        }
+        
+        /* Correção específica para garantir que todos os campos sejam visíveis */
+        @media (max-width: 768px) {
+            #clientModal .modern-modal-body {
+                padding-top: 1rem !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            
+            #clientModal .modern-form-group:first-child {
+                margin-top: 0.5rem !important;
+            }
+            
+            #clientModal .modern-form-grid {
+                margin-top: 0 !important;
+            }
         }
     </style>
 </head>
@@ -560,7 +578,9 @@
     <script src="/assets/js/auth.js"></script>
     <script src="/assets/js/theme-global.js"></script>
     <script src="/assets/js/mobile-responsive.js"></script>
+
     <script src="/assets/js/clients.js"></script>
+    <script src="/assets/js/client-modal-simple-fix.js"></script>
 
     <!-- Protection Script -->
     <script src="/assets/js/protection.js"></script>

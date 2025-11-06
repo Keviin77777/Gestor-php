@@ -7,6 +7,25 @@
     <link rel="stylesheet" href="/assets/css/dashboard.css">
     <link rel="stylesheet" href="/assets/css/header-menu.css">
     <link rel="stylesheet" href="/assets/css/plans.css">
+    <link rel="stylesheet" href="/assets/css/modal-responsive.css">
+    <style>
+        /* Correções específicas para modal de planos em mobile */
+        @media (max-width: 768px) {
+            #planModal .modern-modal-body {
+                padding-top: 1rem !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            
+            #planModal .modern-form-group:first-child {
+                margin-top: 0.5rem !important;
+            }
+            
+            #planModal .modern-form-grid {
+                margin-top: 0 !important;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Sidebar Overlay -->
@@ -157,6 +176,7 @@
     <script src="/assets/js/auth.js"></script>
     <script src="/assets/js/theme-global.js"></script>
     <script src="/assets/js/mobile-responsive.js"></script>
+    <script src="/assets/js/plans-modal-fix.js"></script>
     <script src="/assets/js/plans.js"></script>
 
     <!-- Protection Script -->

@@ -223,8 +223,9 @@ function updateServer($serverId) {
         }
 
         // Update server
-        // Se sigma_token não for fornecido ou for vazio, manter o existente
-        if (!empty($data['sigma_token'])) {
+        // Se sigma_token for fornecido e não estiver vazio, atualizar
+        // Caso contrário, manter o token existente
+        if (isset($data['sigma_token']) && !empty(trim($data['sigma_token']))) {
             $stmt = $db->prepare("
                 UPDATE servers SET
                     name = ?,
@@ -245,12 +246,12 @@ function updateServer($serverId) {
                 $data['panel_type'] ?? null,
                 $data['panel_url'] ?? null,
                 $data['reseller_user'] ?? null,
-                $data['sigma_token'],
+                trim($data['sigma_token']),
                 $serverId,
                 $user['id']
             ]);
         } else {
-            // Não atualizar o token
+            // Não atualizar o token - manter o existente
             $stmt = $db->prepare("
                 UPDATE servers SET
                     name = ?,
@@ -344,16 +345,52 @@ function testSigmaConnection() {
         // Get JSON data
         $data = json_decode(file_get_contents('php://input'), true);
 
-        // Validate required fields
-        if (empty($data['panel_url']) || empty($data['sigma_token']) || empty($data['reseller_user'])) {
-            Response::json([
-                'success' => false,
-                'error' => 'URL do painel, token e usuário são obrigatórios'
-            ], 400);
-            return;
+        // Se usar token salvo, buscar do banco de dados
+        if (!empty($data['use_saved_token']) && !empty($data['server_id'])) {
+            $db = Database::connect();
+            
+            // Buscar dados do servidor
+            $stmt = $db->prepare("SELECT panel_url, sigma_token, reseller_user FROM servers WHERE id = ? AND user_id = ?");
+            $stmt->execute([$data['server_id'], $user['id']]);
+            $server = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$server) {
+                Response::json([
+                    'success' => false,
+                    'error' => 'Servidor não encontrado'
+                ], 404);
+                return;
+            }
+            
+            // Usar dados do banco, mas permitir override da URL e usuário se fornecidos
+            $panelUrl = !empty($data['panel_url']) ? $data['panel_url'] : $server['panel_url'];
+            $resellerUser = !empty($data['reseller_user']) ? $data['reseller_user'] : $server['reseller_user'];
+            $sigmaToken = $server['sigma_token'];
+            
+            if (empty($panelUrl) || empty($sigmaToken) || empty($resellerUser)) {
+                Response::json([
+                    'success' => false,
+                    'error' => 'Dados de integração incompletos no servidor salvo'
+                ], 400);
+                return;
+            }
+            
+        } else {
+            // Validação normal para novos testes
+            if (empty($data['panel_url']) || empty($data['sigma_token']) || empty($data['reseller_user'])) {
+                Response::json([
+                    'success' => false,
+                    'error' => 'URL do painel, token e usuário são obrigatórios'
+                ], 400);
+                return;
+            }
+            
+            $panelUrl = $data['panel_url'];
+            $sigmaToken = $data['sigma_token'];
+            $resellerUser = $data['reseller_user'];
         }
 
-        $result = testSigmaConnectionHelper($data['panel_url'], $data['sigma_token'], $data['reseller_user']);
+        $result = testSigmaConnectionHelper($panelUrl, $sigmaToken, $resellerUser);
         
         Response::json($result);
 

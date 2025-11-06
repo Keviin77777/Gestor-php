@@ -226,6 +226,14 @@
                                 <div class="form-group">
                                     <label for="sigmaToken">Token do Sigma *</label>
                                     <input type="password" id="sigmaToken" name="sigma_token" placeholder="••••••••••••">
+                                    <small style="display: block; margin-top: 0.5rem; color: var(--text-tertiary); font-size: 0.75rem;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 0.25rem;">
+                                            <path d="M9 12l2 2 4-4"></path>
+                                            <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+                                            <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
+                                        </svg>
+                                        Token será salvo de forma segura no banco de dados
+                                    </small>
                                 </div>
                             </div>
                         </div>

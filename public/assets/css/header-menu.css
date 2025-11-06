@@ -630,10 +630,11 @@
     .user-dropdown-menu {
         position: fixed;
         top: 70px;
-        left: 1rem;
-        right: 1rem;
-        width: auto;
-        max-width: none;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: calc(100vw - 2rem) !important;
+        max-width: 350px !important;
     }
 
     .notifications-header {
@@ -696,9 +697,11 @@
     }
 
     .user-dropdown-menu {
-        right: 0;
-        width: calc(100vw - 2rem);
-        max-width: 280px;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: calc(100vw - 2rem) !important;
+        max-width: 300px !important;
     }
 }
 
@@ -713,15 +716,22 @@
 
     .notifications-dropdown {
         top: 60px;
-        left: 0.5rem;
-        right: 0.5rem;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: calc(100vw - 1rem) !important;
+        max-width: 300px !important;
         max-height: calc(100vh - 80px);
     }
 
     .user-dropdown-menu {
-        top: 60px;
-        left: 0.5rem;
-        right: 0.5rem;
+        top: 60px !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: calc(100vw - 1rem) !important;
+        max-width: 300px !important;
+        margin: 0 !important;
     }
 
     .notifications-header {
@@ -769,5 +779,75 @@
         font-size: 0.8125rem;
         display: block;
         padding: 0.5rem;
+    }
+}
+/* Cor
+reção específica para centralização do dropdown do perfil em mobile */
+@media (max-width: 768px) {
+    .user-dropdown-menu {
+        position: fixed !important;
+        top: 70px !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: calc(100vw - 2rem) !important;
+        max-width: 320px !important;
+        z-index: 1000 !important;
+        margin: 0 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .user-dropdown-menu {
+        top: 60px !important;
+        width: calc(100vw - 1rem) !important;
+        max-width: 300px !important;
+    }
+}
+
+/* Garantir que o dropdown seja sempre centralizado independente da posição do botão */
+@media (max-width: 768px) {
+    .user-profile-menu .user-dropdown-menu {
+        position: fixed !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+    }
+}/* Co
+rreção específica para o botão do menu mobile no Android */
+@media (max-width: 768px) {
+    .top-header-menu .mobile-menu-btn {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 10002 !important;
+        position: relative !important;
+        background: none !important;
+        border: none !important;
+        cursor: pointer !important;
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    
+    .top-header-menu .mobile-menu-btn span {
+        display: block !important;
+        width: 24px !important;
+        height: 2px !important;
+        background: var(--text-primary) !important;
+        transition: all 0.3s ease !important;
+        margin: 2px 0 !important;
+    }
+}
+
+/* Garantir que o header seja sempre visível */
+@media (max-width: 768px) {
+    .top-header-menu {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 10002 !important;
+        background: var(--bg-primary) !important;
+        border-bottom: 1px solid var(--border) !important;
     }
 }

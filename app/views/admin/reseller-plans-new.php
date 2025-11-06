@@ -7,6 +7,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="/assets/css/dashboard.css" rel="stylesheet">
     <link href="/assets/css/admin-responsive.css" rel="stylesheet">
+    <link href="/assets/css/modal-responsive.css" rel="stylesheet">
     <style>
         body {
             background: var(--bg-secondary);
@@ -519,6 +520,100 @@
 
             .plan-card.popular {
                 transform: scale(1);
+            }
+        }
+        
+        /* Correções específicas para modal de planos em mobile */
+        @media (max-width: 768px) {
+            #planModal {
+                align-items: flex-start !important;
+                padding: 0 !important;
+            }
+            
+            #planModal .modal-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 100vh !important;
+                max-height: 100vh !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+            }
+            
+            #planModal .modal-header {
+                position: sticky !important;
+                top: 0 !important;
+                background: var(--bg-primary) !important;
+                z-index: 10 !important;
+                border-bottom: 1px solid var(--border) !important;
+                padding: 1rem !important;
+                flex-shrink: 0 !important;
+            }
+            
+            #planModal .modal-body {
+                padding: 1rem !important;
+                padding-top: 1rem !important;
+                padding-bottom: 8rem !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                flex: 1 !important;
+                max-height: calc(100vh - 140px) !important;
+            }
+            
+            #planModal .modal-footer {
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                background: var(--bg-primary) !important;
+                border-top: 1px solid var(--border) !important;
+                z-index: 1001 !important;
+                padding: 1rem !important;
+                box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3) !important;
+                display: flex !important;
+                gap: 0.75rem !important;
+                flex-shrink: 0 !important;
+            }
+            
+            #planModal .modal-footer .btn-primary,
+            #planModal .modal-footer .btn-secondary {
+                flex: 1 !important;
+                min-height: 48px !important;
+                padding: 0.875rem 1rem !important;
+                font-size: 1rem !important;
+            }
+            
+            #planModal .form-row {
+                flex-direction: column !important;
+                gap: 1rem !important;
+            }
+            
+            #planModal .form-group {
+                margin-bottom: 1rem !important;
+            }
+            
+            #planModal .form-group input,
+            #planModal .form-group select,
+            #planModal .form-group textarea {
+                padding: 1rem !important;
+                font-size: 16px !important; /* Previne zoom no iOS */
+                min-height: 48px !important;
+                border-radius: 8px !important;
+            }
+            
+            #planModal .form-group label {
+                font-size: 0.875rem !important;
+                font-weight: 600 !important;
+                margin-bottom: 0.5rem !important;
+            }
+            
+            #planModal .btn-close {
+                min-width: 44px !important;
+                min-height: 44px !important;
+                padding: 0.75rem !important;
+                font-size: 1.25rem !important;
             }
         }
     </style>

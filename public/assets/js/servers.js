@@ -260,6 +260,19 @@ function closeServerModal() {
     form.reset();
     delete form.dataset.serverId; // Limpar ID do servidor
     
+    // Resetar campo de token
+    const tokenField = document.getElementById('sigmaToken');
+    tokenField.placeholder = '••••••••••••';
+    tokenField.value = '';
+    delete tokenField.dataset.isEdit;
+    
+    // Remover indicador de token configurado
+    const tokenGroup = tokenField.closest('.form-group');
+    const indicator = tokenGroup?.querySelector('.token-configured-indicator');
+    if (indicator) {
+        indicator.remove();
+    }
+    
     // Esconder campos de painel
     document.getElementById('sigmaFields').style.display = 'none';
     document.getElementById('testConnectionBtn').style.display = 'none';
@@ -289,7 +302,24 @@ async function testConnection() {
     const panelUrl = document.getElementById('panelUrl').value;
     const resellerUser = document.getElementById('resellerUser').value;
     const sigmaToken = document.getElementById('sigmaToken').value;
+    const form = document.getElementById('serverForm');
+    const serverId = form.dataset.serverId; // Verificar se está editando
 
+    // Se estiver editando e não tiver token preenchido, usar o token salvo
+    if (serverId && (!sigmaToken || sigmaToken.trim() === '')) {
+        
+        // Validar apenas URL e usuário para edição
+        if (!panelUrl || !resellerUser) {
+            showError('Por favor, preencha a URL do painel e usuário antes de testar.');
+            return;
+        }
+        
+        // Testar usando o servidor ID (backend buscará o token salvo)
+        await testConnectionWithServerId(serverId, panelUrl, resellerUser);
+        return;
+    }
+
+    // Para novo servidor ou quando token foi alterado
     if (!panelUrl || !resellerUser || !sigmaToken) {
         showError('Por favor, preencha todos os campos de integração antes de testar.');
         return;
@@ -310,7 +340,7 @@ async function testConnection() {
 
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api-sigma-test.php', {
+        const response = await fetch('/api-servers.php/test-sigma', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -328,7 +358,76 @@ async function testConnection() {
         if (result.success) {
             showSuccess('✅ Conexão com Sigma estabelecida com sucesso!\n\nPainel: ' + panelUrl + '\nUsuário: ' + resellerUser);
         } else {
-            showError('❌ Erro na conexão: ' + result.message);
+            showError('❌ Erro na conexão: ' + (result.error || result.message || 'Erro desconhecido'));
+        }
+
+    } catch (error) {
+        showError('❌ Erro ao testar conexão: ' + error.message);
+    } finally {
+        testBtn.disabled = false;
+        testBtn.innerHTML = originalText;
+    }
+}
+
+/**
+ * Testar conexão usando servidor ID (para edição com token salvo)
+ */
+async function testConnectionWithServerId(serverId, panelUrl, resellerUser) {
+    const testBtn = document.getElementById('testConnectionBtn');
+    const originalText = testBtn.innerHTML;
+    
+    testBtn.disabled = true;
+    testBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 0.5rem; animation: spin 1s linear infinite;">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+        </svg>
+        Testando com token salvo...
+    `;
+
+    try {
+        const token = localStorage.getItem('token');
+        
+        // Tentar primeiro o endpoint integrado
+        let response = await fetch('/api-servers.php/test-sigma', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                server_id: serverId,
+                panel_url: panelUrl,
+                reseller_user: resellerUser,
+                use_saved_token: true
+            })
+        });
+        
+        // Se der 404, tentar o endpoint antigo
+        if (response.status === 404) {
+            console.log('Endpoint integrado não encontrado, tentando endpoint antigo...');
+            response = await fetch('/api-sigma-test.php', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    server_id: serverId,
+                    panel_url: panelUrl,
+                    reseller_user: resellerUser,
+                    use_saved_token: true
+                })
+            });
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccess('✅ Conexão com Sigma estabelecida com sucesso usando token salvo!\n\nPainel: ' + panelUrl + '\nUsuário: ' + resellerUser);
+        } else {
+            showError('❌ Erro na conexão: ' + (result.error || result.message || 'Erro desconhecido'));
         }
 
     } catch (error) {
@@ -354,9 +453,23 @@ async function saveServer() {
             cost: formData.get('cost'),
             panel_type: formData.get('panel_type') || null,
             panel_url: formData.get('panel_url') || null,
-            reseller_user: formData.get('reseller_user') || null,
-            sigma_token: formData.get('sigma_token') || null
+            reseller_user: formData.get('reseller_user') || null
         };
+
+        // Para o token, só incluir se não estiver vazio (novo servidor ou alteração de token)
+        const tokenField = document.getElementById('sigmaToken');
+        const tokenValue = formData.get('sigma_token');
+        
+        if (tokenValue && tokenValue.trim() !== '') {
+            data.sigma_token = tokenValue;
+        } else if (!serverId) {
+            // Se for novo servidor e não tem token, mas tem painel sigma, é obrigatório
+            if (data.panel_type === 'sigma') {
+                showError('Token do Sigma é obrigatório para integração');
+                return;
+            }
+        }
+        // Se for edição e token estiver vazio, não incluir no data (manter o existente)
 
         // Validação
         if (!data.name || !data.billing_type || !data.cost) {
@@ -415,7 +528,7 @@ async function loadServerData(serverId) {
                 // Preencher formulário
                 document.getElementById('serverName').value = server.name;
                 document.getElementById('billingType').value = server.billing_type;
-                document.getElementById('serverCost').value = server.cost;
+                document.getElementById('serverCost').value = formatCurrency(server.cost);
                 
                 if (server.panel_type) {
                     document.getElementById('panelType').value = server.panel_type;
@@ -424,7 +537,34 @@ async function loadServerData(serverId) {
                     if (server.panel_type === 'sigma') {
                         document.getElementById('panelUrl').value = server.panel_url || '';
                         document.getElementById('resellerUser').value = server.reseller_user || '';
-                        // Não preencher token por segurança
+                        
+                        // Configurar campo de token para edição
+                        const tokenField = document.getElementById('sigmaToken');
+                        tokenField.placeholder = 'Token já configurado - deixe em branco para manter o atual';
+                        tokenField.value = ''; // Não mostrar o token real
+                        
+                        // Marcar que é uma edição e adicionar indicador visual
+                        tokenField.dataset.isEdit = 'true';
+                        
+
+                        
+                        // Adicionar indicador visual de que o token está configurado
+                        const tokenGroup = tokenField.closest('.form-group');
+                        let indicator = tokenGroup.querySelector('.token-configured-indicator');
+                        if (!indicator) {
+                            indicator = document.createElement('div');
+                            indicator.className = 'token-configured-indicator';
+                            indicator.innerHTML = `
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; color: #10b981; margin-right: 0.5rem;">
+                                    <path d="M9 12l2 2 4-4"></path>
+                                    <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+                                    <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
+                                </svg>
+                                <span style="color: #10b981; font-size: 0.875rem;">Token configurado e salvo</span>
+                            `;
+                            indicator.style.cssText = 'display: flex; align-items: center; margin-top: 0.5rem; padding: 0.5rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.375rem;';
+                            tokenGroup.appendChild(indicator);
+                        }
                     }
                 }
                 

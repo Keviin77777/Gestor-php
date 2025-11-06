@@ -31,15 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
  * Configurar eventos
  */
 function setupEvents() {
-    // Menu mobile
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const sidebar = document.getElementById('sidebar');
-
-    if (mobileMenuBtn && sidebar) {
-        mobileMenuBtn.addEventListener('click', function() {
-            sidebar.classList.toggle('active');
-        });
-    }
+    // Menu mobile - removido daqui, agora está no common.js
 
     // Busca
     const searchInput = document.getElementById('searchInput');

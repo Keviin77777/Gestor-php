@@ -210,6 +210,13 @@ async function logout() {
             localStorage.removeItem('user');
             sessionStorage.clear();
             
+            // Limpar credenciais salvas apenas se o usuário fizer logout manual
+            // (não limpar no auto-logout por expiração)
+            if (!window.autoLogout) {
+                localStorage.removeItem('ultragestor_credentials');
+                localStorage.removeItem('ultragestor_remember');
+            }
+            
             // Redirecionar para login
             window.location.href = '/login';
         } catch (error) {
@@ -218,6 +225,12 @@ async function logout() {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             sessionStorage.clear();
+            
+            // Limpar credenciais salvas apenas se o usuário fizer logout manual
+            if (!window.autoLogout) {
+                localStorage.removeItem('ultragestor_credentials');
+                localStorage.removeItem('ultragestor_remember');
+            }
             window.location.href = '/login';
         }
     }

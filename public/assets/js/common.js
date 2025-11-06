@@ -117,3 +117,139 @@ function showNotification(message, type = 'info') {
         }
     }, 5000);
 }
+/**
+
+ * Correção específica para centralização do dropdown do perfil em mobile
+ */
+function fixProfileDropdownPosition() {
+    const dropdown = document.getElementById('userDropdownMenu');
+    if (!dropdown) return;
+    
+    // Função para centralizar o dropdown
+    function centerDropdown() {
+        if (window.innerWidth <= 768) {
+            // Remover estilos inline que possam interferir
+            dropdown.style.left = '';
+            dropdown.style.right = '';
+            dropdown.style.transform = '';
+            
+            // Aplicar centralização via CSS
+            dropdown.style.position = 'fixed';
+            dropdown.style.left = '50%';
+            dropdown.style.transform = 'translateX(-50%)';
+            dropdown.style.width = 'calc(100vw - 2rem)';
+            dropdown.style.maxWidth = '320px';
+            dropdown.style.top = window.innerWidth <= 480 ? '60px' : '70px';
+            dropdown.style.zIndex = '1000';
+        }
+    }
+    
+    // Observar quando o dropdown é aberto
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                if (dropdown.classList.contains('active')) {
+                    setTimeout(centerDropdown, 10);
+                }
+            }
+        });
+    });
+    
+    observer.observe(dropdown, {
+        attributes: true,
+        attributeFilter: ['class']
+    });
+    
+    // Aplicar correção quando a tela for redimensionada
+    window.addEventListener('resize', () => {
+        if (dropdown.classList.contains('active')) {
+            centerDropdown();
+        }
+    });
+    
+    // Aplicar correção inicial se o dropdown já estiver ativo
+    if (dropdown.classList.contains('active')) {
+        centerDropdown();
+    }
+}
+
+// Inicializar correção do dropdown do perfil
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixProfileDropdownPosition);
+} else {
+    fixProfileDropdownPosition();
+}
+
+// Também executar após um pequeno delay
+setTimeout(fixProfileDropdownPosition, 500);
+
+/**
+ * Correção específica para o menu mobile em Android
+ */
+function fixMobileMenuAndroid() {
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    
+    if (!mobileMenuBtn || !sidebar) return;
+    
+    // Função para toggle do sidebar
+    function toggleSidebar(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const isActive = sidebar.classList.contains('active');
+        
+        if (isActive) {
+            // Fechar sidebar
+            sidebar.classList.remove('active');
+            if (sidebarOverlay) {
+                sidebarOverlay.classList.remove('active');
+            }
+            document.body.classList.remove('sidebar-open');
+        } else {
+            // Abrir sidebar
+            sidebar.classList.add('active');
+            if (sidebarOverlay) {
+                sidebarOverlay.classList.add('active');
+            }
+            document.body.classList.add('sidebar-open');
+        }
+    }
+    
+    // Remover listeners existentes
+    mobileMenuBtn.removeEventListener('click', toggleSidebar);
+    
+    // Adicionar listener
+    mobileMenuBtn.addEventListener('click', toggleSidebar);
+    mobileMenuBtn.addEventListener('touchstart', toggleSidebar);
+    
+    // Fechar sidebar ao clicar no overlay
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', function(e) {
+            e.preventDefault();
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            document.body.classList.remove('sidebar-open');
+        });
+    }
+    
+    // Garantir que o sidebar esteja fechado inicialmente em mobile
+    if (window.innerWidth <= 768) {
+        sidebar.classList.remove('active');
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.remove('active');
+        }
+        document.body.classList.remove('sidebar-open');
+    }
+}
+
+// Inicializar correção do menu mobile
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixMobileMenuAndroid);
+} else {
+    fixMobileMenuAndroid();
+}
+
+// Executar após delay para garantir que tudo foi carregado
+setTimeout(fixMobileMenuAndroid, 1000);

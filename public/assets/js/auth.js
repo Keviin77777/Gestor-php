@@ -5,6 +5,10 @@
 // Configuração da API
 const API_URL = window.location.origin;
 
+// Chaves para localStorage - "Lembre-me"
+const REMEMBER_KEY = 'ultragestor_remember';
+const CREDENTIALS_KEY = 'ultragestor_credentials';
+
 // Elementos do DOM
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
@@ -13,6 +17,12 @@ const messageDiv = document.getElementById('message');
 // Event Listeners
 if (loginForm) {
     loginForm.addEventListener('submit', handleLogin);
+    
+    // Carregar credenciais salvas ao carregar a página
+    loadSavedCredentials();
+    
+    // Auto-login se "Lembre-me" estiver ativo
+    checkAutoLogin();
 }
 
 if (registerForm) {
@@ -28,16 +38,25 @@ async function handleLogin(e) {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const submitBtn = loginForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
     
     // Validação básica
     if (!email || !password) {
-        showMessage('Preencha todos os campos', 'error');
+        showNotification('Por favor, preencha todos os campos obrigatórios', 'error');
+        return;
+    }
+    
+    // Validação de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Por favor, insira um email válido', 'error');
         return;
     }
     
     // Loading state
     submitBtn.disabled = true;
     submitBtn.classList.add('loading');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
     hideMessage();
     
     try {
@@ -53,45 +72,60 @@ async function handleLogin(e) {
             })
         });
         
-        console.log('Response status:', response.status);
-        console.log('Response ok:', response.ok);
-        
         const text = await response.text();
-        console.log('Response text:', text);
         
         let data;
         try {
             data = JSON.parse(text);
         } catch (e) {
-            console.error('JSON parse error:', e);
-            showMessage('Erro na resposta do servidor', 'error');
+            showNotification('Erro na comunicação com o servidor. Tente novamente.', 'error');
             return;
         }
-        
-        console.log('Response data:', data);
         
         if (response.ok && data.token) {
             // Salvar token
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             
+            // Gerenciar "Lembre-me"
+            handleRememberMe(email, password);
+            
+            // Mostrar mensagem de sucesso
+            showNotification('Login realizado com sucesso! Redirecionando...', 'success');
+            
             // Redirecionar para página salva ou dashboard
             const redirectTo = sessionStorage.getItem('redirectAfterLogin') || '/dashboard';
             sessionStorage.removeItem('redirectAfterLogin');
             
-            showMessage('Login realizado com sucesso!', 'success');
             setTimeout(() => {
                 window.location.href = redirectTo;
-            }, 500);
+            }, 1500);
         } else {
-            showMessage(data.error || 'Erro ao fazer login', 'error');
+            // Mensagens de erro mais específicas
+            let errorMessage = 'Erro ao fazer login';
+            
+            if (data.error) {
+                if (data.error.includes('credenciais') || data.error.includes('inválid') || data.error.includes('incorret')) {
+                    errorMessage = 'Email ou senha incorretos. Verifique suas credenciais.';
+                } else if (data.error.includes('não encontrado') || data.error.includes('not found')) {
+                    errorMessage = 'Usuário não encontrado. Verifique o email informado.';
+                } else if (data.error.includes('bloqueado') || data.error.includes('suspenso')) {
+                    errorMessage = 'Conta bloqueada. Entre em contato com o suporte.';
+                } else if (data.error.includes('expirado') || data.error.includes('vencido')) {
+                    errorMessage = 'Acesso expirado. Renove sua assinatura para continuar.';
+                } else {
+                    errorMessage = data.error;
+                }
+            }
+            
+            showNotification(errorMessage, 'error');
         }
     } catch (error) {
-        console.error('Login error:', error);
-        showMessage('Erro ao conectar com o servidor', 'error');
+        showNotification('Erro de conexão. Verifique sua internet e tente novamente.', 'error');
     } finally {
         submitBtn.disabled = false;
         submitBtn.classList.remove('loading');
+        submitBtn.innerHTML = originalText || 'Entrar';
     }
 }
 
@@ -192,16 +226,46 @@ async function handleRegister(e) {
 /**
  * Mostrar mensagem
  */
-function showMessage(text, type = 'info') {
+function showMessage(text, type = 'info', autoHide = true) {
+    if (!messageDiv) return;
+    
     messageDiv.textContent = text;
-    messageDiv.className = `message ${type} show`;
+    messageDiv.className = `message ${type}`;
+    
+    // Forçar reflow para garantir que a animação funcione
+    messageDiv.offsetHeight;
+    
+    // Adicionar classe show para animação
+    messageDiv.classList.add('show');
+    
+    // Auto-ocultar mensagens de erro após 5 segundos
+    if (autoHide && type === 'error') {
+        setTimeout(() => {
+            hideMessage();
+        }, 5000);
+    }
+    
+    // Auto-ocultar mensagens de info após 3 segundos
+    if (autoHide && type === 'info') {
+        setTimeout(() => {
+            hideMessage();
+        }, 3000);
+    }
 }
 
 /**
  * Esconder mensagem
  */
 function hideMessage() {
-    messageDiv.className = 'message';
+    if (!messageDiv) return;
+    
+    messageDiv.classList.remove('show');
+    
+    // Remover completamente após a animação
+    setTimeout(() => {
+        messageDiv.className = 'message';
+        messageDiv.textContent = '';
+    }, 300);
 }
 
 /**
@@ -251,6 +315,9 @@ async function logout() {
     localStorage.removeItem('user');
     sessionStorage.clear();
     
+    // Limpar credenciais salvas para impedir auto-login
+    clearSavedCredentials();
+    
     // Redirecionar para login
     window.location.href = '/login';
 }
@@ -266,3 +333,187 @@ if (!publicPages.includes(currentPath) && !currentPath.startsWith('/api/')) {
         window.location.href = '/login';
     }
 }
+/**
+ * Sistema de Toast Notifications
+ */
+function createToastContainer() {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    return container;
+}
+
+function showToast(message, type = 'info', duration = 5000) {
+    const container = createToastContainer();
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icons = {
+        success: '✅',
+        error: '❌',
+        info: 'ℹ️',
+        warning: '⚠️'
+    };
+    
+    toast.innerHTML = `
+        <div class="toast-icon">${icons[type] || icons.info}</div>
+        <div class="toast-content">${message}</div>
+        <button class="toast-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Trigger animation
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    // Auto remove
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 300);
+    }, duration);
+    
+    return toast;
+}
+
+// Função melhorada para mostrar mensagens
+function showNotification(message, type = 'info') {
+    // Mostrar tanto no elemento message quanto no toast
+    showMessage(message, type, false);
+    showToast(message, type);
+}/**
+ * Funcionalidade "Lembre-me"
+ */
+
+/**
+ * Salvar credenciais no localStorage
+ */
+function saveCredentials(email, password) {
+    const credentials = {
+        email: email,
+        password: btoa(password), // Codificar senha em base64 (não é seguro, mas melhor que texto puro)
+        timestamp: Date.now(),
+        userAgent: navigator.userAgent.substring(0, 50), // Verificação básica de dispositivo
+        domain: window.location.hostname
+    };
+    
+    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(credentials));
+    localStorage.setItem(REMEMBER_KEY, 'true');
+}
+
+/**
+ * Carregar credenciais salvas
+ */
+function loadSavedCredentials() {
+    const rememberMe = localStorage.getItem(REMEMBER_KEY);
+    const credentialsStr = localStorage.getItem(CREDENTIALS_KEY);
+    
+    if (rememberMe === 'true' && credentialsStr) {
+        try {
+            const credentials = JSON.parse(credentialsStr);
+            
+            // Verificar se as credenciais não são muito antigas (30 dias)
+            const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+            if (credentials.timestamp < thirtyDaysAgo) {
+                clearSavedCredentials();
+                return;
+            }
+            
+            // Preencher campos
+            const emailField = document.getElementById('email');
+            const passwordField = document.getElementById('password');
+            const rememberCheckbox = document.getElementById('remember');
+            
+            if (emailField && passwordField && rememberCheckbox) {
+                emailField.value = credentials.email;
+                passwordField.value = atob(credentials.password); // Decodificar senha
+                rememberCheckbox.checked = true;
+            }
+            
+        } catch (error) {
+            clearSavedCredentials();
+        }
+    }
+}
+
+/**
+ * Verificar se deve fazer auto-login
+ */
+function checkAutoLogin() {
+    // Auto-login desabilitado - usuário deve fazer login manualmente
+    return;
+}
+
+
+
+/**
+ * Limpar credenciais salvas
+ */
+function clearSavedCredentials() {
+    localStorage.removeItem(CREDENTIALS_KEY);
+    localStorage.removeItem(REMEMBER_KEY);
+    
+    const rememberCheckbox = document.getElementById('remember');
+    if (rememberCheckbox) {
+        rememberCheckbox.checked = false;
+    }
+}
+
+/**
+ * Verificar se "Lembre-me" está marcado e salvar credenciais
+ */
+function handleRememberMe(email, password) {
+    const rememberCheckbox = document.getElementById('remember');
+    
+    if (rememberCheckbox && rememberCheckbox.checked) {
+        saveCredentials(email, password);
+    } else {
+        clearSavedCredentials();
+    }
+}/**
+
+ * Adicionar listener para o checkbox "Lembre-me"
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    const rememberCheckbox = document.getElementById('remember');
+    
+    if (rememberCheckbox) {
+        rememberCheckbox.addEventListener('change', function() {
+            if (!this.checked) {
+                // Se desmarcou "Lembre-me", limpar credenciais salvas
+                clearSavedCredentials();
+            }
+        });
+    }
+});
+
+/**
+ * I
+nicialização e verificações
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se todos os elementos necessários existem
+    const emailField = document.getElementById('email');
+    const passwordField = document.getElementById('password');
+    const rememberCheckbox = document.getElementById('remember');
+    const loginForm = document.getElementById('loginForm');
+    
+    if (emailField && passwordField && rememberCheckbox && loginForm) {
+        // Carregar credenciais salvas
+        loadSavedCredentials();
+        
+        // Auto-login desabilitado
+    }
+});
