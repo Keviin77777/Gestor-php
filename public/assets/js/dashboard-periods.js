@@ -108,7 +108,7 @@ async function generateClientsDataByPeriod(period) {
 
     try {
         // Buscar dados reais da API de clientes
-        const response = await fetch('http://localhost:8000/api-clients.php', {
+        const response = await fetch('/api-clients.php', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
