@@ -29,13 +29,15 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Carregar .env ANTES de qualquer classe que precise dele
+require_once __DIR__ . '/../app/helpers/functions.php';
+loadEnv(__DIR__ . '/../.env');
+
+// Agora carregar as classes
 require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/core/Auth.php';
-require_once __DIR__ . '/../app/helpers/functions.php';
 
 try {
-    // Carregar .env antes de verificar autenticação
-    loadEnv(__DIR__ . '/../.env');
     
     // Verificar autenticação
     $user = Auth::user();
