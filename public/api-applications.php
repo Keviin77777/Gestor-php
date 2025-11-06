@@ -23,11 +23,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
+// Iniciar sessão antes de qualquer coisa
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_samesite', 'Lax');
+    session_start();
+}
+
 require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/core/Auth.php';
 require_once __DIR__ . '/../app/helpers/functions.php';
 
 try {
+    // Carregar .env antes de verificar autenticação
+    loadEnv(__DIR__ . '/../.env');
+    
     // Verificar autenticação
     $user = Auth::user();
     if (!$user) {

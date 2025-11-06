@@ -1,7 +1,16 @@
 <?php
-// Verificar se o usuário está autenticado e obter suas informações
-require_once __DIR__ . '/../../core/Database.php';
+// Carregar .env ANTES de qualquer coisa
 require_once __DIR__ . '/../../helpers/functions.php';
+loadEnv(__DIR__ . '/../../.env');
+
+// Iniciar sessão antes de carregar classes que dependem dela
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_samesite', 'Lax');
+    session_start();
+}
+
+// Agora carregar as classes
+require_once __DIR__ . '/../../core/Database.php';
 require_once __DIR__ . '/../../core/Auth.php';
 
 $currentUser = null;
@@ -13,12 +22,6 @@ $currentPath = $_SERVER['REQUEST_URI'] ?? '';
 $currentPath = parse_url($currentPath, PHP_URL_PATH);
 
 try {
-    loadEnv(__DIR__ . '/../../.env');
-    
-    // Iniciar sessão se não estiver iniciada
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
     
     // Obter usuário autenticado
     $currentUser = Auth::user();

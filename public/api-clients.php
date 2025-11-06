@@ -2,6 +2,12 @@
 // API para gerenciar clientes
 header('Content-Type: application/json');
 
+// Iniciar sessão antes de qualquer coisa
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_samesite', 'Lax');
+    session_start();
+}
+
 // Carregar funções auxiliares
 require_once __DIR__ . '/../app/helpers/functions.php';
 loadEnv(__DIR__ . '/../.env');
