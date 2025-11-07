@@ -100,6 +100,7 @@ try {
                 'email' => $user['email'],
                 'name' => $user['name'],
                 'role' => $user['role'],
+                'is_admin' => ($user['role'] === 'admin'), // Adicionar flag is_admin
                 'account_status' => $user['account_status'] ?? 'active'
             ];
             

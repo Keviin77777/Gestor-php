@@ -41,8 +41,8 @@ try {
             // Atualizar dados do usuário com informações do banco
             $currentUser = array_merge($currentUser, $userFromDB);
             
-            // Verificar se é admin
-            $isAdmin = ($userFromDB['is_admin'] == 1) || ($userFromDB['role'] === 'admin');
+            // Verificar se é admin (apenas pelo campo role)
+            $isAdmin = ($userFromDB['role'] === 'admin');
             
             // Se não for admin, obter informações do plano
             if (!$isAdmin) {
