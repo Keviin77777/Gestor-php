@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="/assets/css/whatsapp.css">
 </head>
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <div class="app-container">
         <?php include __DIR__ . '/../components/sidebar.php'; ?>
 
@@ -168,6 +171,7 @@
 
     <script src="/assets/js/common.js"></script>
     <script src="/assets/js/loading-manager.js"></script>
+    <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/whatsapp-templates.js"></script>
 
     <!-- Protection Script -->

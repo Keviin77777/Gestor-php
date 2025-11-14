@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="/assets/css/applications.css">
 </head>
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <?php include __DIR__ . '/../components/sidebar.php'; ?>
 
     <!-- Main Content -->
@@ -58,9 +61,11 @@
     </main>
 
     <!-- Scripts -->
+    <script src="/assets/js/common.js"></script>
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/auth.js"></script>
     <script src="/assets/js/theme-global.js"></script>
+    <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/dashboard.js"></script>
     <script src="/assets/js/applications.js"></script>
     <script>

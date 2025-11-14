@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="/assets/css/servers-responsive.css">
 </head>
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <?php include __DIR__ . '/../components/sidebar.php'; ?>
 
     <!-- Main Content -->
@@ -254,7 +257,10 @@
     </div>
 
     <script src="/assets/js/common.js"></script>
+    <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/theme-global.js"></script>
+    <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/servers.js"></script>
     
     <script>
