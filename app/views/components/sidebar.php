@@ -43,16 +43,34 @@ try {
             
             // Verificação robusta de admin - verificar tanto role quanto is_admin
             $isAdmin = false;
-            if (isset($userFromDB['role']) && $userFromDB['role'] === 'admin') {
+            
+            // Verificar role (case-insensitive para segurança)
+            $role = strtolower(trim($userFromDB['role'] ?? ''));
+            if ($role === 'admin') {
                 $isAdmin = true;
-            } elseif (isset($userFromDB['is_admin']) && ($userFromDB['is_admin'] === 1 || $userFromDB['is_admin'] === true || $userFromDB['is_admin'] === '1')) {
+            }
+            
+            // Verificar is_admin como fallback
+            if (!$isAdmin && isset($userFromDB['is_admin'])) {
+                $isAdminValue = $userFromDB['is_admin'];
+                if ($isAdminValue === 1 || $isAdminValue === true || $isAdminValue === '1' || $isAdminValue === 1.0) {
+                    $isAdmin = true;
+                }
+            }
+            
+            // Verificar também na sessão como último recurso
+            if (!$isAdmin && isset($_SESSION['user']['role']) && strtolower(trim($_SESSION['user']['role'])) === 'admin') {
+                $isAdmin = true;
+            }
+            
+            if (!$isAdmin && isset($_SESSION['user']['is_admin']) && ($_SESSION['user']['is_admin'] === true || $_SESSION['user']['is_admin'] === 1 || $_SESSION['user']['is_admin'] === '1')) {
                 $isAdmin = true;
             }
             
             // Garantir que a sessão tenha os dados corretos
             if ($isAdmin && isset($_SESSION['user'])) {
-                $_SESSION['user']['role'] = $userFromDB['role'];
-                $_SESSION['user']['is_admin'] = ($userFromDB['is_admin'] ?? 0) == 1;
+                $_SESSION['user']['role'] = 'admin';
+                $_SESSION['user']['is_admin'] = true;
             }
             
             // Se não for admin, obter informações do plano
