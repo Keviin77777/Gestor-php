@@ -41,8 +41,19 @@ try {
             // Atualizar dados do usuário com informações do banco
             $currentUser = array_merge($currentUser, $userFromDB);
             
-            // Verificar se é admin (apenas pelo campo role)
-            $isAdmin = ($userFromDB['role'] === 'admin');
+            // Verificação robusta de admin - verificar tanto role quanto is_admin
+            $isAdmin = false;
+            if (isset($userFromDB['role']) && $userFromDB['role'] === 'admin') {
+                $isAdmin = true;
+            } elseif (isset($userFromDB['is_admin']) && ($userFromDB['is_admin'] === 1 || $userFromDB['is_admin'] === true || $userFromDB['is_admin'] === '1')) {
+                $isAdmin = true;
+            }
+            
+            // Garantir que a sessão tenha os dados corretos
+            if ($isAdmin && isset($_SESSION['user'])) {
+                $_SESSION['user']['role'] = $userFromDB['role'];
+                $_SESSION['user']['is_admin'] = ($userFromDB['is_admin'] ?? 0) == 1;
+            }
             
             // Se não for admin, obter informações do plano
             if (!$isAdmin) {

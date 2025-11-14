@@ -15,7 +15,39 @@ $userName = $user['name'] ?? 'Usuário';
 $userEmail = $user['email'] ?? '';
 $userRole = $user['role'] ?? 'reseller';
 $userId = $user['id'] ?? null;
-$isAdmin = ($userRole === 'admin');
+
+// Verificação robusta de admin - verificar tanto role quanto is_admin
+$isAdmin = false;
+if (isset($user['role']) && $user['role'] === 'admin') {
+    $isAdmin = true;
+} elseif (isset($user['is_admin']) && ($user['is_admin'] === true || $user['is_admin'] === 1 || $user['is_admin'] === '1')) {
+    $isAdmin = true;
+}
+
+// Se ainda não identificou como admin, buscar do banco para garantir
+if (!$isAdmin && isset($userId)) {
+    try {
+        require_once __DIR__ . '/../../app/helpers/functions.php';
+        require_once __DIR__ . '/../../app/core/Database.php';
+        
+        $userFromDB = Database::fetch(
+            "SELECT role, is_admin FROM users WHERE id = ? OR email = ? LIMIT 1",
+            [$userId, $userEmail]
+        );
+        
+        if ($userFromDB) {
+            if ($userFromDB['role'] === 'admin' || ($userFromDB['is_admin'] ?? 0) == 1) {
+                $isAdmin = true;
+                // Atualizar sessão com role correto
+                $_SESSION['user']['role'] = $userFromDB['role'];
+                $_SESSION['user']['is_admin'] = ($userFromDB['is_admin'] ?? 0) == 1;
+                $userRole = $userFromDB['role'];
+            }
+        }
+    } catch (Exception $e) {
+        // Silenciar erro, usar valor da sessão
+    }
+}
 ?>
 
 <div class="top-header-menu">
