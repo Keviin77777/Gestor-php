@@ -170,13 +170,21 @@ class EfiBankHelper {
         }
         
         try {
+            // Log do ambiente
+            error_log("EFI Bank - Modo: " . ($this->sandbox ? 'SANDBOX (Homologação)' : 'PRODUÇÃO'));
+            error_log("EFI Bank - Client ID: " . substr($this->clientId, 0, 20) . '...');
+            error_log("EFI Bank - Certificado: " . ($this->certificate ?: 'não configurado'));
+            
             // Obter token de acesso
             $accessToken = $this->getAccessToken();
+            error_log("EFI Bank - Token obtido com sucesso");
             
             // URL da API
             $url = $this->sandbox ? 
                 'https://api-pix-h.gerencianet.com.br/v2/cob' : 
                 'https://api-pix.gerencianet.com.br/v2/cob';
+            
+            error_log("EFI Bank - URL da API: " . $url);
             
             // Preparar payload
             $payload = [
@@ -324,12 +332,16 @@ class EfiBankHelper {
      */
     private function getQRCode($txid, $accessToken) {
         try {
-            $url = $this->sandbox ? 
-                "https://api-pix-h.gerencianet.com.br/v2/loc/{$txid}/qrcode" : 
-                "https://api-pix.gerencianet.com.br/v2/loc/{$txid}/qrcode";
+            // A API EFI usa o campo 'loc' da resposta da cobrança, não o txid diretamente
+            // Precisamos buscar a cobrança primeiro para pegar o location ID
+            $cobUrl = $this->sandbox ? 
+                "https://api-pix-h.gerencianet.com.br/v2/cob/{$txid}" : 
+                "https://api-pix.gerencianet.com.br/v2/cob/{$txid}";
+            
+            error_log("EFI Bank - Buscando cobrança para obter location: " . $cobUrl);
             
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_URL, $cobUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Authorization: Bearer ' . $accessToken,
@@ -354,16 +366,106 @@ class EfiBankHelper {
             
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
             curl_close($ch);
+            
+            error_log("EFI Bank - Resposta cobrança HTTP: " . $httpCode);
+            error_log("EFI Bank - Resposta cobrança Body: " . $response);
+            
+            if ($error) {
+                error_log("EFI Bank - Erro cURL ao buscar cobrança: " . $error);
+                return [
+                    'success' => false,
+                    'error' => 'Erro de conexão ao buscar cobrança: ' . $error
+                ];
+            }
             
             if ($httpCode !== 200) {
                 return [
                     'success' => false,
-                    'error' => 'Erro ao obter QR Code'
+                    'error' => 'Erro ao buscar cobrança (HTTP ' . $httpCode . ')'
+                ];
+            }
+            
+            $cobResult = json_decode($response, true);
+            
+            // Extrair location ID
+            $locationId = $cobResult['loc']['id'] ?? null;
+            
+            if (!$locationId) {
+                error_log("EFI Bank - Location ID não encontrado na resposta");
+                return [
+                    'success' => false,
+                    'error' => 'Location ID não encontrado na cobrança'
+                ];
+            }
+            
+            error_log("EFI Bank - Location ID: " . $locationId);
+            
+            // Agora buscar o QR Code usando o location ID
+            $qrUrl = $this->sandbox ? 
+                "https://api-pix-h.gerencianet.com.br/v2/loc/{$locationId}/qrcode" : 
+                "https://api-pix.gerencianet.com.br/v2/loc/{$locationId}/qrcode";
+            
+            error_log("EFI Bank - Buscando QR Code: " . $qrUrl);
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $qrUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $accessToken,
+                'Content-Type: application/json'
+            ]);
+            
+            if ($isLocalhost || env('APP_ENV') === 'development') {
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            } else {
+                if (!empty($this->certificate) && file_exists($this->certificate)) {
+                    curl_setopt($ch, CURLOPT_SSLCERT, $this->certificate);
+                }
+            }
+            
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+            
+            error_log("EFI Bank - Resposta QR Code HTTP: " . $httpCode);
+            error_log("EFI Bank - Resposta QR Code Body: " . substr($response, 0, 200));
+            
+            if ($error) {
+                error_log("EFI Bank - Erro cURL ao buscar QR Code: " . $error);
+                return [
+                    'success' => false,
+                    'error' => 'Erro de conexão ao buscar QR Code: ' . $error
+                ];
+            }
+            
+            if ($httpCode !== 200) {
+                $result = json_decode($response, true);
+                $errorMsg = $result['mensagem'] ?? 'HTTP ' . $httpCode;
+                error_log("EFI Bank - Erro ao obter QR Code: " . $errorMsg);
+                return [
+                    'success' => false,
+                    'error' => 'Erro ao obter QR Code: ' . $errorMsg
                 ];
             }
             
             $result = json_decode($response, true);
+            
+            if (!isset($result['qrcode']) || !isset($result['imagemQrcode'])) {
+                error_log("EFI Bank - QR Code não encontrado na resposta");
+                return [
+                    'success' => false,
+                    'error' => 'QR Code não encontrado na resposta da API'
+                ];
+            }
+            
+            error_log("EFI Bank - QR Code obtido com sucesso");
             
             return [
                 'success' => true,
@@ -372,6 +474,7 @@ class EfiBankHelper {
             ];
             
         } catch (Exception $e) {
+            error_log("EFI Bank - Exception ao obter QR Code: " . $e->getMessage());
             return [
                 'success' => false,
                 'error' => 'Erro ao obter QR Code: ' . $e->getMessage()
