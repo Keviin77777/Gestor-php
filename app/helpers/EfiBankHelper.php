@@ -186,16 +186,23 @@ class EfiBankHelper {
                 'calendario' => [
                     'expiracao' => 3600 // 1 hora
                 ],
-                'devedor' => [
-                    'nome' => $data['payer_name'],
-                    'cpf' => preg_replace('/[^0-9]/', '', $data['payer_doc_number'])
-                ],
                 'valor' => [
                     'original' => number_format((float)$data['amount'], 2, '.', '')
                 ],
                 'chave' => $this->getPixKey(), // Chave PIX cadastrada
                 'solicitacaoPagador' => $data['description'] ?? 'Pagamento'
             ];
+            
+            // Adicionar devedor apenas se tiver CPF válido
+            if (!empty($data['payer_doc_number'])) {
+                $cpf = preg_replace('/[^0-9]/', '', $data['payer_doc_number']);
+                if (strlen($cpf) === 11 && $this->validarCPF($cpf)) {
+                    $payload['devedor'] = [
+                        'nome' => $data['payer_name'],
+                        'cpf' => $cpf
+                    ];
+                }
+            }
             
             // Adicionar informações adicionais se fornecidas
             if (!empty($data['external_reference'])) {
@@ -465,5 +472,36 @@ class EfiBankHelper {
         
         // Consultar status atualizado
         return $this->getPaymentStatus($txid);
+    }
+    
+    /**
+     * Validar CPF
+     */
+    private function validarCPF($cpf) {
+        // Remove caracteres não numéricos
+        $cpf = preg_replace('/[^0-9]/', '', $cpf);
+        
+        // Verifica se tem 11 dígitos
+        if (strlen($cpf) != 11) {
+            return false;
+        }
+        
+        // Verifica se todos os dígitos são iguais
+        if (preg_match('/(\d)\1{10}/', $cpf)) {
+            return false;
+        }
+        
+        // Valida primeiro dígito verificador
+        for ($t = 9; $t < 11; $t++) {
+            for ($d = 0, $c = 0; $c < $t; $c++) {
+                $d += $cpf[$c] * (($t + 1) - $c);
+            }
+            $d = ((10 * $d) % 11) % 10;
+            if ($cpf[$c] != $d) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 }
