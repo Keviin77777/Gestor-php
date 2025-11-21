@@ -1462,9 +1462,9 @@
                     
                     <!-- QR Code -->
                     <div style="background: white; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; border: 2px solid var(--border);">
-                        <img src="data:image/png;base64,${pixData.qr_code_base64}" 
-                             alt="QR Code PIX" 
-                             style="max-width: 100%; height: auto; border-radius: 8px;">
+                        <div id="qrCodeContainer" style="display: flex; justify-content: center; align-items: center; min-height: 250px;">
+                            <div class="spinner"></div>
+                        </div>
                     </div>
                     
                     <!-- Código PIX -->
@@ -1488,6 +1488,23 @@
                             </button>
                         </div>
                     </div>
+                    
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+                    <script>
+                        // Gerar QR Code a partir do texto PIX
+                        setTimeout(() => {
+                            const container = document.getElementById('qrCodeContainer');
+                            container.innerHTML = '';
+                            new QRCode(container, {
+                                text: '${pixData.qr_code}',
+                                width: 250,
+                                height: 250,
+                                colorDark: "#000000",
+                                colorLight: "#ffffff",
+                                correctLevel: QRCode.CorrectLevel.M
+                            });
+                        }, 100);
+                    </script>
                     
                     <!-- Instruções -->
                     <div style="background: rgba(99, 102, 241, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid rgba(99, 102, 241, 0.2);">
