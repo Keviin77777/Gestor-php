@@ -257,7 +257,6 @@ async function logout() {
             // Redirecionar para login
             window.location.href = '/login';
         } catch (error) {
-            console.error('Erro no logout:', error);
             // Mesmo com erro, limpar dados locais e redirecionar
             localStorage.removeItem('token');
             localStorage.removeItem('user');
@@ -311,7 +310,6 @@ function updateWhatsAppStatus() {
             }
         })
         .catch(e => {
-            console.log('Erro ao verificar WhatsApp:', e);
             // Em caso de erro, manter como desconectado
             const icon = document.querySelector('.top-header-menu .header-status-item .status-icon');
             const text = document.querySelector('.top-header-menu .header-status-item .status-text');
@@ -397,7 +395,6 @@ function loadNotifications() {
             }
         })
         .catch(error => {
-            console.error('Erro ao carregar notificações:', error);
             showEmptyNotifications();
         });
 }
@@ -517,13 +514,12 @@ async function updatePlanExpiry() {
         } else {
             // Sem plano ou erro
             planExpiryDays.textContent = 'Sem plano';
-            planExpiryIcon.className = 'status-icon warning';
-        }
-    } catch (error) {
-        console.error('Erro ao atualizar vencimento do plano:', error);
-        planExpiryDays.textContent = 'Erro ao carregar';
         planExpiryIcon.className = 'status-icon warning';
     }
+} catch (error) {
+    planExpiryDays.textContent = 'Erro ao carregar';
+    planExpiryIcon.className = 'status-icon warning';
+}
 }
 
 // Atualizar vencimento imediatamente ao carregar

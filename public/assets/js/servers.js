@@ -399,7 +399,6 @@ async function testConnectionWithServerId(serverId, panelUrl, resellerUser) {
         
         // Se der 404, tentar o endpoint antigo
         if (response.status === 404) {
-            console.log('Endpoint integrado não encontrado, tentando endpoint antigo...');
             response = await fetch('/api-sigma-test.php', {
                 method: 'POST',
                 headers: {

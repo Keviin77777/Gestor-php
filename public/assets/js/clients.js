@@ -428,7 +428,6 @@ async function loadPlansAndServers() {
             // Preencher filtro de planos após carregar
             populatePlanFilter();
         } else {
-            console.error('Erro ao carregar planos:', plansResult.error || 'Resposta inválida');
             availablePlans = [];
             // Mesmo com erro, tentar preencher o filtro com planos vazios
             populatePlanFilter();
@@ -452,11 +451,9 @@ async function loadPlansAndServers() {
         if (serversResult.success) {
             availableServers = serversResult.servers || [];
         } else {
-            console.error('Erro ao carregar servidores:', serversResult.error);
             availableServers = [];
         }
     } catch (error) {
-        console.error('Erro ao carregar planos/servidores:', error);
         availableServers = [];
         availablePlans = [];
         // Mesmo com erro, tentar preencher o filtro
@@ -590,11 +587,9 @@ async function loadApplications() {
         if (result.success) {
             availableApplications = result.applications || [];
         } else {
-            console.error('Erro ao carregar aplicativos:', result.error);
             availableApplications = [];
         }
     } catch (error) {
-        console.error('Erro ao carregar aplicativos:', error);
         availableApplications = [];
     }
 }
@@ -1978,7 +1973,6 @@ async function checkMercadoPagoStatus() {
         updateAddPaymentButton();
     } catch (error) {
         // Tratar erro de forma silenciosa - apenas definir como não configurado
-        console.log('Não foi possível verificar status do Mercado Pago:', error.message);
         mercadoPagoConfigured = false;
         updateAddPaymentButton();
     }

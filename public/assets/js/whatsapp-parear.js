@@ -375,8 +375,6 @@ function startQRCheck() {
                         }
                     }
                 }
-            } else {
-                console.warn('Erro ao buscar QR Code:', data.error);
             }
 
             // Timeout após tentativas máximas

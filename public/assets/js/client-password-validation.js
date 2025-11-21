@@ -30,7 +30,7 @@ async function checkServerHasSigma(serverName) {
             return false;
         }
     } catch (error) {
-        console.error('Erro ao verificar Sigma:', error);
+        // Erro silencioso
         selectedServerHasSigma = false;
         updatePasswordValidationUI(false);
         return false;

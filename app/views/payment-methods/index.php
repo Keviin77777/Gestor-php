@@ -1,3 +1,43 @@
+<?php
+// Carregar dependências
+require_once __DIR__ . '/../../helpers/functions.php';
+
+// Tentar múltiplos caminhos para o .env
+$currentFile = __FILE__;
+$envPaths = [
+    dirname(dirname(dirname($currentFile))) . '/.env',
+    dirname(dirname(dirname(dirname($currentFile)))) . '/Gestor/.env',
+    '/www/wwwroot/ultragestor.site/Gestor/.env',
+    realpath(dirname(dirname(dirname($currentFile))) . '/.env'),
+];
+
+if (isset($_SERVER['DOCUMENT_ROOT'])) {
+    $docRoot = $_SERVER['DOCUMENT_ROOT'];
+    if (strpos($docRoot, '/public') !== false || strpos($docRoot, '/Gestor') !== false) {
+        $envPaths[] = dirname($docRoot) . '/.env';
+        $envPaths[] = $docRoot . '/../.env';
+    }
+}
+
+foreach ($envPaths as $envPath) {
+    $realPath = realpath($envPath);
+    if ($realPath && file_exists($realPath)) {
+        loadEnv($realPath);
+        if (getenv('DB_HOST')) {
+            break;
+        }
+    }
+}
+
+// Iniciar sessão se necessário
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_samesite', 'Lax');
+    session_start();
+}
+
+require_once __DIR__ . '/../../core/Database.php';
+require_once __DIR__ . '/../../core/Auth.php';
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -22,6 +62,37 @@
         <!-- Content -->
         <div class="content-wrapper">
             <div class="payment-methods-container">
+                
+                <?php
+                // Verificar se é admin (reutilizar lógica do sidebar)
+                // A variável $isAdmin já está disponível do sidebar.php incluído acima
+                // Mas vamos garantir que está definida
+                if (!isset($isAdmin)) {
+                    $currentUser = Auth::user();
+                    $isAdmin = false;
+                    
+                    if ($currentUser) {
+                        $userFromDB = Database::fetch(
+                            "SELECT * FROM users WHERE id = ? OR email = ?",
+                            [$currentUser['id'] ?? '', $currentUser['email'] ?? '']
+                        );
+                        
+                        if ($userFromDB) {
+                            $role = strtolower(trim($userFromDB['role'] ?? ''));
+                            if ($role === 'admin') {
+                                $isAdmin = true;
+                            }
+                            
+                            if (!$isAdmin && isset($userFromDB['is_admin'])) {
+                                $isAdminValue = $userFromDB['is_admin'];
+                                if ($isAdminValue === 1 || $isAdminValue === true || $isAdminValue === '1' || $isAdminValue === 1.0) {
+                                    $isAdmin = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                ?>
                 
                 <!-- Mercado Pago Card -->
                 <div class="payment-method-card">
@@ -101,7 +172,8 @@
                     </div>
                 </div>
                 
-                <!-- EFI Bank Card -->
+                <!-- EFI Bank Card - Apenas para Admin -->
+                <?php if ($isAdmin): ?>
                 <div class="payment-method-card">
                     <div class="payment-method-header">
                         <div class="payment-method-logo">
@@ -210,6 +282,7 @@
                         </form>
                     </div>
                 </div>
+                <?php endif; ?>
                 
                 <!-- Info Box -->
                 <div class="info-box">
@@ -242,7 +315,8 @@
                     </div>
                 </div>
                 
-                <!-- Info Box EFI Bank -->
+                <!-- Info Box EFI Bank - Apenas para Admin -->
+                <?php if ($isAdmin): ?>
                 <div class="info-box">
                     <div class="info-box-header">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -275,6 +349,7 @@
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
                 
             </div>
         </div>

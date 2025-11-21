@@ -534,7 +534,6 @@ function formatDate(dateString) {
         
         return date.toLocaleDateString('pt-BR');
     } catch (error) {
-        console.warn('Erro ao formatar data:', dateString, error);
         return dateString || 'N/A';
     }
 }

@@ -379,10 +379,7 @@ function closeSchedulingModal() {
 }
 
 async function saveScheduling() {
-    console.log('saveScheduling chamada, currentSchedulingId:', currentSchedulingId);
-
     if (!currentSchedulingId) {
-        console.error('currentSchedulingId não definido');
         showNotification('Erro: Template não selecionado', 'error');
         return;
     }
@@ -392,8 +389,6 @@ async function saveScheduling() {
 
         const time = document.getElementById('schedulingTime').value;
         const selectedDays = Array.from(document.querySelectorAll('.day-input:checked')).map(input => input.value);
-
-        console.log('Dados coletados:', { time, selectedDays });
 
         // Validação: deve ter pelo menos um dia selecionado se estiver ativando
         const enabled = selectedDays.length > 0;
@@ -410,8 +405,6 @@ async function saveScheduling() {
             scheduled_time: time
         };
 
-        console.log('Enviando dados:', { id: currentSchedulingId, ...schedulingData });
-
         const response = await fetch('/api-whatsapp-templates.php', {
             method: 'PUT',
             headers: {
@@ -423,9 +416,7 @@ async function saveScheduling() {
             })
         });
 
-        console.log('Response status:', response.status);
         const data = await response.json();
-        console.log('Response data:', data);
 
         if (data.success) {
             showNotification('Agendamento salvo com sucesso!', 'success');

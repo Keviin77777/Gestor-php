@@ -194,8 +194,6 @@ async function handleRegister(e) {
         try {
             data = JSON.parse(text);
         } catch (e) {
-            console.error('JSON parse error:', e);
-            console.error('Response text:', text);
             showMessage('Erro na resposta do servidor', 'error');
             return;
         }
@@ -214,7 +212,6 @@ async function handleRegister(e) {
             showMessage(errorMsg, 'error');
         }
     } catch (error) {
-        console.error('Register error:', error);
         showMessage('Erro ao conectar com o servidor', 'error');
     } finally {
         submitBtn.disabled = false;
@@ -307,7 +304,7 @@ async function logout() {
             })
         });
     } catch (error) {
-        console.error('Erro no logout:', error);
+        // Erro silencioso no logout
     }
     
     // Limpar dados locais independente da resposta da API

@@ -176,7 +176,7 @@ async function initPlansLoader() {
             throw new Error(data.error || 'Erro ao carregar planos');
         }
     } catch (error) {
-        console.error('Erro ao carregar planos:', error);
+        // Erro ao carregar planos
         plansGrid.innerHTML = `
             <div class="plans-loading">
                 <p style="color: var(--danger);">Erro ao carregar planos. Tente novamente mais tarde.</p>

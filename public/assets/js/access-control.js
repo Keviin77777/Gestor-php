@@ -66,8 +66,6 @@
      */
     async function checkPlanStatus() {
         try {
-            console.log('Verificando status do plano...');
-            
             const response = await fetch('/api-auth.php?action=check_plan', {
                 method: 'GET',
                 credentials: 'include',
@@ -76,15 +74,11 @@
                 }
             });
             
-            console.log('Response status:', response.status);
-            
             if (!response.ok) {
-                console.error('Erro na resposta da API:', response.status);
                 return null;
             }
             
             const data = await response.json();
-            console.log('Dados recebidos da API:', data);
             
             if (data.success && data.plan) {
                 const planStatus = {
@@ -94,14 +88,11 @@
                     planName: data.plan.name || 'Sem plano'
                 };
                 
-                console.log('Status do plano processado:', planStatus);
                 return planStatus;
             }
             
-            console.warn('API não retornou dados válidos do plano');
             return null;
         } catch (error) {
-            console.error('Erro ao verificar status do plano:', error);
             return null;
         }
     }
@@ -311,25 +302,18 @@
         }
         
         // Se plano vencido (dias <= 0 ou negativo), bloquear e redirecionar
-        console.log('Status do plano:', planStatus);
         
         // Administradores não têm restrição de plano
         if (planStatus.isAdmin) {
-            console.log('Usuário é administrador. Acesso liberado.');
             return;
         }
         
         if (planStatus.daysRemaining <= 0 || planStatus.isExpired) {
-            console.log('Plano vencido! Dias restantes:', planStatus.daysRemaining);
-            console.log('Redirecionando para renovação...');
-            
             // Bloquear navegação
             blockNavigation();
             
             // Redirecionar imediatamente
             redirectToRenew();
-        } else {
-            console.log('Plano ativo. Dias restantes:', planStatus.daysRemaining);
         }
     }
     
@@ -354,7 +338,6 @@
         }
         
         if (planStatus && (planStatus.daysRemaining <= 0 || planStatus.isExpired)) {
-            console.log('Verificação periódica: Plano vencido, redirecionando...');
             redirectToRenew();
         }
     }, 5 * 60 * 1000); // 5 minutos

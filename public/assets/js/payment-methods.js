@@ -14,7 +14,13 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function initPaymentMethods() {
     loadMercadoPagoConfig();
-    loadEfiBankConfig();
+    
+    // Carregar EFI Bank apenas se o formulário existir (apenas para admin)
+    const efiForm = document.getElementById('efiBankForm');
+    if (efiForm) {
+        loadEfiBankConfig();
+    }
+    
     setupFormHandlers();
 }
 
@@ -67,15 +73,20 @@ function setupFormHandlers() {
     const mpForm = document.getElementById('mercadoPagoForm');
     const efiForm = document.getElementById('efiBankForm');
     
-    mpForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await saveMercadoPagoConfig();
-    });
+    if (mpForm) {
+        mpForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await saveMercadoPagoConfig();
+        });
+    }
     
-    efiForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await saveEfiBankConfig();
-    });
+    // Configurar EFI Bank apenas se o formulário existir (apenas para admin)
+    if (efiForm) {
+        efiForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await saveEfiBankConfig();
+        });
+    }
 }
 
 /**
@@ -187,6 +198,12 @@ async function testMercadoPagoConnection() {
  * Carregar configuração do EFI Bank
  */
 async function loadEfiBankConfig() {
+    // Verificar se o formulário existe (apenas para admin)
+    const efiForm = document.getElementById('efiBankForm');
+    if (!efiForm) {
+        return; // Não é admin, não carregar
+    }
+    
     try {
         const response = await fetch('/api-payment-methods.php?method=efibank', {
             headers: {
@@ -198,18 +215,25 @@ async function loadEfiBankConfig() {
         
         if (result.success && result.config) {
             // Preencher formulário
-            document.getElementById('efiClientId').value = result.config.client_id || '';
-            document.getElementById('efiClientSecret').value = result.config.client_secret || '';
-            document.getElementById('efiPixKey').value = result.config.pix_key || '';
-            document.getElementById('efiCertificate').value = result.config.certificate || '';
-            document.getElementById('efiSandbox').checked = result.config.sandbox || false;
-            document.getElementById('efiEnabled').checked = result.config.enabled || false;
+            const clientIdEl = document.getElementById('efiClientId');
+            const clientSecretEl = document.getElementById('efiClientSecret');
+            const pixKeyEl = document.getElementById('efiPixKey');
+            const certificateEl = document.getElementById('efiCertificate');
+            const sandboxEl = document.getElementById('efiSandbox');
+            const enabledEl = document.getElementById('efiEnabled');
+            
+            if (clientIdEl) clientIdEl.value = result.config.client_id || '';
+            if (clientSecretEl) clientSecretEl.value = result.config.client_secret || '';
+            if (pixKeyEl) pixKeyEl.value = result.config.pix_key || '';
+            if (certificateEl) certificateEl.value = result.config.certificate || '';
+            if (sandboxEl) sandboxEl.checked = result.config.sandbox || false;
+            if (enabledEl) enabledEl.checked = result.config.enabled || false;
             
             // Atualizar status
             updateEfiBankStatus(result.config.enabled);
         }
     } catch (error) {
-        console.error('Erro ao carregar config EFI Bank:', error);
+        // Erro silencioso - pode ser que não seja admin
     }
 }
 
@@ -218,7 +242,10 @@ async function loadEfiBankConfig() {
  */
 function updateEfiBankStatus(enabled) {
     const statusElement = document.getElementById('efiStatus');
+    if (!statusElement) return; // Não é admin, elemento não existe
+    
     const badge = statusElement.querySelector('.status-badge');
+    if (!badge) return;
     
     if (enabled) {
         badge.className = 'status-badge status-active';
@@ -234,6 +261,11 @@ function updateEfiBankStatus(enabled) {
  */
 async function saveEfiBankConfig() {
     const form = document.getElementById('efiBankForm');
+    if (!form) {
+        alert('❌ Acesso negado. Apenas administradores podem configurar EFI Bank.');
+        return;
+    }
+    
     const formData = new FormData(form);
     
     const config = {
@@ -267,7 +299,6 @@ async function saveEfiBankConfig() {
             alert('❌ Erro ao salvar: ' + result.error);
         }
     } catch (error) {
-        console.error('Erro ao salvar:', error);
         alert('❌ Erro ao salvar configuração');
     }
 }
@@ -276,11 +307,22 @@ async function saveEfiBankConfig() {
  * Testar conexão com EFI Bank
  */
 async function testEfiBankConnection() {
-    const clientId = document.getElementById('efiClientId').value;
-    const clientSecret = document.getElementById('efiClientSecret').value;
-    const pixKey = document.getElementById('efiPixKey').value;
-    const certificate = document.getElementById('efiCertificate').value;
-    const sandbox = document.getElementById('efiSandbox').checked;
+    const clientIdEl = document.getElementById('efiClientId');
+    const clientSecretEl = document.getElementById('efiClientSecret');
+    const pixKeyEl = document.getElementById('efiPixKey');
+    const certificateEl = document.getElementById('efiCertificate');
+    const sandboxEl = document.getElementById('efiSandbox');
+    
+    if (!clientIdEl || !clientSecretEl || !pixKeyEl) {
+        alert('❌ Acesso negado. Apenas administradores podem testar EFI Bank.');
+        return;
+    }
+    
+    const clientId = clientIdEl.value;
+    const clientSecret = clientSecretEl.value;
+    const pixKey = pixKeyEl.value;
+    const certificate = certificateEl ? certificateEl.value : '';
+    const sandbox = sandboxEl ? sandboxEl.checked : false;
     
     if (!clientId || !clientSecret || !pixKey) {
         alert('⚠️ Por favor, preencha Client ID, Client Secret e Chave PIX');
@@ -338,16 +380,9 @@ async function testEfiBankConnection() {
             
         } else {
             let errorMsg = '❌ Erro ao testar conexão:\n\n' + result.error;
-            
-            if (result.details) {
-                console.error('Detalhes do erro:', result.details);
-                errorMsg += '\n\nVerifique o console para mais detalhes.';
-            }
-            
             alert(errorMsg);
         }
     } catch (error) {
-        console.error('Erro ao testar:', error);
         alert('❌ Erro ao testar conexão');
     }
 }

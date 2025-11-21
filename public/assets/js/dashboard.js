@@ -343,7 +343,6 @@ function formatDate(dateString) {
 
         return date.toLocaleDateString('pt-BR');
     } catch (error) {
-        console.warn('Erro ao formatar data:', dateString, error);
         return dateString;
     }
 }
@@ -569,7 +568,6 @@ function setupDashboardEvents() {
                 // Redirecionar para login
                 window.location.href = '/login';
             } catch (error) {
-                console.error('Erro no logout:', error);
                 // Mesmo com erro, limpar dados locais e redirecionar
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');

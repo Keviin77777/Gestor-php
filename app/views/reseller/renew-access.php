@@ -1566,7 +1566,6 @@
                             correctLevel: QRCode.CorrectLevel.M
                         });
                     } catch (error) {
-                        console.error('Erro ao gerar QR Code:', error);
                         container.innerHTML = '<p style="color: var(--danger);">Erro ao gerar QR Code. Use o código copia e cola.</p>';
                     }
                 }

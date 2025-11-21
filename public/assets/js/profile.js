@@ -58,7 +58,6 @@ async function loadUserProfile() {
         }
         
     } catch (error) {
-        console.error('Erro ao carregar perfil:', error);
         
         if (error.message === 'Não autenticado') {
             showNotification('Sessão expirada. Redirecionando para login...', 'error');
@@ -266,7 +265,6 @@ async function handleProfileSubmit(event) {
         }
         
     } catch (error) {
-        console.error('Erro ao atualizar perfil:', error);
         showNotification('Erro ao atualizar perfil: ' + error.message, 'error');
     } finally {
         showLoading(false);
@@ -319,7 +317,6 @@ async function handlePasswordSubmit(event) {
         }
         
     } catch (error) {
-        console.error('Erro ao alterar senha:', error);
         showNotification('Erro ao alterar senha: ' + error.message, 'error');
     } finally {
         showLoading(false);

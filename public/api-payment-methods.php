@@ -32,10 +32,32 @@ if (!$user) {
     exit;
 }
 
-// Apenas admin pode gerenciar métodos de pagamento
-if (!isset($user['role']) || $user['role'] !== 'admin') {
-    Response::json(['success' => false, 'error' => 'Acesso negado'], 403);
-    exit;
+// Verificar se é admin
+$isAdmin = false;
+if (isset($user['role']) && strtolower(trim($user['role'])) === 'admin') {
+    $isAdmin = true;
+} elseif (isset($user['is_admin']) && ($user['is_admin'] === true || $user['is_admin'] === 1 || $user['is_admin'] === '1')) {
+    $isAdmin = true;
+}
+
+// Se não for admin, verificar no banco
+if (!$isAdmin) {
+    $userFromDB = Database::fetch(
+        "SELECT role, is_admin FROM users WHERE id = ? OR email = ?",
+        [$user['id'] ?? '', $user['email'] ?? '']
+    );
+    
+    if ($userFromDB) {
+        $role = strtolower(trim($userFromDB['role'] ?? ''));
+        if ($role === 'admin') {
+            $isAdmin = true;
+        } elseif (isset($userFromDB['is_admin'])) {
+            $isAdminValue = $userFromDB['is_admin'];
+            if ($isAdminValue === 1 || $isAdminValue === true || $isAdminValue === '1' || $isAdminValue === 1.0) {
+                $isAdmin = true;
+            }
+        }
+    }
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -67,10 +89,18 @@ try {
  * GET - Obter configurações de um método de pagamento
  */
 function handleGet($db) {
+    global $isAdmin;
+    
     $paymentMethod = $_GET['method'] ?? null;
     
     if (!$paymentMethod) {
         Response::json(['success' => false, 'error' => 'Método de pagamento não especificado'], 400);
+        return;
+    }
+    
+    // EFI Bank apenas para admin
+    if ($paymentMethod === 'efibank' && !$isAdmin) {
+        Response::json(['success' => false, 'error' => 'Acesso negado. Apenas administradores podem acessar EFI Bank.'], 403);
         return;
     }
     
@@ -108,6 +138,8 @@ function handleGet($db) {
  * POST - Salvar ou testar configurações
  */
 function handlePost($db) {
+    global $isAdmin;
+    
     $input = json_decode(file_get_contents('php://input'), true);
     $action = $_GET['action'] ?? 'save';
     
@@ -122,6 +154,12 @@ function handlePost($db) {
     
     if (!$paymentMethod || !$config) {
         Response::json(['success' => false, 'error' => 'Dados incompletos'], 400);
+        return;
+    }
+    
+    // EFI Bank apenas para admin
+    if ($paymentMethod === 'efibank' && !$isAdmin) {
+        Response::json(['success' => false, 'error' => 'Acesso negado. Apenas administradores podem configurar EFI Bank.'], 403);
         return;
     }
     
@@ -197,7 +235,15 @@ function handlePost($db) {
  * Testar conexão com provedor de pagamento
  */
 function handleTestConnection($input) {
+    global $isAdmin;
+    
     $paymentMethod = $input['method'] ?? null;
+    
+    // EFI Bank apenas para admin
+    if ($paymentMethod === 'efibank' && !$isAdmin) {
+        Response::json(['success' => false, 'error' => 'Acesso negado. Apenas administradores podem testar EFI Bank.'], 403);
+        return;
+    }
     
     if ($paymentMethod === 'mercadopago') {
         $publicKey = $input['public_key'] ?? null;

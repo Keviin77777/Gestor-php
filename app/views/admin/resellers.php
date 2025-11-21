@@ -1750,7 +1750,6 @@
                 });
                 
                 const text = await response.text();
-                console.log('Response:', text);
                 
                 let data;
                 try {
@@ -1766,7 +1765,6 @@
                     throw new Error(data.error || 'Erro desconhecido');
                 }
             } catch (error) {
-                console.error('Erro completo:', error);
                 showError('Erro ao excluir revendedor: ' + error.message);
             }
         }

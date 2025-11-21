@@ -246,7 +246,6 @@ class LoadingManager {
             document.querySelector(container) : container;
         
         if (!element) {
-            console.warn('Container não encontrado para loading inline');
             return;
         }
 
