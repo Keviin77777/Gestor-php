@@ -245,7 +245,13 @@ class EfiBankHelper {
             $error = curl_error($ch);
             curl_close($ch);
             
+            // Log detalhado da resposta
+            error_log("EFI Bank Response - HTTP Code: {$httpCode}");
+            error_log("EFI Bank Response - Body: " . $response);
+            error_log("EFI Bank Request - Payload: " . json_encode($payload));
+            
             if ($error) {
+                error_log("EFI Bank cURL Error: " . $error);
                 return [
                     'success' => false,
                     'error' => 'Erro de conexão: ' . $error
@@ -255,10 +261,27 @@ class EfiBankHelper {
             $result = json_decode($response, true);
             
             if ($httpCode !== 201 && $httpCode !== 200) {
+                $errorMsg = 'Erro desconhecido';
+                if (isset($result['mensagem'])) {
+                    $errorMsg = $result['mensagem'];
+                } elseif (isset($result['error_description'])) {
+                    $errorMsg = $result['error_description'];
+                } elseif (isset($result['message'])) {
+                    $errorMsg = $result['message'];
+                } elseif (isset($result['violations'])) {
+                    $violations = array_map(function($v) {
+                        return ($v['property'] ?? 'campo') . ': ' . ($v['reason'] ?? $v['message'] ?? 'erro');
+                    }, $result['violations']);
+                    $errorMsg = implode(', ', $violations);
+                }
+                
+                error_log("EFI Bank Error Details: " . json_encode($result));
+                
                 return [
                     'success' => false,
-                    'error' => 'Erro ao criar cobrança: ' . ($result['mensagem'] ?? 'Erro desconhecido'),
-                    'details' => $result
+                    'error' => 'Erro ao criar cobrança: ' . $errorMsg,
+                    'details' => $result,
+                    'http_code' => $httpCode
                 ];
             }
             
