@@ -1740,7 +1740,13 @@
             
             try {
                 const response = await fetch(`/api-resellers.php/${resellerId}`, {
-                    method: 'DELETE'
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        _method: 'DELETE'
+                    })
                 });
                 
                 const data = await response.json();

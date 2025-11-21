@@ -65,6 +65,24 @@ try {
             }
             break;
             
+        case 'POST':
+            // Suporte para ações via POST (compatibilidade com Nginx)
+            $data = json_decode(file_get_contents('php://input'), true);
+            $postAction = $data['_method'] ?? null;
+            
+            if ($postAction === 'DELETE') {
+                deleteReseller($resellerId);
+            } elseif ($action === 'suspend') {
+                suspendReseller($resellerId);
+            } elseif ($action === 'activate') {
+                activateReseller($resellerId);
+            } elseif ($action === 'change-plan') {
+                changeResellerPlan($resellerId);
+            } else {
+                updateReseller($resellerId);
+            }
+            break;
+            
         case 'PUT':
             if ($action === 'suspend') {
                 suspendReseller($resellerId);
