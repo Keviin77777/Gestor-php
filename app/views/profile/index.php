@@ -210,6 +210,8 @@
     </div>
 
     <!-- Scripts -->
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/access-control.js"></script>
     <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/profile.js"></script>
 

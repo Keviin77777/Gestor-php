@@ -27,8 +27,13 @@ if (isset($user['role']) && $user['role'] === 'admin') {
 // Se ainda não identificou como admin, buscar do banco para garantir
 if (!$isAdmin && isset($userId)) {
     try {
-        require_once __DIR__ . '/../../app/helpers/functions.php';
-        require_once __DIR__ . '/../../app/core/Database.php';
+        $rootPath = dirname(dirname(dirname(__DIR__)));
+        if (!function_exists('loadEnv')) {
+            require_once $rootPath . '/app/helpers/functions.php';
+        }
+        if (!class_exists('Database')) {
+            require_once $rootPath . '/app/core/Database.php';
+        }
         
         $userFromDB = Database::fetch(
             "SELECT role, is_admin FROM users WHERE id = ? OR email = ? LIMIT 1",

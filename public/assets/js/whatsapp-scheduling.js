@@ -30,7 +30,7 @@ const dayLabels = {
 };
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     loadUserProfile();
     loadTemplates();
     setupEventListeners();
@@ -46,16 +46,16 @@ function setupMobileMenu() {
     const sidebarOverlay = document.querySelector('.sidebar-overlay');
 
     if (mobileMenuBtn && sidebar) {
-        mobileMenuBtn.addEventListener('click', function(e) {
+        mobileMenuBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             sidebar.classList.toggle('active');
             mobileMenuBtn.classList.toggle('active');
-            
+
             // Criar overlay se não existir
             if (!sidebarOverlay && sidebar.classList.contains('active')) {
                 const overlay = document.createElement('div');
                 overlay.className = 'sidebar-overlay active';
-                overlay.addEventListener('click', function() {
+                overlay.addEventListener('click', function () {
                     sidebar.classList.remove('active');
                     mobileMenuBtn.classList.remove('active');
                     overlay.remove();
@@ -68,7 +68,7 @@ function setupMobileMenu() {
     // Fechar sidebar ao clicar em um link
     const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
     sidebarLinks.forEach(link => {
-        link.addEventListener('click', function() {
+        link.addEventListener('click', function () {
             if (window.innerWidth <= 768) {
                 sidebar.classList.remove('active');
                 if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
@@ -115,7 +115,7 @@ function loadUserProfile() {
 function setupEventListeners() {
     // Event listeners para os checkboxes de dias
     document.querySelectorAll('.day-input').forEach(input => {
-        input.addEventListener('change', function() {
+        input.addEventListener('change', function () {
             updateDaysDisplay();
         });
     });
@@ -124,10 +124,10 @@ function setupEventListeners() {
 async function loadTemplates() {
     try {
         showLoading('Carregando templates...');
-        
+
         const response = await fetch('/api-whatsapp-templates.php');
         const data = await response.json();
-        
+
         if (data.success) {
             templates = data.templates || [];
             renderSchedulingList();
@@ -144,7 +144,7 @@ async function loadTemplates() {
 function renderSchedulingList() {
     const container = document.getElementById('schedulingList');
     if (!container) return;
-    
+
     if (templates.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -161,13 +161,13 @@ function renderSchedulingList() {
         `;
         return;
     }
-    
+
     container.innerHTML = templates.map(template => createSchedulingListItem(template)).join('');
-}function createSchedulingListItem(template) {
+} function createSchedulingListItem(template) {
     const isScheduled = template.is_scheduled || false;
     const scheduledDays = template.scheduled_days ? JSON.parse(template.scheduled_days) : [];
     const scheduledTime = template.scheduled_time || '09:00';
-    
+
     // Cores e ícones por tipo (MESMO PADRÃO DA ABA TEMPLATES)
     const typeColors = {
         'welcome': '#10b981',
@@ -192,10 +192,10 @@ function renderSchedulingList() {
         'expired_3d': `<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>`,
         'custom': `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>`
     };
-    
+
     const color = typeColors[template.type] || '#6366f1';
     const icon = typeIcons[template.type] || typeIcons['custom'];
-    
+
     // Formatação dos dias - abreviados com todos os dias
     const allDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayAbbrev = {
@@ -207,12 +207,12 @@ function renderSchedulingList() {
         'friday': 'SEX',
         'saturday': 'SÁB'
     };
-    
+
     const daysDisplay = allDays.map(day => {
         const isActive = scheduledDays.includes(day);
         return `<span class="day-badge ${isActive ? 'active' : 'inactive'}">${dayAbbrev[day]}</span>`;
     }).join('');
-    
+
     return `
         <div class="scheduling-row ${!isScheduled ? 'inactive' : ''}" data-template-id="${template.id}">
             <div class="scheduling-col col-template">
@@ -250,21 +250,21 @@ function renderSchedulingList() {
             </div>
             
             <div class="scheduling-col col-status">
-                ${isScheduled ? 
-                    `<div class="status-badge active">
+                ${isScheduled ?
+            `<div class="status-badge active">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                         <span>Ativo</span>
-                    </div>` : 
-                    `<div class="status-badge inactive">
+                    </div>` :
+            `<div class="status-badge inactive">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
                         </svg>
                         <span>Inativo</span>
                     </div>`
-                }
+        }
             </div>
             
             <div class="scheduling-col col-actions">
@@ -288,9 +288,9 @@ function renderSchedulingList() {
 function editScheduling(templateId) {
     const template = templates.find(t => t.id === templateId);
     if (!template) return;
-    
+
     currentSchedulingId = templateId;
-    
+
     // Cores por tipo
     const typeColors = {
         'welcome': '#10b981',
@@ -303,9 +303,9 @@ function editScheduling(templateId) {
         'expired_3d': '#ef4444',
         'custom': '#6366f1'
     };
-    
+
     const color = typeColors[template.type] || '#6366f1';
-    
+
     // Preencher informações do template
     document.getElementById('templateInfo').innerHTML = `
         <div class="template-select-display">
@@ -318,32 +318,32 @@ function editScheduling(templateId) {
             <span class="template-select-name">${template.name}</span>
         </div>
     `;
-    
+
     // Mostrar/ocultar campo de dias offset para templates de vencimento
     const isExpiryTemplate = ['expires_3d', 'expires_7d', 'expires_today', 'expired_1d', 'expired_3d'].includes(template.type);
     const daysOffsetSection = document.getElementById('daysOffsetSection');
     if (daysOffsetSection) {
         daysOffsetSection.style.display = isExpiryTemplate ? 'block' : 'none';
     }
-    
+
     // Preencher dados do agendamento
     const scheduledDays = template.scheduled_days ? JSON.parse(template.scheduled_days) : [];
     const scheduledTime = template.scheduled_time || '09:00';
-    
+
     document.getElementById('schedulingTime').value = scheduledTime;
-    
+
     // Limpar e marcar dias selecionados
     document.querySelectorAll('.day-input').forEach(input => {
         input.checked = false;
     });
-    
+
     scheduledDays.forEach(day => {
         const input = document.querySelector(`.day-input[value="${day}"]`);
         if (input) {
             input.checked = true;
         }
     });
-    
+
     openSchedulingModal();
 }
 
@@ -380,38 +380,38 @@ function closeSchedulingModal() {
 
 async function saveScheduling() {
     console.log('saveScheduling chamada, currentSchedulingId:', currentSchedulingId);
-    
+
     if (!currentSchedulingId) {
         console.error('currentSchedulingId não definido');
         showNotification('Erro: Template não selecionado', 'error');
         return;
     }
-    
+
     try {
         showLoading('Salvando agendamento...');
-        
+
         const time = document.getElementById('schedulingTime').value;
         const selectedDays = Array.from(document.querySelectorAll('.day-input:checked')).map(input => input.value);
-        
+
         console.log('Dados coletados:', { time, selectedDays });
-        
+
         // Validação: deve ter pelo menos um dia selecionado se estiver ativando
         const enabled = selectedDays.length > 0;
-        
+
         if (!enabled) {
             showNotification('⚠️ Selecione pelo menos um dia da semana', 'warning');
             hideLoading();
             return;
         }
-        
+
         const schedulingData = {
             is_scheduled: enabled,
             scheduled_days: selectedDays,
             scheduled_time: time
         };
-        
+
         console.log('Enviando dados:', { id: currentSchedulingId, ...schedulingData });
-        
+
         const response = await fetch('/api-whatsapp-templates.php', {
             method: 'PUT',
             headers: {
@@ -422,11 +422,11 @@ async function saveScheduling() {
                 ...schedulingData
             })
         });
-        
+
         console.log('Response status:', response.status);
         const data = await response.json();
         console.log('Response data:', data);
-        
+
         if (data.success) {
             showNotification('Agendamento salvo com sucesso!', 'success');
             closeSchedulingModal();
@@ -445,7 +445,7 @@ function deleteScheduling(templateId) {
     if (!confirm('Deseja realmente desativar este agendamento?')) {
         return;
     }
-    
+
     // Implementar lógica de desativação
     // Por enquanto, apenas recarregar a lista
     loadTemplates();
@@ -459,7 +459,7 @@ function refreshScheduling() {
 function showNotification(message, type = 'info') {
     const container = document.getElementById('notificationContainer');
     if (!container) return;
-    
+
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.innerHTML = `
@@ -473,9 +473,9 @@ function showNotification(message, type = 'info') {
             </button>
         </div>
     `;
-    
+
     container.appendChild(notification);
-    
+
     // Auto remove após 5 segundos
     setTimeout(() => {
         if (notification.parentElement) {
@@ -487,11 +487,11 @@ function showNotification(message, type = 'info') {
 function showLoading(text = 'Carregando...') {
     const overlay = document.getElementById('loadingOverlay');
     const loadingText = document.getElementById('loadingText');
-    
+
     if (overlay) {
         overlay.style.display = 'flex';
     }
-    
+
     if (loadingText) {
         loadingText.textContent = text;
     }

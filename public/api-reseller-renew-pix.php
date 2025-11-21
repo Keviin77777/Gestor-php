@@ -20,6 +20,7 @@ require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/core/Auth.php';
 require_once __DIR__ . '/../app/core/Response.php';
 require_once __DIR__ . '/../app/helpers/MercadoPagoHelper.php';
+require_once __DIR__ . '/../app/helpers/EfiBankHelper.php';
 
 // Verificar autenticação
 $user = Auth::user();
@@ -89,11 +90,28 @@ try {
     
     error_log("Usuário encontrado: {$userData['email']}");
     
-    // Inicializar Mercado Pago
-    $mp = new MercadoPagoHelper();
+    // Verificar qual método de pagamento está ativo (prioridade: EFI Bank > Mercado Pago)
+    $paymentProvider = null;
+    $providerName = '';
     
-    if (!$mp->isEnabled()) {
-        error_log("Mercado Pago não está habilitado");
+    // Tentar EFI Bank primeiro
+    $efi = new EfiBankHelper();
+    if ($efi->isEnabled()) {
+        $paymentProvider = $efi;
+        $providerName = 'efibank';
+        error_log("EFI Bank habilitado, usando como provedor");
+    } else {
+        // Fallback para Mercado Pago
+        $mp = new MercadoPagoHelper();
+        if ($mp->isEnabled()) {
+            $paymentProvider = $mp;
+            $providerName = 'mercadopago';
+            error_log("Mercado Pago habilitado, usando como provedor");
+        }
+    }
+    
+    if (!$paymentProvider) {
+        error_log("Nenhum método de pagamento está habilitado");
         Response::json([
             'success' => false,
             'error' => 'Sistema de pagamento não está configurado. Entre em contato com o suporte.'
@@ -101,27 +119,38 @@ try {
         exit;
     }
     
-    error_log("Mercado Pago habilitado, criando pagamento...");
+    error_log("Provedor $providerName habilitado, criando pagamento...");
     
-    // Preparar dados do pagamento
-    $paymentData = [
-        'amount' => (float)$plan['price'],
-        'description' => "Renovação - {$plan['name']} ({$plan['duration_days']} dias)",
-        'payer_email' => $userData['email'],
-        'payer_name' => $userData['name'] ?? 'Revendedor',
-        'payer_doc_type' => !empty($userData['cpf_cnpj']) && strlen($userData['cpf_cnpj']) > 11 ? 'CNPJ' : 'CPF',
-        'payer_doc_number' => preg_replace('/[^0-9]/', '', $userData['cpf_cnpj'] ?? ''),
-        'external_reference' => "RENEW_USER_{$user['id']}_PLAN_{$planId}"
-    ];
-    
-    // Adicionar notification_url apenas se não for localhost
-    $appUrl = env('APP_URL');
-    if (strpos($appUrl, 'localhost') === false && strpos($appUrl, '127.0.0.1') === false) {
-        $paymentData['notification_url'] = $appUrl . '/webhook-mercadopago.php';
+    // Preparar dados do pagamento baseado no provedor
+    if ($providerName === 'efibank') {
+        $paymentData = [
+            'amount' => (float)$plan['price'],
+            'description' => "Renovação - {$plan['name']} ({$plan['duration_days']} dias)",
+            'payer_name' => $userData['name'] ?? 'Revendedor',
+            'payer_doc_number' => preg_replace('/[^0-9]/', '', $userData['cpf_cnpj'] ?? '00000000000'),
+            'external_reference' => "RENEW_USER_{$user['id']}_PLAN_{$planId}"
+        ];
+    } else {
+        // Mercado Pago
+        $paymentData = [
+            'amount' => (float)$plan['price'],
+            'description' => "Renovação - {$plan['name']} ({$plan['duration_days']} dias)",
+            'payer_email' => $userData['email'],
+            'payer_name' => $userData['name'] ?? 'Revendedor',
+            'payer_doc_type' => !empty($userData['cpf_cnpj']) && strlen($userData['cpf_cnpj']) > 11 ? 'CNPJ' : 'CPF',
+            'payer_doc_number' => preg_replace('/[^0-9]/', '', $userData['cpf_cnpj'] ?? ''),
+            'external_reference' => "RENEW_USER_{$user['id']}_PLAN_{$planId}"
+        ];
+        
+        // Adicionar notification_url apenas se não for localhost
+        $appUrl = env('APP_URL');
+        if (strpos($appUrl, 'localhost') === false && strpos($appUrl, '127.0.0.1') === false) {
+            $paymentData['notification_url'] = $appUrl . '/webhook-mercadopago.php';
+        }
     }
     
     // Criar pagamento PIX
-    $result = $mp->createPixPayment($paymentData);
+    $result = $paymentProvider->createPixPayment($paymentData);
     
     if (!$result['success']) {
         error_log("Erro ao criar PIX: {$result['error']}");
@@ -143,15 +172,17 @@ try {
             amount, 
             status, 
             qr_code,
+            payment_provider,
             created_at
-        ) VALUES (?, ?, ?, ?, 'pending', ?, NOW())
+        ) VALUES (?, ?, ?, ?, 'pending', ?, ?, NOW())
     ");
     $stmt->execute([
         $user['id'],
         $planId,
         $result['payment_id'],
         $plan['price'],
-        $result['qr_code']
+        $result['qr_code'],
+        $providerName
     ]);
     
     // Retornar sucesso

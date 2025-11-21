@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/assets/css/clients-improved.css">
     <link rel="stylesheet" href="/assets/css/payment-history.css">
     <link rel="stylesheet" href="/assets/css/modal-responsive.css">
+    <link rel="stylesheet" href="/assets/css/client-add-page-mobile.css">
     <style>
         .field-error {
             border-color: #e74c3c !important;
@@ -17,6 +18,35 @@
         .field-error:focus {
             border-color: #e74c3c !important;
             box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.3) !important;
+        }
+        
+        .password-validation-hint {
+            padding: 0.75rem;
+            background: rgba(255, 193, 7, 0.1);
+            border-left: 3px solid var(--warning);
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+        
+        .password-validation-hint ul {
+            margin: 0.5rem 0 0 0;
+            padding-left: 1.5rem;
+        }
+        
+        .password-validation-hint li {
+            margin: 0.25rem 0;
+            color: var(--text-secondary);
+        }
+        
+        .password-error-message {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.25rem;
+            padding: 0.5rem;
+            background: rgba(231, 76, 60, 0.1);
+            border-left: 3px solid var(--danger);
+            border-radius: 4px;
+            margin-top: 0.5rem;
         }
         
         /* Correção específica para garantir que todos os campos sejam visíveis */
@@ -576,11 +606,14 @@
 
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/access-control.js"></script>
     <script src="/assets/js/theme-global.js"></script>
     <script src="/assets/js/mobile-responsive.js"></script>
 
     <script src="/assets/js/clients.js"></script>
     <script src="/assets/js/client-modal-simple-fix.js"></script>
+    <script src="/assets/js/client-password-validation.js"></script>
+    <script src="/assets/js/client-add-page-mobile.js"></script>
 
     <!-- Protection Script -->
     <script src="/assets/js/protection.js"></script>

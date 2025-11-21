@@ -6,6 +6,7 @@
     <title>Aplicativos - UltraGestor</title>
     <link rel="stylesheet" href="/assets/css/dashboard.css">
     <link rel="stylesheet" href="/assets/css/header-menu.css">
+    <link rel="stylesheet" href="/assets/css/admin-responsive.css">
     <link rel="stylesheet" href="/assets/css/applications.css">
 </head>
 <body>
@@ -64,6 +65,7 @@
     <script src="/assets/js/common.js"></script>
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/access-control.js"></script>
     <script src="/assets/js/theme-global.js"></script>
     <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/dashboard.js"></script>

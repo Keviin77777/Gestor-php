@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/assets/css/dashboard.css">
     <link rel="stylesheet" href="/assets/css/top-servers.css">
     <link rel="stylesheet" href="/assets/css/metric-cards.css">
+    <link rel="stylesheet" href="/assets/css/dashboard-mobile-modern.css">
     <link rel="stylesheet" href="/assets/css/header-menu.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -525,6 +526,7 @@
     <script src="/assets/js/common.js"></script>
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/access-control.js"></script>
     <script src="/assets/js/theme-global.js"></script>
     <script src="/assets/js/dashboard-periods.js"></script>
     <script src="/assets/js/dashboard-charts.js"></script>

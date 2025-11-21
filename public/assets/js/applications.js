@@ -23,15 +23,8 @@ document.addEventListener('DOMContentLoaded', function() {
  * Configurar eventos
  */
 function setupEvents() {
-    // Menu mobile
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const sidebar = document.getElementById('sidebar');
-
-    if (mobileMenuBtn && sidebar) {
-        mobileMenuBtn.addEventListener('click', function() {
-            sidebar.classList.toggle('active');
-        });
-    }
+    // Menu mobile já é gerenciado pelo mobile-responsive.js
+    // Não precisa duplicar aqui
 
     // Busca
     const searchInput = document.querySelector('.search-box input');

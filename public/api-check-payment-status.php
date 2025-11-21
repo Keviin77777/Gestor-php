@@ -20,6 +20,7 @@ require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/core/Auth.php';
 require_once __DIR__ . '/../app/core/Response.php';
 require_once __DIR__ . '/../app/helpers/MercadoPagoHelper.php';
+require_once __DIR__ . '/../app/helpers/EfiBankHelper.php';
 
 // Verificar autenticação
 $user = Auth::user();
@@ -53,6 +54,7 @@ try {
     $stmt->execute([$paymentId, $user['id']]);
     $payment = $stmt->fetch(PDO::FETCH_ASSOC);
     $paymentType = 'renewal';
+    $paymentProvider = $payment['payment_provider'] ?? 'mercadopago';
     
     // Se não encontrou, buscar em invoice_payments
     if (!$payment) {
@@ -83,9 +85,14 @@ try {
         exit;
     }
     
-    // Consultar status no Mercado Pago
-    $mp = new MercadoPagoHelper();
-    $result = $mp->getPaymentStatus($paymentId);
+    // Consultar status no provedor correto
+    if ($paymentProvider === 'efibank') {
+        $provider = new EfiBankHelper();
+    } else {
+        $provider = new MercadoPagoHelper();
+    }
+    
+    $result = $provider->getPaymentStatus($paymentId);
     
     if (!$result['success']) {
         Response::json([

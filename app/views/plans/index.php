@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/assets/css/header-menu.css">
     <link rel="stylesheet" href="/assets/css/plans.css">
     <link rel="stylesheet" href="/assets/css/modal-responsive.css">
+    <link rel="stylesheet" href="/assets/css/plan-add-page-mobile.css">
     <style>
         /* Correções específicas para modal de planos em mobile */
         @media (max-width: 768px) {
@@ -174,10 +175,12 @@
     <script src="/assets/js/common.js"></script>
     <script src="/assets/js/loading-manager.js"></script>
     <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/access-control.js"></script>
     <script src="/assets/js/theme-global.js"></script>
     <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/plans-modal-fix.js"></script>
     <script src="/assets/js/plans.js"></script>
+    <script src="/assets/js/plan-add-page-mobile.js"></script>
 
     <!-- Protection Script -->
     <script src="/assets/js/protection.js"></script>

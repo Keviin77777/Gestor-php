@@ -22,6 +22,7 @@ loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/core/Auth.php';
 require_once __DIR__ . '/../app/core/Response.php';
+require_once __DIR__ . '/../app/helpers/EfiBankHelper.php';
 
 // Verificar autenticação
 $user = Auth::user();
@@ -130,6 +131,11 @@ function handlePost($db) {
             Response::json(['success' => false, 'error' => 'Public Key e Access Token são obrigatórios'], 400);
             return;
         }
+    } elseif ($paymentMethod === 'efibank') {
+        if (empty($config['client_id']) || empty($config['client_secret']) || empty($config['pix_key'])) {
+            Response::json(['success' => false, 'error' => 'Client ID, Client Secret e Chave PIX são obrigatórios'], 400);
+            return;
+        }
     }
     
     // Verificar se já existe
@@ -137,10 +143,24 @@ function handlePost($db) {
     $stmt->execute([$paymentMethod]);
     $exists = $stmt->fetch();
     
-    $configJson = json_encode([
-        'public_key' => $config['public_key'],
-        'access_token' => $config['access_token']
-    ]);
+    // Preparar configuração baseada no método
+    if ($paymentMethod === 'mercadopago') {
+        $configJson = json_encode([
+            'public_key' => $config['public_key'],
+            'access_token' => $config['access_token']
+        ]);
+    } elseif ($paymentMethod === 'efibank') {
+        $configJson = json_encode([
+            'client_id' => $config['client_id'],
+            'client_secret' => $config['client_secret'],
+            'pix_key' => $config['pix_key'],
+            'certificate' => $config['certificate'] ?? '',
+            'sandbox' => $config['sandbox'] ?? false
+        ]);
+    } else {
+        Response::json(['success' => false, 'error' => 'Método de pagamento não suportado'], 400);
+        return;
+    }
     
     if ($exists) {
         // Atualizar
@@ -174,38 +194,64 @@ function handlePost($db) {
 }
 
 /**
- * Testar conexão com Mercado Pago
+ * Testar conexão com provedor de pagamento
  */
 function handleTestConnection($input) {
     $paymentMethod = $input['method'] ?? null;
     
-    if ($paymentMethod !== 'mercadopago') {
-        Response::json(['success' => false, 'error' => 'Método não suportado'], 400);
-        return;
-    }
-    
-    $publicKey = $input['public_key'] ?? null;
-    $accessToken = $input['access_token'] ?? null;
-    
-    if (!$publicKey || !$accessToken) {
-        Response::json(['success' => false, 'error' => 'Public Key e Access Token são obrigatórios'], 400);
-        return;
-    }
-    
-    // Testar conexão com Mercado Pago
-    $result = testMercadoPagoConnection($accessToken);
-    
-    if ($result['success']) {
-        Response::json([
-            'success' => true,
-            'message' => 'Conexão testada com sucesso',
-            'account_info' => $result['account_info']
-        ]);
+    if ($paymentMethod === 'mercadopago') {
+        $publicKey = $input['public_key'] ?? null;
+        $accessToken = $input['access_token'] ?? null;
+        
+        if (!$publicKey || !$accessToken) {
+            Response::json(['success' => false, 'error' => 'Public Key e Access Token são obrigatórios'], 400);
+            return;
+        }
+        
+        // Testar conexão com Mercado Pago
+        $result = testMercadoPagoConnection($accessToken);
+        
+        if ($result['success']) {
+            Response::json([
+                'success' => true,
+                'message' => 'Conexão testada com sucesso',
+                'account_info' => $result['account_info']
+            ]);
+        } else {
+            Response::json([
+                'success' => false,
+                'error' => $result['error']
+            ], 400);
+        }
+    } elseif ($paymentMethod === 'efibank') {
+        $clientId = $input['client_id'] ?? null;
+        $clientSecret = $input['client_secret'] ?? null;
+        $pixKey = $input['pix_key'] ?? null;
+        $certificate = $input['certificate'] ?? '';
+        $sandbox = $input['sandbox'] ?? false;
+        
+        if (!$clientId || !$clientSecret || !$pixKey) {
+            Response::json(['success' => false, 'error' => 'Client ID, Client Secret e Chave PIX são obrigatórios'], 400);
+            return;
+        }
+        
+        // Testar conexão com EFI Bank
+        $result = testEfiBankConnection($clientId, $clientSecret, $certificate, $sandbox);
+        
+        if ($result['success']) {
+            Response::json([
+                'success' => true,
+                'message' => 'Conexão testada com sucesso',
+                'account_info' => $result['account_info']
+            ]);
+        } else {
+            Response::json([
+                'success' => false,
+                'error' => $result['error']
+            ], 400);
+        }
     } else {
-        Response::json([
-            'success' => false,
-            'error' => $result['error']
-        ], 400);
+        Response::json(['success' => false, 'error' => 'Método não suportado'], 400);
     }
 }
 
@@ -315,6 +361,110 @@ function testMercadoPagoConnection($accessToken) {
         } else {
             // Outro erro
             $errorMsg = $data['message'] ?? 'Erro desconhecido';
+            return [
+                'success' => false,
+                'error' => "Erro ao validar: $errorMsg (HTTP $httpCode)",
+                'details' => $data
+            ];
+        }
+        
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'error' => 'Erro ao testar conexão: ' . $e->getMessage()
+        ];
+    }
+}
+
+
+/**
+ * Testar conexão real com API do EFI Bank
+ */
+function testEfiBankConnection($clientId, $clientSecret, $certificate = '', $sandbox = false) {
+    try {
+        // Log para debug
+        error_log("Testando EFI Bank - Client ID: " . substr($clientId, 0, 20) . "...");
+        
+        // URL da API
+        $url = $sandbox ? 
+            'https://api-pix-h.gerencianet.com.br/oauth/token' : 
+            'https://api-pix.gerencianet.com.br/oauth/token';
+        
+        $auth = base64_encode($clientId . ':' . $clientSecret);
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['grant_type' => 'client_credentials']));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Basic ' . $auth,
+            'Content-Type: application/json'
+        ]);
+        
+        // Configurações SSL
+        $isLocalhost = strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
+                       strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false;
+        
+        if ($isLocalhost || env('APP_ENV') === 'development') {
+            // Em desenvolvimento, desabilitar verificação SSL
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        } else {
+            // Em produção, usar certificado se fornecido
+            if (!empty($certificate) && file_exists($certificate)) {
+                curl_setopt($ch, CURLOPT_SSLCERT, $certificate);
+            }
+        }
+        
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        // Log da resposta
+        error_log("EFI Test - HTTP Code: $httpCode");
+        error_log("EFI Test - Response: " . substr($response, 0, 300));
+        
+        if ($error) {
+            error_log("EFI Error: $error");
+            return [
+                'success' => false,
+                'error' => 'Erro de conexão: ' . $error
+            ];
+        }
+        
+        $data = json_decode($response, true);
+        
+        // Códigos de sucesso: 200 (token obtido)
+        if ($httpCode === 200 && isset($data['access_token'])) {
+            // Token válido - extrair informações
+            $accountInfo = [
+                'status' => '✅ Credenciais válidas',
+                'token_type' => $data['token_type'] ?? 'Bearer',
+                'expires_in' => $data['expires_in'] ?? 3600,
+                'environment' => $sandbox ? 'Homologação (Sandbox)' : 'Produção',
+                'message' => 'EFI Bank configurado e pronto para uso'
+            ];
+            
+            return [
+                'success' => true,
+                'account_info' => $accountInfo
+            ];
+        } elseif ($httpCode === 401 || $httpCode === 403) {
+            // Credenciais inválidas
+            $errorMsg = $data['error_description'] ?? $data['mensagem'] ?? 'Credenciais inválidas';
+            return [
+                'success' => false,
+                'error' => "Credenciais inválidas: $errorMsg",
+                'details' => $data
+            ];
+        } else {
+            // Outro erro
+            $errorMsg = $data['error_description'] ?? $data['mensagem'] ?? 'Erro desconhecido';
             return [
                 'success' => false,
                 'error' => "Erro ao validar: $errorMsg (HTTP $httpCode)",

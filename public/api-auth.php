@@ -36,7 +36,14 @@ $uri = $_SERVER['REQUEST_URI'];
 
 // Parse action from URI
 $action = '';
-if (preg_match('#/api/auth/(\w+)#', $uri, $matches)) {
+
+// Tentar obter da query string primeiro
+if (isset($_GET['action'])) {
+    $action = $_GET['action'];
+}
+
+// Se não encontrou, tentar do padrão de rota
+if (empty($action) && preg_match('#/api/auth/(\w+)#', $uri, $matches)) {
     $action = $matches[1];
 }
 
@@ -268,6 +275,74 @@ try {
                     'name' => $data['name'],
                     'role' => 'reseller',
                     'account_status' => 'trial'
+                ]
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            break;
+            
+        case 'check_plan':
+            if ($method !== 'GET') {
+                ob_clean();
+                http_response_code(405);
+                echo json_encode(['error' => 'Método não permitido'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                exit;
+            }
+            
+            session_start();
+            
+            if (!isset($_SESSION['user_id'])) {
+                ob_clean();
+                http_response_code(401);
+                echo json_encode(['error' => 'Não autenticado'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                exit;
+            }
+            
+            // Buscar informações do plano do usuário
+            $userPlan = Database::fetchAll(
+                "SELECT 
+                    u.id,
+                    u.role,
+                    u.is_admin,
+                    u.plan_expires_at,
+                    rp.name as plan_name,
+                    rp.price as plan_price,
+                    CASE 
+                        WHEN u.plan_expires_at IS NULL THEN -999
+                        ELSE DATEDIFF(DATE(u.plan_expires_at), CURDATE())
+                    END as days_remaining
+                FROM users u
+                LEFT JOIN reseller_plans rp ON u.current_plan_id = rp.id
+                WHERE u.id = ?",
+                [$_SESSION['user_id']]
+            );
+            
+            if (empty($userPlan)) {
+                ob_clean();
+                echo json_encode([
+                    'success' => true,
+                    'plan' => [
+                        'name' => 'Sem plano',
+                        'days_remaining' => 0,
+                        'is_expired' => true,
+                        'is_trial' => false
+                    ]
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                exit;
+            }
+            
+            $plan = $userPlan[0];
+            $daysRemaining = (int)$plan['days_remaining'];
+            $isAdmin = ($plan['role'] === 'admin' || $plan['is_admin'] == 1);
+            
+            ob_clean();
+            echo json_encode([
+                'success' => true,
+                'plan' => [
+                    'name' => $plan['plan_name'] ?? 'Sem plano',
+                    'days_remaining' => $daysRemaining,
+                    'is_expired' => $daysRemaining <= 0,
+                    'is_admin' => $isAdmin,
+                    'is_trial' => false,
+                    'expires_at' => $plan['plan_expires_at']
                 ]
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             break;

@@ -655,6 +655,13 @@ async function openAddClientModal() {
     await populateServersDropdown();
     await populateApplicationsDropdown();
 
+    // Inicializar validação de senha após preencher dropdowns
+    setTimeout(() => {
+        if (typeof setupPasswordValidation === 'function') {
+            setupPasswordValidation();
+        }
+    }, 100);
+
     document.getElementById('clientModal').classList.add('active');
 }
 
@@ -1299,6 +1306,13 @@ async function saveClient(event) {
                     valueField.classList.remove('field-error');
                 }, 3000);
             }
+            return;
+        }
+    }
+    
+    // Validar senha IPTV se servidor tiver Sigma configurado
+    if (typeof validatePasswordBeforeSaveDesktop === 'function') {
+        if (!validatePasswordBeforeSaveDesktop()) {
             return;
         }
     }

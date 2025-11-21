@@ -73,6 +73,9 @@ try {
                 $_SESSION['user']['is_admin'] = true;
             }
             
+            // DEBUG: Log para verificar (remover depois)
+            // error_log("SIDEBAR DEBUG - isAdmin: " . ($isAdmin ? 'TRUE' : 'FALSE') . ", role: " . ($userFromDB['role'] ?? 'NULL'));
+            
             // Se não for admin, obter informações do plano
             if (!$isAdmin) {
                 $userDetails = Database::fetch("
