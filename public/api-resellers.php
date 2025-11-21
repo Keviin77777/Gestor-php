@@ -29,28 +29,32 @@ try {
     }
     
     $method = $_SERVER['REQUEST_METHOD'];
-    $path = $_SERVER['REQUEST_URI'];
-    $pathParts = explode('/', trim(parse_url($path, PHP_URL_PATH), '/'));
     
-    // Extrair ID do revendedor se fornecido
-    $resellerId = null;
-    $action = null;
+    // Extrair ID do revendedor via query string ou path
+    $resellerId = $_GET['id'] ?? null;
+    $action = $_GET['action'] ?? null;
     
-    if (count($pathParts) > 1) {
-        $lastPart = $pathParts[count($pathParts) - 1];
-        $secondLastPart = count($pathParts) > 2 ? $pathParts[count($pathParts) - 2] : null;
+    // Fallback: tentar extrair do path se não vier via query string
+    if (!$resellerId) {
+        $path = $_SERVER['REQUEST_URI'];
+        $pathParts = explode('/', trim(parse_url($path, PHP_URL_PATH), '/'));
         
-        if ($lastPart === 'suspend' && $secondLastPart) {
-            $resellerId = $secondLastPart;
-            $action = 'suspend';
-        } elseif ($lastPart === 'activate' && $secondLastPart) {
-            $resellerId = $secondLastPart;
-            $action = 'activate';
-        } elseif ($lastPart === 'change-plan' && $secondLastPart) {
-            $resellerId = $secondLastPart;
-            $action = 'change-plan';
-        } elseif ($lastPart !== 'api-resellers.php' && $lastPart !== 'resellers') {
-            $resellerId = $lastPart;
+        if (count($pathParts) > 1) {
+            $lastPart = $pathParts[count($pathParts) - 1];
+            $secondLastPart = count($pathParts) > 2 ? $pathParts[count($pathParts) - 2] : null;
+            
+            if ($lastPart === 'suspend' && $secondLastPart) {
+                $resellerId = $secondLastPart;
+                $action = 'suspend';
+            } elseif ($lastPart === 'activate' && $secondLastPart) {
+                $resellerId = $secondLastPart;
+                $action = 'activate';
+            } elseif ($lastPart === 'change-plan' && $secondLastPart) {
+                $resellerId = $secondLastPart;
+                $action = 'change-plan';
+            } elseif ($lastPart !== 'api-resellers.php' && $lastPart !== 'resellers') {
+                $resellerId = $lastPart;
+            }
         }
     }
     

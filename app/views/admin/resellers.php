@@ -1739,7 +1739,7 @@
             if (!confirm('Tem certeza que deseja excluir este revendedor? Esta ação não pode ser desfeita.')) return;
             
             try {
-                const response = await fetch(`/api-resellers.php/${resellerId}`, {
+                const response = await fetch(`/api-resellers.php?id=${resellerId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
