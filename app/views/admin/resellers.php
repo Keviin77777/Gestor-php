@@ -1169,7 +1169,7 @@
         async function loadResellerStats() {
             for (const reseller of filteredResellers) {
                 try {
-                    const response = await fetch(`/api-resellers.php/${reseller.id}`);
+                    const response = await fetch(`/api-resellers.php?id=${reseller.id}`);
                     const data = await response.json();
                     
                     if (data.success) {
@@ -1282,7 +1282,7 @@
             modalBody.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
             
             try {
-                const response = await fetch(`/api-resellers.php/${resellerId}`);
+                const response = await fetch(`/api-resellers.php?id=${resellerId}`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -1469,7 +1469,7 @@
             }
             
             try {
-                const response = await fetch(`/api-resellers.php/${resellerId}`, {
+                const response = await fetch(`/api-resellers.php?id=${resellerId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(updateData)
@@ -1639,7 +1639,7 @@
             }
             
             try {
-                const response = await fetch(`/api-resellers.php/${resellerId}/change-plan`, {
+                const response = await fetch(`/api-resellers.php?id=${resellerId}&action=change-plan`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1699,7 +1699,7 @@
             if (!confirm('Tem certeza que deseja suspender este revendedor?')) return;
             
             try {
-                const response = await fetch(`/api-resellers.php/${resellerId}/suspend`, {
+                const response = await fetch(`/api-resellers.php?id=${resellerId}&action=suspend`, {
                     method: 'PUT'
                 });
                 
@@ -1718,7 +1718,7 @@
 
         async function activateReseller(resellerId) {
             try {
-                const response = await fetch(`/api-resellers.php/${resellerId}/activate`, {
+                const response = await fetch(`/api-resellers.php?id=${resellerId}&action=activate`, {
                     method: 'PUT'
                 });
                 
