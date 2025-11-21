@@ -338,7 +338,7 @@ try {
         
         <div class="user-info">
             <div class="user-name"><?= htmlspecialchars($currentUser['name'] ?? 'Usuário') ?></div>
-            <div class="user-role"><?= $isAdmin ? 'Administrador' : 'Revendedor' ?></div>
+            <div class="user-role"><?= (isset($currentUser['role']) && strtolower($currentUser['role']) === 'admin') || (isset($_SESSION['user']['role']) && strtolower($_SESSION['user']['role']) === 'admin') ? 'Administrador' : 'Revendedor' ?></div>
         </div>
         
         <button class="logout-btn" onclick="logout()">
