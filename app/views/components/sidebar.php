@@ -58,13 +58,6 @@ try {
                 }
             }
             
-            // FIX: Verificar também por email específico do admin
-            if (!$isAdmin && isset($userFromDB['email']) && $userFromDB['email'] === 'admin@ultragestor.com') {
-                $isAdmin = true;
-                // Corrigir dados no banco se necessário
-                Database::query("UPDATE users SET role = 'admin', is_admin = 1 WHERE email = ?", [$userFromDB['email']]);
-            }
-            
             // Verificar também na sessão como último recurso
             if (!$isAdmin && isset($_SESSION['user']['role']) && strtolower(trim($_SESSION['user']['role'])) === 'admin') {
                 $isAdmin = true;
@@ -150,7 +143,7 @@ try {
         </a>
         
         <!-- Menu para Admin: Seção Administrativa -->
-        <?php if (true): // FIX: Forçado true pois $isAdmin não funciona corretamente ?>
+        <?php if ($isAdmin): ?>
             <div class="nav-group">
                 <a href="#" class="nav-item has-submenu <?= strpos($currentPath, '/admin/') === 0 ? 'active' : '' ?>" onclick="toggleSubmenu(event, 'admin-submenu')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -338,7 +331,7 @@ try {
         
         <div class="user-info">
             <div class="user-name"><?= htmlspecialchars($currentUser['name'] ?? 'Usuário') ?></div>
-            <div class="user-role"><?= (isset($currentUser['role']) && strtolower($currentUser['role']) === 'admin') || (isset($_SESSION['user']['role']) && strtolower($_SESSION['user']['role']) === 'admin') ? 'Administrador' : 'Revendedor' ?></div>
+            <div class="user-role"><?= $isAdmin ? 'Administrador' : 'Revendedor' ?></div>
         </div>
         
         <button class="logout-btn" onclick="logout()">
