@@ -197,8 +197,10 @@ try {
     
 } catch (Exception $e) {
     error_log("Erro ao gerar PIX de renovação: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     Response::json([
         'success' => false,
-        'error' => 'Erro ao gerar PIX: ' . $e->getMessage()
-    ], 500);
+        'error' => 'Erro ao gerar PIX: ' . $e->getMessage(),
+        'details' => $e->getTraceAsString()
+    ], 400);
 }
