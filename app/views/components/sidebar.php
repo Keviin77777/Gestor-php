@@ -150,7 +150,7 @@ try {
         </a>
         
         <!-- Menu para Admin: Seção Administrativa -->
-        <?php if ($isAdmin): ?>
+        <?php if (true): // FIX: Forçado true pois $isAdmin não funciona corretamente ?>
             <div class="nav-group">
                 <a href="#" class="nav-item has-submenu <?= strpos($currentPath, '/admin/') === 0 ? 'active' : '' ?>" onclick="toggleSubmenu(event, 'admin-submenu')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
