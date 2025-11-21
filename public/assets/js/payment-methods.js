@@ -328,8 +328,14 @@ async function testEfiBankConnection() {
             }
             
             message += `\n${info.message || '🎉 EFI Bank configurado e pronto para uso!'}`;
+            message += '\n\n💾 Salvando configurações automaticamente...';
             
             alert(message);
+            
+            // Marcar como ativo e salvar automaticamente
+            document.getElementById('efiEnabled').checked = true;
+            await saveEfiBankConfig();
+            
         } else {
             let errorMsg = '❌ Erro ao testar conexão:\n\n' + result.error;
             
