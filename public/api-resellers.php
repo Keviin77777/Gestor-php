@@ -124,7 +124,7 @@ function listResellers() {
             END as days_remaining
         FROM users u
         LEFT JOIN reseller_plans rp ON u.current_plan_id = rp.id
-        WHERE u.is_admin = FALSE OR u.is_admin IS NULL
+        WHERE (u.is_admin = 0 OR u.is_admin IS NULL) AND (u.role != 'admin' OR u.role IS NULL)
         ORDER BY u.created_at DESC
     ");
     
