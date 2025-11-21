@@ -78,9 +78,26 @@ try {
     writeLog("=== INICIANDO AUTOMAÇÃO WHATSAPP ===");
     writeLog("Hora atual: $currentHour | Dia: $currentDay");
     
-    // 1. Executar agendamentos personalizados (templates configurados pelo usuário)
-    writeLog("--- Verificando Templates Agendados ---");
-    $scheduledReport = runScheduledTemplates();
+    // Buscar todos os resellers ativos
+    $resellers = Database::fetchAll("SELECT DISTINCT id FROM resellers WHERE status = 'active'");
+    
+    if (empty($resellers)) {
+        writeLog("⚠️  Nenhum reseller ativo encontrado");
+        exit(0);
+    }
+    
+    writeLog("📊 Total de resellers ativos: " . count($resellers));
+    
+    $totalMessagesAllResellers = 0;
+    $totalErrorsAllResellers = 0;
+    
+    foreach ($resellers as $reseller) {
+        $resellerId = $reseller['id'];
+        writeLog("\n--- Processando Reseller: {$resellerId} ---");
+        
+        // 1. Executar agendamentos personalizados (templates configurados pelo usuário)
+        writeLog("--- Verificando Templates Agendados ---");
+        $scheduledReport = runScheduledTemplates($resellerId);
     
     // Escrever logs de debug
     if (!empty($scheduledReport['debug'])) {
@@ -98,47 +115,55 @@ try {
         writeLog("ℹ️  Nenhum template agendado para este horário");
     }
     
-    // 2. Executar automação de lembretes de vencimento
-    writeLog("--- Verificando Lembretes de Vencimento ---");
-    writeLog("ℹ️  Nota: Lembretes só são enviados se:");
-    writeLog("   • auto_send_reminders = TRUE nas configurações");
-    writeLog("   • Template NÃO tem agendamento ativo (is_scheduled = 0)");
-    $report = runWhatsAppReminderAutomation();
-    
-    if ($report['reminders_sent'] > 0) {
-        writeLog("✅ Lembretes de vencimento: {$report['reminders_sent']} enviados");
-        foreach ($report['clients_processed'] as $client) {
-            writeLog("  → {$client['client_name']} ({$client['template_type']}) - {$client['days_until_renewal']} dias");
-        }
-    } else {
-        writeLog("ℹ️  Nenhum lembrete de vencimento necessário");
-    }
-    
-    // Consolidar resultados
-    $totalMessages = $scheduledReport['messages_sent'] + $report['reminders_sent'];
-    $totalErrors = count($scheduledReport['errors']) + count($report['errors']);
-    
-    writeLog("--- Resumo ---");
-    writeLog("📊 Total de mensagens enviadas: {$totalMessages}");
-    writeLog("📊 Total de erros: {$totalErrors}");
-    
-    // Log de erros detalhado
-    if ($totalErrors > 0) {
-        writeLog("--- Erros Encontrados ---");
+        // 2. Executar automação de lembretes de vencimento
+        writeLog("--- Verificando Lembretes de Vencimento ---");
+        writeLog("ℹ️  Nota: Lembretes só são enviados se:");
+        writeLog("   • auto_send_reminders = TRUE nas configurações");
+        writeLog("   • Template NÃO tem agendamento ativo (is_scheduled = 0)");
+        $report = runWhatsAppReminderAutomation();
         
-        foreach ($scheduledReport['errors'] as $error) {
-            if (isset($error['global'])) {
-                writeLog("❌ [Global] {$error['global']}");
-            } else {
-                writeLog("❌ [Template {$error['template_id']}] Cliente {$error['client_id']}: {$error['error']}");
+        if ($report['reminders_sent'] > 0) {
+            writeLog("✅ Lembretes de vencimento: {$report['reminders_sent']} enviados");
+            foreach ($report['clients_processed'] as $client) {
+                writeLog("  → {$client['client_name']} ({$client['template_type']}) - {$client['days_until_renewal']} dias");
+            }
+        } else {
+            writeLog("ℹ️  Nenhum lembrete de vencimento necessário");
+        }
+        
+        // Consolidar resultados do reseller
+        $totalMessages = $scheduledReport['messages_sent'] + $report['reminders_sent'];
+        $totalErrors = count($scheduledReport['errors']) + count($report['errors']);
+        
+        $totalMessagesAllResellers += $totalMessages;
+        $totalErrorsAllResellers += $totalErrors;
+        
+        writeLog("--- Resumo do Reseller {$resellerId} ---");
+        writeLog("📊 Mensagens enviadas: {$totalMessages}");
+        writeLog("📊 Erros: {$totalErrors}");
+        
+        // Log de erros detalhado
+        if ($totalErrors > 0) {
+            writeLog("--- Erros Encontrados ---");
+            
+            foreach ($scheduledReport['errors'] as $error) {
+                if (isset($error['global'])) {
+                    writeLog("❌ [Global] {$error['global']}");
+                } else {
+                    writeLog("❌ [Template {$error['template_id']}] Cliente {$error['client_id']}: {$error['error']}");
+                }
+            }
+            
+            foreach ($report['errors'] as $error) {
+                writeLog("❌ [Lembrete] {$error['client_name']}: {$error['error']}");
             }
         }
-        
-        foreach ($report['errors'] as $error) {
-            writeLog("❌ [Lembrete] {$error['client_name']}: {$error['error']}");
-        }
     }
     
+    writeLog("\n=== RESUMO GERAL ===");
+    writeLog("📊 Total de resellers processados: " . count($resellers));
+    writeLog("📊 Total de mensagens enviadas: {$totalMessagesAllResellers}");
+    writeLog("📊 Total de erros: {$totalErrorsAllResellers}");
     writeLog("=== AUTOMAÇÃO FINALIZADA ===\n");
     
 } catch (Exception $e) {
