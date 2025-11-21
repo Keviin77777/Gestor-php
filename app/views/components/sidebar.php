@@ -143,7 +143,7 @@ try {
         </a>
         
         <!-- Menu para Admin: Seção Administrativa -->
-        <?php if ($isAdmin): ?>
+        <!-- TESTE: Removido if($isAdmin) temporariamente -->
             <div class="nav-group">
                 <a href="#" class="nav-item has-submenu <?= strpos($currentPath, '/admin/') === 0 ? 'active' : '' ?>" onclick="toggleSubmenu(event, 'admin-submenu')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -184,7 +184,7 @@ try {
                     </a>
                 </div>
             </div>
-        <?php endif; ?>
+        <!-- FIM TESTE -->
         
         <!-- Menu Comum: Clientes (para todos os usuários) -->
             <div class="nav-group">
