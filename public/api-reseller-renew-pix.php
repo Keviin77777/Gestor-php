@@ -124,22 +124,25 @@ try {
     // Preparar dados do pagamento baseado no provedor
     if ($providerName === 'efibank') {
         // Limpar e validar CPF/CNPJ
-        $docNumber = preg_replace('/[^0-9]/', '', $userData['cpf_cnpj'] ?? '');
+        $docNumber = '';
+        if (!empty($userData['cpf_cnpj'])) {
+            $docNumber = preg_replace('/[^0-9]/', '', $userData['cpf_cnpj']);
+        }
         
         // Log do documento
-        error_log("Documento original: " . ($userData['cpf_cnpj'] ?? 'vazio'));
-        error_log("Documento limpo: " . $docNumber);
-        error_log("Tamanho do documento: " . strlen($docNumber));
+        error_log("Renovação EFI - Documento original: " . ($userData['cpf_cnpj'] ?? 'vazio'));
+        error_log("Renovação EFI - Documento limpo: " . ($docNumber ?: 'vazio'));
+        error_log("Renovação EFI - Tamanho do documento: " . strlen($docNumber));
         
         $paymentData = [
             'amount' => (float)$plan['price'],
             'description' => "Renovação - {$plan['name']} ({$plan['duration_days']} dias)",
-            'payer_name' => $userData['name'] ?? 'Revendedor',
-            'payer_doc_number' => $docNumber,
+            'payer_name' => $userData['name'] ?? $userData['email'] ?? 'Revendedor',
+            'payer_doc_number' => $docNumber, // Pode ser vazio, EFI Bank aceita
             'external_reference' => "RENEW_USER_{$user['id']}_PLAN_{$planId}"
         ];
         
-        error_log("Payment Data EFI: " . json_encode($paymentData));
+        error_log("Renovação EFI - Payment Data: " . json_encode($paymentData));
     } else {
         // Mercado Pago
         $paymentData = [

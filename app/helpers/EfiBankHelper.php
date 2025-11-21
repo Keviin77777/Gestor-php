@@ -161,15 +161,12 @@ class EfiBankHelper {
             return $mock->createPixPayment($data);
         }
         
-        // Validar dados obrigatórios
-        $required = ['amount', 'payer_name', 'payer_doc_number'];
-        foreach ($required as $field) {
-            if (empty($data[$field])) {
-                return [
-                    'success' => false,
-                    'error' => "Campo obrigatório ausente: {$field}"
-                ];
-            }
+        // Validar dados obrigatórios (apenas amount é realmente obrigatório)
+        if (empty($data['amount'])) {
+            return [
+                'success' => false,
+                'error' => "Campo obrigatório ausente: amount"
+            ];
         }
         
         try {
@@ -194,14 +191,26 @@ class EfiBankHelper {
             ];
             
             // Adicionar devedor apenas se tiver CPF válido
-            if (!empty($data['payer_doc_number'])) {
+            if (!empty($data['payer_doc_number']) && !empty($data['payer_name'])) {
                 $cpf = preg_replace('/[^0-9]/', '', $data['payer_doc_number']);
+                
+                // Log para debug
+                error_log("EFI Bank - CPF recebido: " . $data['payer_doc_number']);
+                error_log("EFI Bank - CPF limpo: " . $cpf);
+                error_log("EFI Bank - Tamanho CPF: " . strlen($cpf));
+                
+                // Validar CPF (11 dígitos e algoritmo válido)
                 if (strlen($cpf) === 11 && $this->validarCPF($cpf)) {
                     $payload['devedor'] = [
                         'nome' => $data['payer_name'],
                         'cpf' => $cpf
                     ];
+                    error_log("EFI Bank - Devedor adicionado ao payload");
+                } else {
+                    error_log("EFI Bank - CPF inválido, devedor não será adicionado (cobrança será criada sem devedor)");
                 }
+            } else {
+                error_log("EFI Bank - Sem CPF ou nome, devedor não será adicionado");
             }
             
             // Adicionar informações adicionais se fornecidas
