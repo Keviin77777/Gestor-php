@@ -1749,15 +1749,24 @@
                     })
                 });
                 
-                const data = await response.json();
+                const text = await response.text();
+                console.log('Response:', text);
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    throw new Error('Resposta inválida do servidor: ' + text.substring(0, 100));
+                }
                 
                 if (data.success) {
                     showSuccess('Revendedor excluído com sucesso');
                     loadResellers();
                 } else {
-                    throw new Error(data.error);
+                    throw new Error(data.error || 'Erro desconhecido');
                 }
             } catch (error) {
+                console.error('Erro completo:', error);
                 showError('Erro ao excluir revendedor: ' + error.message);
             }
         }
