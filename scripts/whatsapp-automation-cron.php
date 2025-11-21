@@ -78,21 +78,21 @@ try {
     writeLog("=== INICIANDO AUTOMAÇÃO WHATSAPP ===");
     writeLog("Hora atual: $currentHour | Dia: $currentDay");
     
-    // Buscar todos os resellers ativos
-    $resellers = Database::fetchAll("SELECT DISTINCT id FROM resellers WHERE status = 'active'");
+    // Buscar todos os resellers ativos (baseado nos clientes)
+    $resellers = Database::fetchAll("SELECT DISTINCT reseller_id FROM clients WHERE reseller_id IS NOT NULL");
     
     if (empty($resellers)) {
-        writeLog("⚠️  Nenhum reseller ativo encontrado");
+        writeLog("⚠️  Nenhum reseller encontrado");
         exit(0);
     }
     
-    writeLog("📊 Total de resellers ativos: " . count($resellers));
+    writeLog("📊 Total de resellers encontrados: " . count($resellers));
     
     $totalMessagesAllResellers = 0;
     $totalErrorsAllResellers = 0;
     
     foreach ($resellers as $reseller) {
-        $resellerId = $reseller['id'];
+        $resellerId = $reseller['reseller_id'];
         writeLog("\n--- Processando Reseller: {$resellerId} ---");
         
         // 1. Executar agendamentos personalizados (templates configurados pelo usuário)
