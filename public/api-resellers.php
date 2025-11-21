@@ -87,10 +87,13 @@ try {
     
 } catch (Exception $e) {
     http_response_code(400);
+    header('Content-Type: application/json');
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
-    ]);
+        'error' => $e->getMessage(),
+        'trace' => $e->getTraceAsString()
+    ], JSON_PRETTY_PRINT);
+    exit;
 }
 
 /**
