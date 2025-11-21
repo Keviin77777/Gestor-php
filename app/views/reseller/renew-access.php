@@ -1478,7 +1478,7 @@
                                 readonly 
                                 style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 0.75rem; resize: none; background: var(--bg-secondary); color: var(--text-primary);"
                                 rows="3"
-                            >${pixData.qr_code}</textarea>
+                            ></textarea>
                             <button 
                                 onclick="copyPixCode()" 
                                 style="position: absolute; top: 0.5rem; right: 0.5rem; background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;"
@@ -1488,23 +1488,6 @@
                             </button>
                         </div>
                     </div>
-                    
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-                    <script>
-                        // Gerar QR Code a partir do texto PIX
-                        setTimeout(() => {
-                            const container = document.getElementById('qrCodeContainer');
-                            container.innerHTML = '';
-                            new QRCode(container, {
-                                text: '${pixData.qr_code}',
-                                width: 250,
-                                height: 250,
-                                colorDark: "#000000",
-                                colorLight: "#ffffff",
-                                correctLevel: QRCode.CorrectLevel.M
-                            });
-                        }, 100);
-                    </script>
                     
                     <!-- Instruções -->
                     <div style="background: rgba(99, 102, 241, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid rgba(99, 102, 241, 0.2);">
@@ -1550,8 +1533,44 @@
             modal.appendChild(modalContent);
             document.body.appendChild(modal);
             
+            // Preencher código PIX
+            document.getElementById('pixCode').value = pixData.qr_code;
+            
+            // Carregar biblioteca QRCode e gerar QR Code
+            if (typeof QRCode === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+                script.onload = () => generateQRCode(pixData.qr_code);
+                document.head.appendChild(script);
+            } else {
+                generateQRCode(pixData.qr_code);
+            }
+            
             // Iniciar verificação automática
             startPaymentCheck(pixData.payment_id);
+        }
+        
+        // Gerar QR Code
+        function generateQRCode(pixCode) {
+            setTimeout(() => {
+                const container = document.getElementById('qrCodeContainer');
+                if (container) {
+                    container.innerHTML = '';
+                    try {
+                        new QRCode(container, {
+                            text: pixCode,
+                            width: 250,
+                            height: 250,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    } catch (error) {
+                        console.error('Erro ao gerar QR Code:', error);
+                        container.innerHTML = '<p style="color: var(--danger);">Erro ao gerar QR Code. Use o código copia e cola.</p>';
+                    }
+                }
+            }, 100);
         }
         
         // Copiar código PIX
