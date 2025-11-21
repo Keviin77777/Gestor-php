@@ -302,8 +302,32 @@ class EfiBankHelper {
                 ];
             }
             
-            // Obter QR Code
             $txid = $result['txid'];
+            
+            // A resposta da criação já inclui o pixCopiaECola (QR Code texto)
+            // Mas não inclui a imagem base64, então precisamos buscar
+            if (isset($result['pixCopiaECola'])) {
+                error_log("EFI Bank - QR Code (copia e cola) já veio na resposta da cobrança");
+                
+                // Buscar apenas a imagem do QR Code
+                $locationId = $result['loc']['id'] ?? null;
+                
+                if ($locationId) {
+                    $qrImageData = $this->getQRCodeImage($locationId, $accessToken);
+                    
+                    return [
+                        'success' => true,
+                        'payment_id' => $txid,
+                        'status' => $result['status'],
+                        'qr_code' => $result['pixCopiaECola'],
+                        'qr_code_base64' => $qrImageData['qr_code_base64'] ?? '',
+                        'expiration_date' => date('Y-m-d H:i:s', strtotime('+1 hour'))
+                    ];
+                }
+            }
+            
+            // Fallback: buscar QR Code completo se não veio na resposta
+            error_log("EFI Bank - QR Code não veio na resposta, buscando separadamente");
             $qrCodeData = $this->getQRCode($txid, $accessToken);
             
             if (!$qrCodeData['success']) {
@@ -324,6 +348,68 @@ class EfiBankHelper {
                 'success' => false,
                 'error' => 'Erro ao criar pagamento: ' . $e->getMessage()
             ];
+        }
+    }
+    
+    /**
+     * Obter apenas a imagem do QR Code (base64)
+     */
+    private function getQRCodeImage($locationId, $accessToken) {
+        try {
+            $qrUrl = $this->sandbox ? 
+                "https://api-pix-h.gerencianet.com.br/v2/loc/{$locationId}/qrcode" : 
+                "https://api-pix.gerencianet.com.br/v2/loc/{$locationId}/qrcode";
+            
+            error_log("EFI Bank - Buscando imagem QR Code: " . $qrUrl);
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $qrUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $accessToken,
+                'Content-Type: application/json'
+            ]);
+            
+            // Configurações SSL
+            $isLocalhost = strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
+                           strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false;
+            
+            if ($isLocalhost || env('APP_ENV') === 'development') {
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            } else {
+                if (!empty($this->certificate) && file_exists($this->certificate)) {
+                    curl_setopt($ch, CURLOPT_SSLCERT, $this->certificate);
+                }
+            }
+            
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+            
+            if ($error) {
+                error_log("EFI Bank - Erro ao buscar imagem QR Code: " . $error);
+                return ['qr_code_base64' => ''];
+            }
+            
+            if ($httpCode !== 200) {
+                error_log("EFI Bank - Erro HTTP ao buscar imagem QR Code: " . $httpCode);
+                return ['qr_code_base64' => ''];
+            }
+            
+            $result = json_decode($response, true);
+            
+            return [
+                'qr_code_base64' => $result['imagemQrcode'] ?? ''
+            ];
+            
+        } catch (Exception $e) {
+            error_log("EFI Bank - Exception ao buscar imagem QR Code: " . $e->getMessage());
+            return ['qr_code_base64' => ''];
         }
     }
     
