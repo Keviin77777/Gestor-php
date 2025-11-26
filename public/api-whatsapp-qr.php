@@ -57,26 +57,37 @@ try {
         exit();
     }
     
-    // Buscar configurações
-    $settings = Database::fetch(
-        "SELECT * FROM whatsapp_settings WHERE reseller_id = ?",
-        [$resellerId]
-    );
+    // Detectar qual API está sendo usada
+    require_once __DIR__ . '/../app/helpers/whatsapp-helper.php';
+    $provider = getActiveWhatsAppProvider($resellerId);
     
-    if (!$settings) {
-        // Usar configurações padrão do .env
-        $settings = [
-            'evolution_api_url' => getenv('EVOLUTION_API_URL') ?: getenv('WHATSAPP_API_URL') ?: 'http://localhost:8081',
-            'evolution_api_key' => getenv('EVOLUTION_API_KEY') ?: getenv('WHATSAPP_API_KEY') ?: ''
-        ];
+    if ($provider === 'native') {
+        // Usar API Premium (Nativa)
+        require_once __DIR__ . '/../app/helpers/whatsapp-native-api.php';
+        $nativeApi = new WhatsAppNativeAPI();
+        $qrResult = $nativeApi->getQRCode($resellerId);
+    } else {
+        // Usar Evolution API (Básica)
+        $settings = Database::fetch(
+            "SELECT * FROM whatsapp_settings WHERE reseller_id = ?",
+            [$resellerId]
+        );
+        
+        if (!$settings) {
+            // Usar configurações padrão do .env
+            $settings = [
+                'evolution_api_url' => getenv('EVOLUTION_API_URL') ?: getenv('WHATSAPP_API_URL') ?: 'http://localhost:8081',
+                'evolution_api_key' => getenv('EVOLUTION_API_KEY') ?: getenv('WHATSAPP_API_KEY') ?: ''
+            ];
+        }
+        
+        // Buscar QR Code na Evolution API
+        $qrResult = fetchQRCodeFromEvolution(
+            $settings['evolution_api_url'], 
+            $settings['evolution_api_key'], 
+            $session['instance_name']
+        );
     }
-    
-    // Buscar QR Code na Evolution API
-    $qrResult = fetchQRCodeFromEvolution(
-        $settings['evolution_api_url'], 
-        $settings['evolution_api_key'], 
-        $session['instance_name']
-    );
     
     if ($qrResult['success']) {
         // Atualizar QR Code no banco se houver um novo
