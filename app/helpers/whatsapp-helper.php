@@ -238,6 +238,23 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
             throw new Exception("Template '$templateType' não encontrado");
         }
         
+        // Se as variáveis não incluem payment_link, precisamos buscar do cliente
+        if (!isset($variables['payment_link']) && $clientId) {
+            // Buscar dados do cliente para gerar payment_link
+            require_once __DIR__ . '/whatsapp-automation.php';
+            $client = Database::fetch(
+                "SELECT * FROM clients WHERE id = ?",
+                [$clientId]
+            );
+            
+            if ($client) {
+                // Usar prepareTemplateVariables para gerar todas as variáveis incluindo payment_link
+                $allVariables = prepareTemplateVariables($template, $client);
+                // Mesclar com as variáveis passadas (as passadas têm prioridade)
+                $variables = array_merge($allVariables, $variables);
+            }
+        }
+        
         // Processar template com variáveis
         $message = processTemplate($template['message'], $variables);
         
