@@ -3,6 +3,12 @@
  * API para gerenciar templates do WhatsApp
  */
 
+// Limpar qualquer output anterior
+while (ob_get_level()) {
+    ob_end_clean();
+}
+ob_start();
+
 header('Content-Type: application/json; charset=utf-8');
 mb_internal_encoding('UTF-8');
 header('Access-Control-Allow-Origin: *');

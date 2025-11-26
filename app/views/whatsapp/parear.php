@@ -24,6 +24,54 @@
             <div class="content">
                 <!-- Connection Section - Primeiro -->
                 <div class="connection-section">
+                    <!-- API Provider Selection -->
+                    <div class="provider-selection-card">
+                        <div class="provider-header">
+                            <h3>Escolha o Provedor de API</h3>
+                            <p>Selecione qual API WhatsApp deseja utilizar</p>
+                        </div>
+                        
+                        <div class="provider-options">
+                            <label class="provider-option" for="providerNative">
+                                <input type="radio" id="providerNative" name="apiProvider" value="native" checked>
+                                <div class="provider-card">
+                                    <div class="provider-badge recommended">Recomendado</div>
+                                    <div class="provider-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                                        </svg>
+                                    </div>
+                                    <h4>API Premium</h4>
+                                    <p>Máxima performance e estabilidade</p>
+                                    <ul class="provider-features">
+                                        <li>✅ Conexão ultra estável</li>
+                                        <li>✅ Reconexão automática inteligente</li>
+                                        <li>✅ Suporte a múltiplas instâncias</li>
+                                        <li>✅ Sistema de fila otimizado</li>
+                                    </ul>
+                                </div>
+                            </label>
+                            
+                            <label class="provider-option" for="providerEvolution">
+                                <input type="radio" id="providerEvolution" name="apiProvider" value="evolution">
+                                <div class="provider-card">
+                                    <div class="provider-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                                        </svg>
+                                    </div>
+                                    <h4>API Básica</h4>
+                                    <p>Solução simples e funcional</p>
+                                    <ul class="provider-features">
+                                        <li>⚠️ Requer configuração externa</li>
+                                        <li>⚠️ Estabilidade moderada</li>
+                                        <li>⚠️ Pode apresentar quedas</li>
+                                    </ul>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="connection-card">
                         <div class="connection-status" id="connectionStatus">
                             <div class="status-icon" id="statusIcon">
@@ -33,7 +81,8 @@
                             </div>
                             <div class="status-info">
                                 <h3 id="statusTitle">WhatsApp Desconectado</h3>
-                                <p id="statusDescription">Clique em "Conectar" para iniciar o pareamento</p>
+                                <p id="statusDescription">Selecione uma API e clique em "Conectar"</p>
+                                <span class="provider-badge-small" id="currentProvider">API Premium</span>
                             </div>
                         </div>
                         

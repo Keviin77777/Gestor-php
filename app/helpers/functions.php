@@ -7,13 +7,32 @@
  * Carregar variáveis de ambiente do arquivo .env
  */
 function loadEnv($path) {
+    // Se for um diretório, adicionar /.env
+    if (is_dir($path)) {
+        $path = rtrim($path, '/\\') . '/.env';
+    }
+    
     if (!file_exists($path)) {
         return;
     }
     
+    // Verificar se é um arquivo válido
+    if (!is_file($path)) {
+        return;
+    }
+    
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    
+    if ($lines === false) {
+        return;
+    }
+    
     foreach ($lines as $line) {
         if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+        
+        if (strpos($line, '=') === false) {
             continue;
         }
         

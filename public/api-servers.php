@@ -3,6 +3,16 @@
  * API pública para servidores
  */
 
+// Limpar qualquer output anterior
+while (ob_get_level()) {
+    ob_end_clean();
+}
+ob_start();
+
+// Suprimir warnings e notices em produção
+error_reporting(E_ERROR | E_PARSE);
+ini_set('display_errors', '0');
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -15,7 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Iniciar sessão
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Carregar dependências
 require_once __DIR__ . '/../app/helpers/functions.php';
@@ -111,8 +123,19 @@ try {
     
 } catch (Exception $e) {
     error_log("API Servers error: " . $e->getMessage());
+    
+    // Limpar qualquer output que possa ter sido gerado
+    if (ob_get_length()) {
+        ob_clean();
+    }
+    
     Response::json([
         'success' => false,
-        'error' => 'Erro interno do servidor'
+        'error' => 'Erro interno do servidor: ' . $e->getMessage()
     ], 500);
+}
+
+// Garantir que o buffer seja enviado
+if (ob_get_length()) {
+    ob_end_flush();
 }

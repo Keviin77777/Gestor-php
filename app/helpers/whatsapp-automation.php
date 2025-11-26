@@ -269,7 +269,7 @@ function prepareTemplateVariables($template, $client) {
     ];
 
     // Adicionar payment_link para templates de fatura e lembretes
-    if (in_array($template['type'], ['invoice_generated', 'expires_today', 'expires_3d', 'expires_7d'])) {
+    if (in_array($template['type'], ['invoice_generated', 'expires_today', 'expires_3d', 'expires_7d', 'expired_1d', 'expired_3d'])) {
         // Buscar fatura mais recente do cliente
         $invoice = Database::fetch(
             "SELECT id FROM invoices 
@@ -281,12 +281,17 @@ function prepareTemplateVariables($template, $client) {
         );
         
         if ($invoice) {
-            // Obter domínio do sistema
-            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $baseUrl = $protocol . '://' . $host;
+            // Obter domínio do sistema - priorizar APP_URL do .env
+            $baseUrl = env('APP_URL');
             
-            $variables['payment_link'] = $baseUrl . '/checkout.php?invoice=' . $invoice['id'];
+            // Se não tiver no .env, tentar pegar do servidor
+            if (!$baseUrl) {
+                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
+                $baseUrl = $protocol . '://' . $host;
+            }
+            
+            $variables['payment_link'] = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
         } else {
             $variables['payment_link'] = '';
         }
@@ -659,14 +664,20 @@ function checkAndSendReminderForNewClient($clientId) {
             return null;
         }
         
-        // Preparar variáveis do template
-        $variables = [
-            'cliente_nome' => $client['name'],
-            'cliente_plano' => $client['plan'] ?: 'Personalizado',
-            'cliente_vencimento' => date('d/m/Y', strtotime($client['renewal_date'])),
-            'cliente_valor' => 'R$ ' . number_format($client['value'], 2, ',', '.'),
-            'cliente_servidor' => $client['server'] ?: 'Principal'
-        ];
+        // Buscar template completo para preparar variáveis corretamente
+        $fullTemplate = Database::fetch(
+            "SELECT * FROM whatsapp_templates 
+             WHERE type = ? AND reseller_id = ? AND is_active = 1",
+            [$templateType, $client['reseller_id']]
+        );
+        
+        if (!$fullTemplate) {
+            error_log("Template '{$templateType}' não encontrado");
+            return null;
+        }
+        
+        // Preparar variáveis do template (inclui payment_link automaticamente)
+        $variables = prepareTemplateVariables($fullTemplate, $client);
         
         // Enviar mensagem
         $result = sendTemplateMessage(

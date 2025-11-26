@@ -3,6 +3,11 @@
  * API para enviar mensagens WhatsApp
  */
 
+// Limpar qualquer output anterior
+if (ob_get_level()) {
+    ob_clean();
+}
+
 header('Content-Type: application/json; charset=utf-8');
 mb_internal_encoding('UTF-8');
 header('Access-Control-Allow-Origin: *');
@@ -55,11 +60,15 @@ try {
         
         error_log('WhatsApp Send API - Resultado: ' . json_encode($result));
         
+        // Verificar se houve erro
+        if (!$result['success']) {
+            throw new Exception($result['error'] ?? 'Erro ao enviar mensagem');
+        }
+        
         echo json_encode([
             'success' => true,
             'message' => 'Mensagem enviada com sucesso',
-            'message_id' => $result['message_id'] ?? null,
-            'debug' => $result // Adicionar debug para ver o que está retornando
+            'message_id' => $result['message_id'] ?? null
         ], JSON_UNESCAPED_UNICODE);
         
     } else {

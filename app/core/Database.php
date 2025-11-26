@@ -20,6 +20,10 @@ class Database {
             $user = env('DB_USER', 'root');
             $pass = env('DB_PASS', '');
             
+            if (empty($host) || empty($dbname)) {
+                throw new Exception('Configurações do banco de dados não encontradas. Verifique o arquivo .env');
+            }
+            
             $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
             
             self::$connection = new PDO($dsn, $user, $pass, [
@@ -32,7 +36,10 @@ class Database {
             return self::$connection;
         } catch (PDOException $e) {
             logError('Database connection failed: ' . $e->getMessage());
-            throw new Exception('Erro ao conectar ao banco de dados');
+            throw new Exception('Erro ao conectar ao banco de dados: ' . $e->getMessage());
+        } catch (Exception $e) {
+            logError('Database configuration error: ' . $e->getMessage());
+            throw $e;
         }
     }
     

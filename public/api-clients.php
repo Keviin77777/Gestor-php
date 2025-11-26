@@ -239,6 +239,10 @@ try {
                     'notes' => $data['notes'] ?? ''
                 ];
                 
+                // 1. Verificar se precisa enviar lembrete de WhatsApp (PRIMEIRO!)
+                $whatsappResult = checkAndSendReminderForNewClient($id);
+                
+                // 2. Verificar se precisa gerar fatura automática após atualização (DEPOIS)
                 $invoiceResult = checkAndGenerateInvoiceForClient($clientData);
                 
                 // NÃO sincronizar com Sigma na edição para evitar renovações indesejadas
@@ -251,6 +255,12 @@ try {
                     'success' => true,
                     'message' => 'Cliente atualizado com sucesso'
                 ];
+                
+                // Adicionar informação sobre lembrete se foi enviado
+                if ($whatsappResult && $whatsappResult['success']) {
+                    $response['whatsapp_sent'] = true;
+                    $response['message'] .= ' - Lembrete WhatsApp enviado';
+                }
                 
                 // Adicionar informação sobre fatura se foi gerada
                 if ($invoiceResult['invoice_generated']) {

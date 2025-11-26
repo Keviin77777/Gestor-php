@@ -6,6 +6,43 @@
 require_once __DIR__ . '/../core/Database.php';
 
 /**
+ * Detectar qual API está sendo usada
+ */
+function getActiveWhatsAppProvider($resellerId) {
+    // Verificar qual API está conectada
+    $session = Database::fetch(
+        "SELECT * FROM whatsapp_sessions WHERE reseller_id = ? AND status = 'connected' ORDER BY connected_at DESC LIMIT 1",
+        [$resellerId]
+    );
+    
+    if (!$session) {
+        return null;
+    }
+    
+    // Verificar se o instance_name indica API nativa (formato: reseller_xxx)
+    if (strpos($session['instance_name'], 'reseller_') === 0 || strpos($session['instance_name'], 'ultragestor-') === 0) {
+        // Verificar se a API nativa está configurada
+        $nativeApiUrl = env('WHATSAPP_NATIVE_API_URL', 'http://localhost:3000');
+        
+        // Tentar fazer um ping na API nativa
+        $ch = curl_init($nativeApiUrl . '/health');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode === 200) {
+            return 'native';
+        }
+    }
+    
+    // Fallback para Evolution API
+    return 'evolution';
+}
+
+/**
  * Enviar mensagem via WhatsApp
  */
 function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = null, $clientId = null, $invoiceId = null) {
@@ -31,7 +68,7 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
         }
         
         // Verificar horário comercial se configurado
-        if ($settings['send_only_business_hours']) {
+        if (isset($settings['send_only_business_hours']) && $settings['send_only_business_hours']) {
             $currentTime = date('H:i:s');
             if ($currentTime < $settings['business_hours_start'] || $currentTime > $settings['business_hours_end']) {
                 throw new Exception('Fora do horário comercial configurado');
@@ -49,8 +86,19 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
             [$messageId, $resellerId, $session['id'], $templateId, $clientId, $invoiceId, $formattedPhone, $message]
         );
         
-        // Enviar mensagem via Evolution API
-        $result = sendMessageToEvolution($settings['evolution_api_url'], $settings['evolution_api_key'], $session['instance_name'], $formattedPhone, $message);
+        // Detectar qual API usar
+        $provider = getActiveWhatsAppProvider($resellerId);
+        
+        // Enviar mensagem via API apropriada
+        if ($provider === 'native') {
+            // Usar API Nativa
+            require_once __DIR__ . '/whatsapp-native-api.php';
+            $nativeApi = new WhatsAppNativeAPI();
+            $result = $nativeApi->sendMessage($resellerId, $formattedPhone, $message);
+        } else {
+            // Usar Evolution API
+            $result = sendMessageToEvolution($settings['evolution_api_url'], $settings['evolution_api_key'], $session['instance_name'], $formattedPhone, $message);
+        }
         
         if ($result['success']) {
             // Atualizar status da mensagem

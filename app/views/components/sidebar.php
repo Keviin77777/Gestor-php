@@ -2,34 +2,9 @@
 // Carregar .env ANTES de qualquer coisa
 require_once __DIR__ . '/../../helpers/functions.php';
 
-// Tentar múltiplos caminhos para o .env (dependendo de onde o arquivo é incluído)
-// Usar __FILE__ que sempre aponta para este arquivo, não importa de onde é incluído
-$sidebarFile = __FILE__;
-$envPaths = [
-    dirname(dirname(dirname($sidebarFile))) . '/.env',  // Subir 3 níveis: components -> views -> app -> raiz
-    dirname(dirname(dirname(dirname($sidebarFile)))) . '/Gestor/.env',  // Se estiver em public/
-    '/www/wwwroot/ultragestor.site/Gestor/.env',  // Caminho absoluto conhecido
-    realpath(dirname(dirname(dirname($sidebarFile))) . '/.env'),
-];
-
-// Se DOCUMENT_ROOT aponta para public/, subir um nível
-if (isset($_SERVER['DOCUMENT_ROOT'])) {
-    $docRoot = $_SERVER['DOCUMENT_ROOT'];
-    if (strpos($docRoot, '/public') !== false || strpos($docRoot, '/Gestor') !== false) {
-        $envPaths[] = dirname($docRoot) . '/.env';
-        $envPaths[] = $docRoot . '/../.env';
-    }
-}
-
-foreach ($envPaths as $envPath) {
-    $realPath = realpath($envPath);
-    if ($realPath && file_exists($realPath)) {
-        loadEnv($realPath);
-        if (getenv('DB_HOST')) {
-            break;
-        }
-    }
-}
+// Caminho para o .env (3 níveis acima: components -> views -> app -> raiz)
+$envPath = dirname(dirname(dirname(__DIR__))) . '/.env';
+loadEnv($envPath);
 
 // Iniciar sessão antes de carregar classes que dependem dela
 if (session_status() === PHP_SESSION_NONE) {
@@ -50,6 +25,11 @@ $currentPath = $_SERVER['REQUEST_URI'] ?? '';
 $currentPath = parse_url($currentPath, PHP_URL_PATH);
 
 try {
+    // Verificar se as variáveis de ambiente foram carregadas
+    if (!env('DB_HOST')) {
+        throw new Exception('Variáveis de ambiente não carregadas');
+    }
+    
     // Obter usuário autenticado
     $currentUser = Auth::user();
     
@@ -134,10 +114,20 @@ try {
     
 } catch (Exception $e) {
     error_log("Erro no sidebar: " . $e->getMessage());
-    // Em caso de erro, assumir como não autenticado
-    $currentUser = null;
-    $isAdmin = false;
-    $userPlan = null;
+    error_log("Stack trace: " . $e->getTraceAsString());
+    
+    // Tentar obter usuário da sessão como fallback
+    if (isset($_SESSION['user'])) {
+        $currentUser = $_SESSION['user'];
+        $isAdmin = (isset($currentUser['role']) && strtolower($currentUser['role']) === 'admin') || 
+                   (isset($currentUser['is_admin']) && $currentUser['is_admin']);
+        $userPlan = null;
+    } else {
+        // Em caso de erro, assumir como não autenticado
+        $currentUser = null;
+        $isAdmin = false;
+        $userPlan = null;
+    }
 }
 ?>
 

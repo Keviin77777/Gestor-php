@@ -3,6 +3,11 @@
  * API para verificar status do WhatsApp
  */
 
+// Limpar qualquer output anterior
+if (ob_get_level()) {
+    ob_clean();
+}
+
 header('Content-Type: application/json; charset=utf-8');
 mb_internal_encoding('UTF-8');
 header('Access-Control-Allow-Origin: *');
@@ -47,8 +52,8 @@ try {
             ] : null,
             'settings' => $settings ? [
                 'id' => $settings['id'],
-                'evolution_api_url' => $settings['evolution_api_url'],
-                'api_key' => $settings['api_key'] ? 'Configurada' : 'Não configurada'
+                'evolution_api_url' => $settings['evolution_api_url'] ?? '',
+                'api_key' => (!empty($settings['api_key']) || !empty($settings['evolution_api_key'])) ? 'Configurada' : 'Não configurada'
             ] : null,
             'templates_count' => $templates[0]['total'] ?? 0,
             'has_session' => !empty($session),
