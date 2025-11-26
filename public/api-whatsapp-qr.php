@@ -57,9 +57,10 @@ try {
         exit();
     }
     
-    // Detectar qual API está sendo usada
-    require_once __DIR__ . '/../app/helpers/whatsapp-helper.php';
-    $provider = getActiveWhatsAppProvider($resellerId);
+    // Detectar qual API está sendo usada baseado no provider da sessão
+    $provider = $session['provider'] ?? 'evolution';
+    
+    error_log("QR API - Provider detectado: $provider");
     
     if ($provider === 'native') {
         // Usar API Premium (Nativa)

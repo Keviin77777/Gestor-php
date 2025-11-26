@@ -111,15 +111,16 @@ try {
         Database::query(
             "UPDATE whatsapp_sessions SET 
              status = 'connecting', 
-             qr_code = NULL, 
+             qr_code = NULL,
+             provider = 'evolution',
              updated_at = CURRENT_TIMESTAMP 
              WHERE id = ?",
             [$sessionId]
         );
     } else {
         Database::query(
-            "INSERT INTO whatsapp_sessions (id, reseller_id, session_name, instance_name, status) 
-             VALUES (?, ?, ?, ?, 'connecting')",
+            "INSERT INTO whatsapp_sessions (id, reseller_id, session_name, instance_name, status, provider) 
+             VALUES (?, ?, ?, ?, 'connecting', 'evolution')",
             [$sessionId, $resellerId, $instanceName, $instanceName]
         );
     }

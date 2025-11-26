@@ -5,6 +5,9 @@
 let connectionStatus = 'disconnected';
 let qrCheckInterval = null;
 let statusCheckInterval = null;
+let currentQRCode = null;
+let isManuallyDisconnecting = false;
+let selectedProvider = null; // 'native' ou 'evolution'
 
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function () {
@@ -12,8 +15,12 @@ document.addEventListener('DOMContentLoaded', function () {
     loadSettings();
     checkConnectionStatus();
 
-    // Verificar status a cada 5 segundos
-    statusCheckInterval = setInterval(checkConnectionStatus, 5000);
+    // Verificar status a cada 5 segundos (só se não estiver desconectando)
+    statusCheckInterval = setInterval(() => {
+        if (!isManuallyDisconnecting) {
+            checkConnectionStatus();
+        }
+    }, 5000);
 
     // Listener para mudança de provedor
     const providerNative = document.getElementById('providerNative');
@@ -23,17 +30,44 @@ document.addEventListener('DOMContentLoaded', function () {
     if (providerNative && providerEvolution && currentProviderBadge) {
         providerNative.addEventListener('change', function() {
             if (this.checked) {
+                selectedProvider = 'native';
                 currentProviderBadge.textContent = 'API Premium';
                 currentProviderBadge.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                // Limpar QR Code ao trocar de API
+                hideQRCode();
+                currentQRCode = null;
+                // Parar verificações
+                if (qrCheckInterval) {
+                    clearInterval(qrCheckInterval);
+                    qrCheckInterval = null;
+                }
+                showNotification('API Premium selecionada', 'info');
             }
         });
 
         providerEvolution.addEventListener('change', function() {
             if (this.checked) {
+                selectedProvider = 'evolution';
                 currentProviderBadge.textContent = 'API Básica';
                 currentProviderBadge.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                // Limpar QR Code ao trocar de API
+                hideQRCode();
+                currentQRCode = null;
+                // Parar verificações
+                if (qrCheckInterval) {
+                    clearInterval(qrCheckInterval);
+                    qrCheckInterval = null;
+                }
+                showNotification('API Básica selecionada', 'info');
             }
         });
+        
+        // Definir provider inicial
+        if (providerNative.checked) {
+            selectedProvider = 'native';
+        } else if (providerEvolution.checked) {
+            selectedProvider = 'evolution';
+        }
     }
 });
 
@@ -181,6 +215,11 @@ async function testConnection() {
  */
 async function connectWhatsApp() {
     try {
+        // Limpar estado anterior
+        isManuallyDisconnecting = false;
+        currentQRCode = null;
+        hideQRCode();
+        
         // Obter dados do usuário logado
         const userStr = localStorage.getItem('user');
         if (!userStr) {
@@ -196,6 +235,9 @@ async function connectWhatsApp() {
         const providerNative = document.getElementById('providerNative');
         const providerEvolution = document.getElementById('providerEvolution');
         const useNativeApi = providerNative && providerNative.checked;
+        
+        // Atualizar provider selecionado
+        selectedProvider = useNativeApi ? 'native' : 'evolution';
 
         await window.LoadingManager.withLoading(async () => {
             updateConnectionStatus('connecting');
@@ -297,6 +339,19 @@ async function connectWhatsApp() {
  */
 async function disconnectWhatsApp() {
     try {
+        // Marcar que estamos desconectando manualmente
+        isManuallyDisconnecting = true;
+        
+        // Parar todas as verificações
+        if (qrCheckInterval) {
+            clearInterval(qrCheckInterval);
+            qrCheckInterval = null;
+        }
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+            statusCheckInterval = null;
+        }
+        
         await window.LoadingManager.withLoading(async () => {
             const response = await fetch('/api-whatsapp-disconnect.php', {
                 method: 'POST'
@@ -308,6 +363,7 @@ async function disconnectWhatsApp() {
                 updateConnectionStatus('disconnected');
                 hideQRCode();
                 hideAccountInfo();
+                currentQRCode = null;
                 showNotification('WhatsApp desconectado com sucesso!', 'success');
             } else {
                 throw new Error(data.error || 'Erro ao desconectar');
@@ -316,7 +372,14 @@ async function disconnectWhatsApp() {
             type: 'global',
             id: 'disconnect-whatsapp'
         });
+        
+        // Aguardar 2 segundos antes de permitir reconexão automática
+        setTimeout(() => {
+            isManuallyDisconnecting = false;
+        }, 2000);
+        
     } catch (error) {
+        isManuallyDisconnecting = false;
         showNotification('Erro ao desconectar: ' + error.message, 'error');
     }
 }
@@ -325,6 +388,11 @@ async function disconnectWhatsApp() {
  * Verificar status da conexão
  */
 async function checkConnectionStatus() {
+    // Não verificar se estiver desconectando manualmente
+    if (isManuallyDisconnecting) {
+        return;
+    }
+    
     try {
         const response = await fetch('/api-whatsapp-status.php');
         const data = await response.json();
@@ -338,6 +406,7 @@ async function checkConnectionStatus() {
                     if (session.profile_name) {
                         showAccountInfo(session);
                         hideQRCode();
+                        currentQRCode = null;
                         // Parar verificação de QR Code se estiver rodando
                         if (qrCheckInterval) {
                             clearInterval(qrCheckInterval);
@@ -348,34 +417,25 @@ async function checkConnectionStatus() {
                     
                 case 'connecting':
                 case 'qr_code':
-                    if (session.qr_code) {
+                    // Só mostrar QR Code se estiver em processo de conexão ativo
+                    if (session.qr_code && qrCheckInterval !== null) {
                         showQRCode(session.qr_code);
                         hideAccountInfo();
-                        // Iniciar verificação se não estiver rodando
-                        if (!qrCheckInterval) {
-                            startQRCheck();
-                        }
                     }
                     break;
                     
                 default:
-                    hideQRCode();
-                    hideAccountInfo();
-                    // Parar verificação de QR Code
-                    if (qrCheckInterval) {
-                        clearInterval(qrCheckInterval);
-                        qrCheckInterval = null;
-                    }
+                    // Não fazer nada se estiver desconectado
+                    // Não limpar QR Code automaticamente
                     break;
             }
         } else {
-            updateConnectionStatus('disconnected');
-            hideQRCode();
-            hideAccountInfo();
-            // Parar verificação de QR Code
-            if (qrCheckInterval) {
-                clearInterval(qrCheckInterval);
-                qrCheckInterval = null;
+            // Só atualizar para desconectado se não estiver em processo de conexão
+            if (qrCheckInterval === null && !isManuallyDisconnecting) {
+                updateConnectionStatus('disconnected');
+                hideQRCode();
+                hideAccountInfo();
+                currentQRCode = null;
             }
         }
     } catch (error) {
@@ -387,6 +447,11 @@ async function checkConnectionStatus() {
  * Iniciar verificação do QR Code
  */
 function startQRCheck() {
+    // Não iniciar se estiver desconectando
+    if (isManuallyDisconnecting) {
+        return;
+    }
+    
     if (qrCheckInterval) {
         clearInterval(qrCheckInterval);
     }
@@ -396,13 +461,19 @@ function startQRCheck() {
     let lastMessage = '';
 
     qrCheckInterval = setInterval(async () => {
+        // Parar se estiver desconectando
+        if (isManuallyDisconnecting) {
+            clearInterval(qrCheckInterval);
+            qrCheckInterval = null;
+            return;
+        }
+        
         try {
             attempts++;
             
             const response = await fetch('/api-whatsapp-qr.php');
             
             if (!response.ok) {
-                const errorText = await response.text();
                 // Não lançar erro, apenas continuar tentando
                 return;
             }
@@ -419,7 +490,7 @@ function startQRCheck() {
                     showNotification('🎉 WhatsApp conectado com sucesso!', 'success');
                     checkConnectionStatus(); // Atualizar informações da conta
                 } else if (data.qr_code) {
-                    // Novo QR Code disponível
+                    // Novo QR Code disponível - só mostrar se for da API selecionada
                     showQRCode(data.qr_code);
                     attempts = 0; // Resetar tentativas quando receber QR Code
                     if (lastMessage !== 'qr_ready') {
@@ -460,13 +531,24 @@ function startQRCheck() {
  * Mostrar QR Code
  */
 function showQRCode(qrCode) {
+    // Evitar mostrar o mesmo QR Code duas vezes
+    if (currentQRCode === qrCode) {
+        return;
+    }
+    
+    // Não mostrar QR Code se estiver desconectando
+    if (isManuallyDisconnecting) {
+        return;
+    }
+    
     const qrCodeCard = document.getElementById('qrCodeCard');
     const qrCodeImage = document.getElementById('qrCodeImage');
 
     if (qrCode) {
+        currentQRCode = qrCode;
+        
         // Verificar se o QR Code já tem o prefixo data:image
         const qrSrc = qrCode.startsWith('data:image') ? qrCode : `data:image/png;base64,${qrCode}`;
-        
         
         qrCodeImage.innerHTML = `
             <div class="qr-code-wrapper">
@@ -502,6 +584,7 @@ function showQRCode(qrCode) {
 function hideQRCode() {
     const qrCodeCard = document.getElementById('qrCodeCard');
     qrCodeCard.style.display = 'none';
+    currentQRCode = null;
 
     if (qrCheckInterval) {
         clearInterval(qrCheckInterval);

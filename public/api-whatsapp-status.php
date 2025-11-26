@@ -100,13 +100,19 @@ try {
         }
     }
     
+    // Só retornar QR Code se estiver em processo de conexão
+    $qrCode = null;
+    if (in_array($session['status'], ['connecting', 'qr_code'])) {
+        $qrCode = $session['qr_code'];
+    }
+    
     echo json_encode([
         'success' => true,
         'session' => [
             'id' => $session['id'],
             'instance_name' => $session['instance_name'],
             'status' => $session['status'],
-            'qr_code' => $session['qr_code'],
+            'qr_code' => $qrCode,
             'profile_name' => $session['profile_name'],
             'profile_picture' => $session['profile_picture'],
             'phone_number' => $session['phone_number'],
