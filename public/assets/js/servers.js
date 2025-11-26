@@ -587,12 +587,27 @@ async function deleteServer(serverId) {
     }
 
     try {
+        console.log('=== DELETE SERVER DEBUG ===');
+        console.log('Servidor ID:', serverId);
+        console.log('URL:', `/api-servers.php?action=delete&id=${serverId}`);
+        console.log('Método: POST');
+        
         // Usar POST com action=delete para compatibilidade total
         const response = await fetch(`/api-servers.php?action=delete&id=${serverId}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id: serverId })
         });
 
-        const result = await response.json();
+        console.log('Status da resposta:', response.status);
+        console.log('Headers da resposta:', [...response.headers.entries()]);
+        
+        const text = await response.text();
+        console.log('Resposta (texto):', text.substring(0, 500));
+        
+        const result = JSON.parse(text);
 
         if (result.success) {
             showSuccess('Servidor excluído com sucesso!');
