@@ -78,39 +78,47 @@ try {
             break;
             
         case 'PUT':
-            // Procurar pelo ID do servidor nos path parts
-            $serverId = null;
-            foreach ($pathParts as $part) {
-                if (is_numeric($part)) {
-                    $serverId = $part;
-                    break;
+            // Tentar pegar ID do query parameter primeiro (compatibilidade com Nginx)
+            $serverId = $_GET['id'] ?? null;
+            
+            // Se não encontrou no query, procurar no path
+            if (!$serverId) {
+                foreach ($pathParts as $part) {
+                    if (is_numeric($part)) {
+                        $serverId = $part;
+                        break;
+                    }
                 }
             }
             
             if ($serverId) {
-                // PUT /api-servers.php/{id}
+                // PUT /api-servers.php?id={id} ou /api-servers.php/{id}
                 updateServer($serverId);
             } else {
-                error_log("PUT - Servidor ID não encontrado. Path parts: " . json_encode($pathParts));
+                error_log("PUT - Servidor ID não encontrado. Query: " . json_encode($_GET) . ", Path parts: " . json_encode($pathParts));
                 Response::json(['success' => false, 'error' => 'ID do servidor é obrigatório'], 400);
             }
             break;
             
         case 'DELETE':
-            // Procurar pelo ID do servidor nos path parts
-            $serverId = null;
-            foreach ($pathParts as $part) {
-                if (is_numeric($part)) {
-                    $serverId = $part;
-                    break;
+            // Tentar pegar ID do query parameter primeiro (compatibilidade com Nginx)
+            $serverId = $_GET['id'] ?? null;
+            
+            // Se não encontrou no query, procurar no path
+            if (!$serverId) {
+                foreach ($pathParts as $part) {
+                    if (is_numeric($part)) {
+                        $serverId = $part;
+                        break;
+                    }
                 }
             }
             
             if ($serverId) {
-                // DELETE /api-servers.php/{id}
+                // DELETE /api-servers.php?id={id} ou /api-servers.php/{id}
                 deleteServer($serverId);
             } else {
-                error_log("DELETE - Servidor ID não encontrado. Path parts: " . json_encode($pathParts));
+                error_log("DELETE - Servidor ID não encontrado. Query: " . json_encode($_GET) . ", Path parts: " . json_encode($pathParts));
                 Response::json(['success' => false, 'error' => 'ID do servidor é obrigatório'], 400);
             }
             break;

@@ -470,7 +470,8 @@ async function saveServer() {
         }
 
         const token = localStorage.getItem('token');
-        const url = serverId ? `/api-servers.php/${serverId}` : '/api-servers.php';
+        // Usar query parameter para compatibilidade com Nginx
+        const url = serverId ? `/api-servers.php?id=${serverId}` : '/api-servers.php';
         const method = serverId ? 'PUT' : 'POST';
         
         const response = await fetch(url, {
@@ -587,7 +588,9 @@ async function deleteServer(serverId) {
 
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api-servers.php/${serverId}`, {
+        
+        // Usar query parameter em vez de path parameter para compatibilidade com Nginx
+        const response = await fetch(`/api-servers.php?id=${serverId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
