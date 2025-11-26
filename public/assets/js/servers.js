@@ -595,6 +595,15 @@ async function deleteServer(serverId) {
             }
         });
 
+        // Verificar se a resposta é JSON válido
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // Se não for JSON, tentar ler como texto para debug
+            const text = await response.text();
+            console.error('Resposta não é JSON:', text);
+            throw new Error('Resposta inválida do servidor. Verifique os logs.');
+        }
+
         const result = await response.json();
 
         if (result.success) {
@@ -605,6 +614,7 @@ async function deleteServer(serverId) {
         }
 
     } catch (error) {
+        console.error('Erro ao excluir servidor:', error);
         showError('Erro ao excluir servidor: ' + error.message);
     }
 }

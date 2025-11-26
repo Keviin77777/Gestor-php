@@ -13,7 +13,10 @@ ob_start();
 error_reporting(E_ERROR | E_PARSE);
 ini_set('display_errors', '0');
 
-header('Content-Type: application/json');
+// Garantir que não há espaços em branco antes do JSON
+ob_clean();
+
+header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -118,19 +121,25 @@ try {
     
 } catch (Exception $e) {
     error_log("API Servers error: " . $e->getMessage());
+    error_log("API Servers stack trace: " . $e->getTraceAsString());
     
     // Limpar qualquer output que possa ter sido gerado
-    if (ob_get_length()) {
-        ob_clean();
+    while (ob_get_level()) {
+        ob_end_clean();
     }
     
-    Response::json([
+    // Garantir que apenas JSON seja retornado
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
         'success' => false,
         'error' => 'Erro interno do servidor: ' . $e->getMessage()
-    ], 500);
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
-// Garantir que o buffer seja enviado
-if (ob_get_length()) {
-    ob_end_flush();
+// Garantir que o buffer seja enviado corretamente
+$output = ob_get_clean();
+if ($output) {
+    echo $output;
 }
