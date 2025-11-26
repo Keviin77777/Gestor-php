@@ -60,6 +60,12 @@ $urlParts = parse_url($path);
 $pathParts = explode('/', trim($urlParts['path'], '/'));
 
 try {
+    // Verificar se é um POST com action=delete (compatibilidade com Nginx)
+    if ($method === 'POST' && isset($_GET['action']) && $_GET['action'] === 'delete') {
+        error_log("POST com action=delete detectado, tratando como DELETE");
+        $method = 'DELETE';
+    }
+    
     switch ($method) {
         case 'GET':
             if (isset($pathParts[2]) && $pathParts[2] === 'test-sigma') {

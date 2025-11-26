@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste DELETE Method</title>
+</head>
+<body>
+    <h1>Teste de Método DELETE</h1>
+    <button onclick="testDeleteClients()">Testar DELETE em Clientes</button>
+    <button onclick="testDeleteServers()">Testar DELETE em Servidores</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testDeleteClients() {
+            const result = document.getElementById('result');
+            result.textContent = 'Testando DELETE em /api-clients.php?id=999...\n';
+            
+            try {
+                const response = await fetch('/api-clients.php?id=999', {
+                    method: 'DELETE'
+                });
+                
+                result.textContent += `Status: ${response.status}\n`;
+                result.textContent += `Content-Type: ${response.headers.get('content-type')}\n`;
+                
+                const text = await response.text();
+                result.textContent += `Resposta: ${text}\n`;
+            } catch (error) {
+                result.textContent += `Erro: ${error.message}\n`;
+            }
+        }
+
+        async function testDeleteServers() {
+            const result = document.getElementById('result');
+            result.textContent = 'Testando DELETE em /api-servers.php?id=999...\n';
+            
+            try {
+                const response = await fetch('/api-servers.php?id=999', {
+                    method: 'DELETE'
+                });
+                
+                result.textContent += `Status: ${response.status}\n`;
+                result.textContent += `Content-Type: ${response.headers.get('content-type')}\n`;
+                
+                const text = await response.text();
+                result.textContent += `Resposta: ${text}\n`;
+            } catch (error) {
+                result.textContent += `Erro: ${error.message}\n`;
+            }
+        }
+    </script>
+</body>
+</html>

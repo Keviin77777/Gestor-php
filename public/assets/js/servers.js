@@ -587,9 +587,9 @@ async function deleteServer(serverId) {
     }
 
     try {
-        // Usar o mesmo padrão de api-clients.php
-        const response = await fetch(`/api-servers.php?id=${serverId}`, {
-            method: 'DELETE'
+        // Usar POST com action=delete para compatibilidade total
+        const response = await fetch(`/api-servers.php?action=delete&id=${serverId}`, {
+            method: 'POST'
         });
 
         const result = await response.json();
