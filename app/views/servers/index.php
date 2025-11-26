@@ -257,13 +257,13 @@
         </div>
     </div>
 
-    <script src="/assets/js/common.js"></script>
-    <script src="/assets/js/loading-manager.js"></script>
-    <script src="/assets/js/auth.js"></script>
-    <script src="/assets/js/access-control.js"></script>
-    <script src="/assets/js/theme-global.js"></script>
-    <script src="/assets/js/mobile-responsive.js"></script>
-    <script src="/assets/js/servers.js"></script>
+    <script src="/assets/js/common.js?v=<?= time() ?>"></script>
+    <script src="/assets/js/loading-manager.js?v=<?= time() ?>"></script>
+    <script src="/assets/js/auth.js?v=<?= time() ?>"></script>
+    <script src="/assets/js/access-control.js?v=<?= time() ?>"></script>
+    <script src="/assets/js/theme-global.js?v=<?= time() ?>"></script>
+    <script src="/assets/js/mobile-responsive.js?v=<?= time() ?>"></script>
+    <script src="/assets/js/servers.js?v=<?= time() ?>"></script>
     
     <script>
     // Scroll hint para mobile
