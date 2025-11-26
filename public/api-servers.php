@@ -108,26 +108,16 @@ try {
             break;
             
         case 'DELETE':
-            // Tentar pegar ID do query parameter primeiro (compatibilidade com Nginx)
+            // Pegar ID do query parameter (mesmo padrão de api-clients.php)
             $serverId = $_GET['id'] ?? null;
             
-            // Se não encontrou no query, procurar no path
             if (!$serverId) {
-                foreach ($pathParts as $part) {
-                    if (is_numeric($part)) {
-                        $serverId = $part;
-                        break;
-                    }
-                }
-            }
-            
-            if ($serverId) {
-                // DELETE /api-servers.php?id={id} ou /api-servers.php/{id}
-                deleteServer($serverId);
-            } else {
-                error_log("DELETE - Servidor ID não encontrado. Query: " . json_encode($_GET) . ", Path parts: " . json_encode($pathParts));
+                error_log("DELETE - Servidor ID não fornecido. GET: " . json_encode($_GET));
                 Response::json(['success' => false, 'error' => 'ID do servidor é obrigatório'], 400);
             }
+            
+            error_log("DELETE - Deletando servidor ID: $serverId");
+            deleteServer($serverId);
             break;
             
         default:

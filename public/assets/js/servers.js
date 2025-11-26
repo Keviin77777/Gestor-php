@@ -587,42 +587,12 @@ async function deleteServer(serverId) {
     }
 
     try {
-        const token = localStorage.getItem('token');
-        
-        // Usar POST com _method=DELETE para compatibilidade com Nginx
-        // Muitos servidores Nginx não permitem DELETE por padrão
-        const response = await fetch(`/api-server-delete.php?id=${serverId}`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                _method: 'DELETE',
-                id: serverId
-            })
+        // Usar o mesmo padrão de api-clients.php
+        const response = await fetch(`/api-servers.php?id=${serverId}`, {
+            method: 'DELETE'
         });
 
-        // Verificar se a resposta é JSON válido
-        const contentType = response.headers.get('content-type');
-        let result;
-        
-        try {
-            const text = await response.text();
-            console.log('Status HTTP:', response.status);
-            console.log('Content-Type:', contentType);
-            console.log('Resposta completa:', text.substring(0, 500));
-            
-            if (!contentType || !contentType.includes('application/json')) {
-                console.error('Resposta não é JSON. Primeiros 500 caracteres:', text.substring(0, 500));
-                throw new Error('Servidor retornou HTML em vez de JSON. Status: ' + response.status);
-            }
-            
-            result = JSON.parse(text);
-        } catch (parseError) {
-            console.error('Erro ao fazer parse do JSON:', parseError);
-            throw new Error('Erro ao processar resposta do servidor: ' + parseError.message);
-        }
+        const result = await response.json();
 
         if (result.success) {
             showSuccess('Servidor excluído com sucesso!');
