@@ -2137,7 +2137,8 @@ async function processDeletePayment(paymentId) {
 
     try {
         await window.LoadingManager.withLoading(async () => {
-            const response = await fetch(`/api-invoices.php/${paymentId}`, {
+            // Usar query parameter para compatibilidade com Nginx
+            const response = await fetch(`/api-invoices.php?id=${paymentId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`

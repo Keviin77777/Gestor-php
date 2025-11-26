@@ -608,11 +608,11 @@
     <script src="/assets/js/auth.js"></script>
     <script src="/assets/js/access-control.js"></script>
     <script src="/assets/js/theme-global.js"></script>
-    <script src="/assets/js/mobile-responsive.js"></script>
+    <script src="/assets/js/mobile-responsive.js?v=<?= time() ?>"></script>
 
-    <script src="/assets/js/clients.js"></script>
-    <script src="/assets/js/client-modal-simple-fix.js"></script>
-    <script src="/assets/js/client-password-validation.js"></script>
+    <script src="/assets/js/clients.js?v=<?= time() ?>"></script>
+    <script src="/assets/js/client-modal-simple-fix.js?v=<?= time() ?>"></script>
+    <script src="/assets/js/client-password-validation.js?v=<?= time() ?>"></script>
     <script src="/assets/js/client-add-page-mobile.js"></script>
 
     <!-- Protection Script -->
