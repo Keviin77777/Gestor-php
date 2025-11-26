@@ -53,7 +53,38 @@ try {
         $clientId = $data['client_id'] ?? null;
         
         error_log("WhatsApp Send API - Enviando para: $phoneNumber");
-        error_log("WhatsApp Send API - Mensagem: " . substr($message, 0, 100) . "...");
+        error_log("WhatsApp Send API - Template ID: " . ($templateId ?? 'nenhum'));
+        
+        // Se tem template_id, processar o template no backend
+        if ($templateId && $clientId) {
+            // Buscar template
+            $template = Database::fetch(
+                "SELECT * FROM whatsapp_templates WHERE id = ? AND reseller_id = ?",
+                [$templateId, $resellerId]
+            );
+            
+            if ($template) {
+                // Buscar dados do cliente
+                $client = Database::fetch(
+                    "SELECT * FROM clients WHERE id = ?",
+                    [$clientId]
+                );
+                
+                if ($client) {
+                    // Usar prepareTemplateVariables para gerar todas as variáveis
+                    require_once __DIR__ . '/../app/helpers/whatsapp-automation.php';
+                    $variables = prepareTemplateVariables($template, $client);
+                    
+                    // Processar template
+                    $message = $template['message'];
+                    foreach ($variables as $key => $value) {
+                        $message = str_replace('{{' . $key . '}}', $value, $message);
+                    }
+                }
+            }
+        }
+        
+        error_log("WhatsApp Send API - Mensagem processada: " . substr($message, 0, 100) . "...");
         
         // Enviar mensagem
         $result = sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId, $clientId);

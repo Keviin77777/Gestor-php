@@ -2427,25 +2427,9 @@ window.sendWhatsAppMessage = async function() {
             return;
         }
         
-        const template = whatsappTemplates.find(t => t.id === templateId);
-        if (template) {
-            message = template.message;
-            
-            // Substituir variáveis com dados do cliente
-            const clientData = {
-                'cliente_nome': currentWhatsAppClient.name,
-                'cliente_telefone': currentWhatsAppClient.phone,
-                'cliente_plano': currentWhatsAppClient.plan || 'Personalizado',
-                'cliente_valor': currentWhatsAppClient.value ? formatMoney(currentWhatsAppClient.value) : 'N/A',
-                'cliente_vencimento': currentWhatsAppClient.renewal_date ? formatDate(currentWhatsAppClient.renewal_date) : 'N/A',
-                'empresa_nome': 'UltraGestor'
-            };
-            
-            Object.keys(clientData).forEach(variable => {
-                const regex = new RegExp(`\\{\\{${variable}\\}\\}`, 'g');
-                message = message.replace(regex, clientData[variable]);
-            });
-        }
+        // NÃO processar o template aqui - deixar o backend fazer isso
+        // O backend vai substituir TODAS as variáveis incluindo payment_link
+        message = 'template'; // Placeholder - o backend vai processar
     } else {
         const customMessage = document.getElementById('customMessage');
         message = customMessage.value.trim();
