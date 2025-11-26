@@ -37,18 +37,19 @@ try {
     $path = $_SERVER['REQUEST_URI'];
     $pathParts = explode('/', trim(parse_url($path, PHP_URL_PATH), '/'));
     
-    // Extrair ID e ação
-    $invoiceId = null;
-    $action = null;
+    // Extrair ID e ação (suportar query parameter e path parameter)
+    $invoiceId = $_GET['id'] ?? null;
+    $action = $_GET['action'] ?? null;
     
-    if (count($pathParts) > 1) {
+    // Se não veio por query parameter, tentar path parameter (retrocompatibilidade)
+    if (!$invoiceId && count($pathParts) > 1) {
         $lastPart = $pathParts[count($pathParts) - 1];
         $secondLastPart = count($pathParts) > 2 ? $pathParts[count($pathParts) - 2] : null;
         
         if ($lastPart === 'mark-paid' && $secondLastPart) {
             $invoiceId = $secondLastPart;
             $action = 'mark-paid';
-        } elseif ($lastPart !== 'invoices') {
+        } elseif ($lastPart !== 'invoices' && $lastPart !== 'api-invoices.php') {
             $invoiceId = $lastPart;
         }
     }
