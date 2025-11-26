@@ -20,12 +20,23 @@ ini_set('display_errors', '0');
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: DELETE, OPTIONS');
+header('Access-Control-Allow-Methods: POST, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
+}
+
+// Aceitar POST com _method=DELETE para compatibilidade com Nginx
+$method = $_SERVER['REQUEST_METHOD'];
+if ($method === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    if (isset($data['_method']) && $data['_method'] === 'DELETE') {
+        $method = 'DELETE';
+        error_log("DELETE - Método convertido de POST para DELETE");
+    }
 }
 
 // Iniciar sessão
@@ -42,12 +53,18 @@ require_once __DIR__ . '/../app/core/Auth.php';
 require_once __DIR__ . '/../app/core/Response.php';
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {
-        Response::json(['success' => false, 'error' => 'Método não permitido'], 405);
+    if ($method !== 'DELETE') {
+        error_log("DELETE - Método inválido: $method");
+        Response::json(['success' => false, 'error' => 'Método não permitido: ' . $method], 405);
     }
     
-    // Pegar ID do servidor
+    // Pegar ID do servidor (pode vir do GET ou do body)
     $serverId = $_GET['id'] ?? null;
+    
+    if (!$serverId && isset($data['id'])) {
+        $serverId = $data['id'];
+        error_log("DELETE - ID obtido do body: $serverId");
+    }
     
     if (!$serverId) {
         error_log("DELETE - ID não fornecido");

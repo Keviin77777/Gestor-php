@@ -589,26 +589,19 @@ async function deleteServer(serverId) {
     try {
         const token = localStorage.getItem('token');
         
-        // Tentar endpoint específico primeiro (melhor compatibilidade com Nginx)
-        let response = await fetch(`/api-server-delete.php?id=${serverId}`, {
-            method: 'DELETE',
+        // Usar POST com _method=DELETE para compatibilidade com Nginx
+        // Muitos servidores Nginx não permitem DELETE por padrão
+        const response = await fetch(`/api-server-delete.php?id=${serverId}`, {
+            method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({
+                _method: 'DELETE',
+                id: serverId
+            })
         });
-        
-        // Se der 404, tentar endpoint genérico
-        if (response.status === 404) {
-            console.log('Endpoint específico não encontrado, tentando endpoint genérico...');
-            response = await fetch(`/api-servers.php?id=${serverId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-        }
 
         // Verificar se a resposta é JSON válido
         const contentType = response.headers.get('content-type');
