@@ -219,14 +219,30 @@ try {
     }
     
     // Listar faturas (GET)
-    $stmt = $pdo->prepare("
-        SELECT i.*, c.name as client_name 
-        FROM invoices i
-        LEFT JOIN clients c ON i.client_id = c.id
-        WHERE i.reseller_id = ? 
-        ORDER BY i.created_at DESC
-    ");
-    $stmt->execute([$user['id']]);
+    $clientId = $_GET['client_id'] ?? null;
+    
+    if ($clientId) {
+        // Filtrar por cliente específico
+        $stmt = $pdo->prepare("
+            SELECT i.*, c.name as client_name 
+            FROM invoices i
+            LEFT JOIN clients c ON i.client_id = c.id
+            WHERE i.reseller_id = ? AND i.client_id = ?
+            ORDER BY i.created_at DESC
+        ");
+        $stmt->execute([$user['id'], $clientId]);
+    } else {
+        // Listar todas as faturas do reseller
+        $stmt = $pdo->prepare("
+            SELECT i.*, c.name as client_name 
+            FROM invoices i
+            LEFT JOIN clients c ON i.client_id = c.id
+            WHERE i.reseller_id = ? 
+            ORDER BY i.created_at DESC
+        ");
+        $stmt->execute([$user['id']]);
+    }
+    
     $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Resumo simples

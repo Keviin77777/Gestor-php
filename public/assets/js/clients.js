@@ -2066,10 +2066,12 @@ async function processMarkAsPaid(paymentId) {
 
     try {
         await window.LoadingManager.withLoading(async () => {
-            const response = await fetch(`/api-payment-history.php?id=${paymentId}`, {
+            // Usar api-invoices.php com action=mark-paid
+            const response = await fetch(`/api-invoices.php?id=${paymentId}&action=mark-paid`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 body: JSON.stringify({
                     status: 'paid',
