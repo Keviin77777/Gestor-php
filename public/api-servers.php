@@ -3,6 +3,13 @@
  * API pública para servidores
  */
 
+// Log de debug
+error_log("=== API SERVERS DEBUG ===");
+error_log("Method: " . $_SERVER['REQUEST_METHOD']);
+error_log("URI: " . $_SERVER['REQUEST_URI']);
+error_log("Query String: " . ($_SERVER['QUERY_STRING'] ?? 'empty'));
+error_log("GET params: " . json_encode($_GET));
+
 // Limpar qualquer output anterior
 while (ob_get_level()) {
     ob_end_clean();

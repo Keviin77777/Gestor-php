@@ -589,25 +589,47 @@ async function deleteServer(serverId) {
     try {
         const token = localStorage.getItem('token');
         
-        // Usar query parameter em vez de path parameter para compatibilidade com Nginx
-        const response = await fetch(`/api-servers.php?id=${serverId}`, {
+        // Tentar endpoint específico primeiro (melhor compatibilidade com Nginx)
+        let response = await fetch(`/api-server-delete.php?id=${serverId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
+        
+        // Se der 404, tentar endpoint genérico
+        if (response.status === 404) {
+            console.log('Endpoint específico não encontrado, tentando endpoint genérico...');
+            response = await fetch(`/api-servers.php?id=${serverId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
 
         // Verificar se a resposta é JSON válido
         const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            // Se não for JSON, tentar ler como texto para debug
+        let result;
+        
+        try {
             const text = await response.text();
-            console.error('Resposta não é JSON:', text);
-            throw new Error('Resposta inválida do servidor. Verifique os logs.');
+            console.log('Status HTTP:', response.status);
+            console.log('Content-Type:', contentType);
+            console.log('Resposta completa:', text.substring(0, 500));
+            
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('Resposta não é JSON. Primeiros 500 caracteres:', text.substring(0, 500));
+                throw new Error('Servidor retornou HTML em vez de JSON. Status: ' + response.status);
+            }
+            
+            result = JSON.parse(text);
+        } catch (parseError) {
+            console.error('Erro ao fazer parse do JSON:', parseError);
+            throw new Error('Erro ao processar resposta do servidor: ' + parseError.message);
         }
-
-        const result = await response.json();
 
         if (result.success) {
             showSuccess('Servidor excluído com sucesso!');
