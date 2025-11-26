@@ -3,15 +3,8 @@
  * API pública para servidores
  */
 
-// Log de debug
+// Ler input para uso posterior
 $input = file_get_contents('php://input');
-error_log("=== API SERVERS DEBUG ===");
-error_log("Method: " . $_SERVER['REQUEST_METHOD']);
-error_log("URI: " . $_SERVER['REQUEST_URI']);
-error_log("Query String: " . ($_SERVER['QUERY_STRING'] ?? 'empty'));
-error_log("GET params: " . json_encode($_GET));
-error_log("POST params: " . json_encode($_POST));
-error_log("Raw Input: " . substr($input, 0, 200));
 
 // Limpar qualquer output anterior
 while (ob_get_level()) {
@@ -63,10 +56,16 @@ $urlParts = parse_url($path);
 $pathParts = explode('/', trim($urlParts['path'], '/'));
 
 try {
-    // Verificar se é um POST com action=delete (compatibilidade com Nginx)
-    if ($method === 'POST' && isset($_GET['action']) && $_GET['action'] === 'delete') {
-        error_log("POST com action=delete detectado, tratando como DELETE");
-        $method = 'DELETE';
+    // Verificar se é um POST com action especial (compatibilidade com Nginx)
+    if ($method === 'POST' && isset($_GET['action'])) {
+        $action = $_GET['action'];
+        
+        if ($action === 'delete') {
+            $method = 'DELETE';
+        } elseif ($action === 'test-sigma') {
+            testSigmaConnection();
+            exit;
+        }
     }
     
     switch ($method) {
@@ -121,11 +120,9 @@ try {
             $serverId = $_GET['id'] ?? null;
             
             if (!$serverId) {
-                error_log("DELETE - Servidor ID não fornecido. GET: " . json_encode($_GET));
                 Response::json(['success' => false, 'error' => 'ID do servidor é obrigatório'], 400);
             }
             
-            error_log("DELETE - Deletando servidor ID: $serverId");
             deleteServer($serverId);
             break;
             

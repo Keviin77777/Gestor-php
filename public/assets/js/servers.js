@@ -333,7 +333,8 @@ async function testConnection() {
 
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api-servers.php/test-sigma', {
+        // Usar query parameter para compatibilidade com Nginx
+        const response = await fetch('/api-servers.php?action=test-sigma', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -382,8 +383,8 @@ async function testConnectionWithServerId(serverId, panelUrl, resellerUser) {
     try {
         const token = localStorage.getItem('token');
         
-        // Tentar primeiro o endpoint integrado
-        let response = await fetch('/api-servers.php/test-sigma', {
+        // Tentar primeiro o endpoint integrado (usar query parameter)
+        let response = await fetch('/api-servers.php?action=test-sigma', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -582,25 +583,16 @@ function editServer(serverId) {
  * Excluir servidor
  */
 async function deleteServer(serverId) {
-    console.log('deleteServer chamado com ID:', serverId);
-    
     if (!confirm('Tem certeza que deseja excluir este servidor?')) {
-        console.log('Usuário cancelou');
         return;
     }
 
     try {
-        console.log('Iniciando exclusão...');
-        
-        // Usar DELETE direto (Nginx configurado)
         const response = await fetch(`/api-servers.php?id=${serverId}`, {
             method: 'DELETE'
         });
 
-        console.log('Resposta recebida:', response.status);
-        
         const result = await response.json();
-        console.log('Resultado:', result);
 
         if (result.success) {
             showSuccess('Servidor excluído com sucesso!');
@@ -610,7 +602,6 @@ async function deleteServer(serverId) {
         }
 
     } catch (error) {
-        console.error('Erro completo:', error);
         showError('Erro ao excluir servidor: ' + error.message);
     }
 }

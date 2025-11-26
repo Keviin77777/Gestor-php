@@ -267,33 +267,21 @@ function updateServer($serverId) {
  * Delete server
  */
 function deleteServer($serverId) {
-    // Limpar qualquer output anterior
-    if (ob_get_level()) {
-        ob_clean();
-    }
-    
     try {
-        error_log("DELETE Server - Iniciando exclusão do servidor ID: $serverId");
-        
         // Verify authentication
         $user = Auth::user();
         if (!$user) {
-            error_log("DELETE Server - Usuário não autenticado");
             Response::json(['success' => false, 'error' => 'Não autorizado'], 401);
             return;
         }
 
-        error_log("DELETE Server - Usuário autenticado: " . $user['id']);
-
         $db = Database::connect();
         
         // Verificar se o servidor existe e pertence ao usuário
-        $stmt = $db->prepare("SELECT id, name FROM servers WHERE id = ? AND user_id = ?");
+        $stmt = $db->prepare("SELECT id FROM servers WHERE id = ? AND user_id = ?");
         $stmt->execute([$serverId, $user['id']]);
-        $server = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if (!$server) {
-            error_log("DELETE Server - Servidor não encontrado ou não pertence ao usuário");
+        if (!$stmt->fetch()) {
             Response::json([
                 'success' => false,
                 'error' => 'Servidor não encontrado'
@@ -301,13 +289,9 @@ function deleteServer($serverId) {
             return;
         }
         
-        error_log("DELETE Server - Servidor encontrado: " . $server['name']);
-        
         // Deletar o servidor
         $stmt = $db->prepare("DELETE FROM servers WHERE id = ? AND user_id = ?");
         $stmt->execute([$serverId, $user['id']]);
-
-        error_log("DELETE Server - Servidor excluído com sucesso. Rows affected: " . $stmt->rowCount());
 
         Response::json([
             'success' => true,
@@ -315,17 +299,11 @@ function deleteServer($serverId) {
         ]);
 
     } catch (Exception $e) {
-        error_log("DELETE Server - Erro: " . $e->getMessage());
-        error_log("DELETE Server - Stack trace: " . $e->getTraceAsString());
-        
-        // Limpar buffer novamente em caso de erro
-        if (ob_get_level()) {
-            ob_clean();
-        }
+        error_log("Erro ao excluir servidor: " . $e->getMessage());
         
         Response::json([
             'success' => false,
-            'error' => 'Erro ao excluir servidor: ' . $e->getMessage()
+            'error' => 'Erro ao excluir servidor'
         ], 500);
     }
 }
