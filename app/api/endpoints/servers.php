@@ -13,19 +13,10 @@ require_once __DIR__ . '/../../helpers/sigma-integration.php';
  */
 function getServers() {
     try {
-        // Debug session
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        error_log("Session data: " . json_encode($_SESSION));
-        
         // Verify authentication
         $user = Auth::user();
-        error_log("Authenticated user: " . json_encode($user));
         
         if (!$user) {
-            error_log("User not authenticated");
             Response::json(['success' => false, 'error' => 'Não autorizado'], 401);
             return;
         }
@@ -53,26 +44,8 @@ function getServers() {
             ORDER BY s.created_at DESC
         ");
         
-        error_log("Executing query for user_id: " . $user['id']);
-        
-        // Primeiro, verificar se há servidores na tabela
-        $countStmt = $db->prepare("SELECT COUNT(*) as total FROM servers");
-        $countStmt->execute();
-        $totalServers = $countStmt->fetch(PDO::FETCH_ASSOC);
-        error_log("Total servers in database: " . $totalServers['total']);
-        
-        // Debug: listar todos os servidores
-        $allStmt = $db->prepare("SELECT id, name, user_id, status FROM servers LIMIT 5");
-        $allStmt->execute();
-        $allServers = $allStmt->fetchAll(PDO::FETCH_ASSOC);
-        error_log("Sample servers: " . json_encode($allServers));
-        
-        // Verificar servidores para este usuário
         $stmt->execute([$user['id']]);
         $servers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        error_log("Found " . count($servers) . " servers for user " . $user['id']);
-        error_log("Servers data: " . json_encode($servers));
 
         // Processar dados dos servidores
         foreach ($servers as &$server) {

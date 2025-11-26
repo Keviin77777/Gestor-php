@@ -49,11 +49,6 @@ $path = $_SERVER['REQUEST_URI'];
 $urlParts = parse_url($path);
 $pathParts = explode('/', trim($urlParts['path'], '/'));
 
-// Debug do parsing
-error_log("API Servers - Method: $method");
-error_log("API Servers - Path: $path");
-error_log("API Servers - Path Parts: " . json_encode($pathParts));
-
 try {
     switch ($method) {
         case 'GET':
