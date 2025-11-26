@@ -1,15 +1,31 @@
 <?php
+// Suprimir erros para não quebrar a página
+error_reporting(E_ERROR | E_PARSE);
+
 // Carregar .env ANTES de qualquer coisa
 require_once __DIR__ . '/../../helpers/functions.php';
 
-// Caminho para o .env (3 níveis acima: components -> views -> app -> raiz)
-$envPath = dirname(dirname(dirname(__DIR__))) . '/.env';
-loadEnv($envPath);
+// Tentar múltiplos caminhos para o .env
+$envPaths = [
+    dirname(dirname(dirname(__DIR__))) . '/.env',  // 3 níveis acima
+    $_SERVER['DOCUMENT_ROOT'] . '/../.env',        // Raiz do servidor
+    '/var/www/html/.env',                          // Caminho comum em VPS
+    '/www/wwwroot/ultragestor.site/Gestor/.env'   // Caminho específico
+];
+
+foreach ($envPaths as $envPath) {
+    if (file_exists($envPath)) {
+        loadEnv($envPath);
+        if (env('DB_HOST')) {
+            break;
+        }
+    }
+}
 
 // Iniciar sessão antes de carregar classes que dependem dela
 if (session_status() === PHP_SESSION_NONE) {
-    ini_set('session.cookie_samesite', 'Lax');
-    session_start();
+    @ini_set('session.cookie_samesite', 'Lax');
+    @session_start();
 }
 
 // Agora carregar as classes
