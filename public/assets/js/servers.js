@@ -582,32 +582,25 @@ function editServer(serverId) {
  * Excluir servidor
  */
 async function deleteServer(serverId) {
+    console.log('deleteServer chamado com ID:', serverId);
+    
     if (!confirm('Tem certeza que deseja excluir este servidor?')) {
+        console.log('Usuário cancelou');
         return;
     }
 
     try {
-        console.log('=== DELETE SERVER DEBUG ===');
-        console.log('Servidor ID:', serverId);
-        console.log('URL:', `/api-servers.php?action=delete&id=${serverId}`);
-        console.log('Método: POST');
+        console.log('Iniciando exclusão...');
         
-        // Usar POST com action=delete para compatibilidade total
-        const response = await fetch(`/api-servers.php?action=delete&id=${serverId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ id: serverId })
+        // Usar DELETE direto (Nginx configurado)
+        const response = await fetch(`/api-servers.php?id=${serverId}`, {
+            method: 'DELETE'
         });
 
-        console.log('Status da resposta:', response.status);
-        console.log('Headers da resposta:', [...response.headers.entries()]);
+        console.log('Resposta recebida:', response.status);
         
-        const text = await response.text();
-        console.log('Resposta (texto):', text.substring(0, 500));
-        
-        const result = JSON.parse(text);
+        const result = await response.json();
+        console.log('Resultado:', result);
 
         if (result.success) {
             showSuccess('Servidor excluído com sucesso!');
@@ -617,7 +610,7 @@ async function deleteServer(serverId) {
         }
 
     } catch (error) {
-        console.error('Erro ao excluir servidor:', error);
+        console.error('Erro completo:', error);
         showError('Erro ao excluir servidor: ' + error.message);
     }
 }
