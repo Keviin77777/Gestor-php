@@ -290,6 +290,22 @@ switch ($path) {
         }
         break;
         
+    case '/whatsapp/queue':
+        // Fila de mensagens WhatsApp
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $queueFile = __DIR__ . '/../app/views/whatsapp/queue.php';
+        if (file_exists($queueFile)) {
+            include $queueFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
     case '/admin/resellers':
         // Página de revendedores (admin)
         if (!hasPermission($path)) {

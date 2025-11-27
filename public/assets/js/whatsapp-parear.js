@@ -849,3 +849,65 @@ window.addEventListener('beforeunload', function () {
         clearInterval(statusCheckInterval);
     }
 });
+
+
+/**
+ * Carregar configuração de rate limit
+ */
+async function loadRateLimits() {
+    try {
+        const response = await fetch('/api-whatsapp-queue.php?action=get_config', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success && result.config) {
+            document.getElementById('messagesPerMinute').value = result.config.messages_per_minute;
+            document.getElementById('messagesPerHour').value = result.config.messages_per_hour;
+            document.getElementById('delayBetween').value = result.config.delay_between_messages;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar configuração:', error);
+    }
+}
+
+/**
+ * Salvar configuração de rate limit
+ */
+async function saveRateLimits() {
+    const config = {
+        messages_per_minute: parseInt(document.getElementById('messagesPerMinute').value),
+        messages_per_hour: parseInt(document.getElementById('messagesPerHour').value),
+        delay_between_messages: parseInt(document.getElementById('delayBetween').value)
+    };
+    
+    try {
+        const response = await fetch('/api-whatsapp-queue.php?action=save_config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(config)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Configuração salva com sucesso!');
+        } else {
+            alert('❌ Erro: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Erro ao salvar configuração');
+        console.error(error);
+    }
+}
+
+// Carregar configuração ao iniciar
+document.addEventListener('DOMContentLoaded', () => {
+    loadRateLimits();
+});

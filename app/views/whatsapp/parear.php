@@ -175,6 +175,59 @@
                     </div>
                 </div>
 
+                <!-- Rate Limit Configuration -->
+                <div class="rate-limit-section">
+                    <div class="rate-limit-card">
+                        <div class="rate-limit-header">
+                            <div class="rate-limit-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </div>
+                            <div class="rate-limit-info">
+                                <h3>⚙️ Configuração de Limites de Envio</h3>
+                                <p>Configure os limites para evitar bloqueios do WhatsApp</p>
+                            </div>
+                        </div>
+                        
+                        <div class="rate-limit-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Mensagens por Minuto</label>
+                                    <input type="number" id="messagesPerMinute" min="1" max="60" value="20">
+                                    <small>Recomendado: 15-20 para evitar bloqueios</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Mensagens por Hora</label>
+                                    <input type="number" id="messagesPerHour" min="10" max="500" value="100">
+                                    <small>Recomendado: 80-100 para uso seguro</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Delay entre Mensagens (segundos)</label>
+                                    <input type="number" id="delayBetween" min="1" max="60" value="3">
+                                    <small>Recomendado: 3-5 segundos</small>
+                                </div>
+                            </div>
+                            
+                            <div class="alert-warning">
+                                <strong>⚠️ Atenção:</strong> Configurações muito agressivas podem resultar em bloqueio da conta WhatsApp.
+                            </div>
+                            
+                            <button class="btn-save-limits" onclick="saveRateLimits()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                    <polyline points="7 3 7 8 15 8"></polyline>
+                                </svg>
+                                Salvar Configuração
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Features Cards -->
                 <div class="features-section">
                     <div class="features-grid">

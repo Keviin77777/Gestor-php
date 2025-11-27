@@ -276,7 +276,7 @@ try {
             </a>
             
             <div class="nav-group">
-                <a href="#" class="nav-item has-submenu <?= in_array($currentPath, ['/whatsapp/parear', '/whatsapp/templates', '/whatsapp/scheduling']) ? 'active' : '' ?>" onclick="toggleSubmenu(event, 'whatsapp-submenu')">
+                <a href="#" class="nav-item has-submenu <?= in_array($currentPath, ['/whatsapp/parear', '/whatsapp/templates', '/whatsapp/scheduling', '/whatsapp/queue']) ? 'active' : '' ?>" onclick="toggleSubmenu(event, 'whatsapp-submenu')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                     </svg>
@@ -285,7 +285,7 @@ try {
                         <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
                 </a>
-                <div class="submenu <?= in_array($currentPath, ['/whatsapp/parear', '/whatsapp/templates', '/whatsapp/scheduling']) ? 'expanded' : '' ?>" id="whatsapp-submenu">
+                <div class="submenu <?= in_array($currentPath, ['/whatsapp/parear', '/whatsapp/templates', '/whatsapp/scheduling', '/whatsapp/queue']) ? 'expanded' : '' ?>" id="whatsapp-submenu">
                     <a href="/whatsapp/parear" class="submenu-item <?= $currentPath === '/whatsapp/parear' ? 'active' : '' ?>">
                         <svg class="submenu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
@@ -310,6 +310,14 @@ try {
                             <polyline points="12 6 12 12 16 14"></polyline>
                         </svg>
                         <span>Agendamento</span>
+                    </a>
+                    <a href="/whatsapp/queue" class="submenu-item <?= $currentPath === '/whatsapp/queue' ? 'active' : '' ?>">
+                        <svg class="submenu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <path d="M9 3v18"></path>
+                            <path d="M15 3v18"></path>
+                        </svg>
+                        <span>Fila de Mensagens</span>
                     </a>
                 </div>
             </div>

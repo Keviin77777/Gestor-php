@@ -9,37 +9,46 @@ require_once __DIR__ . '/../core/Database.php';
  * Detectar qual API está sendo usada
  */
 function getActiveWhatsAppProvider($resellerId) {
-    // Verificar qual API está conectada
+    // Verificar qual API está conectada na tabela whatsapp_sessions
     $session = Database::fetch(
         "SELECT * FROM whatsapp_sessions WHERE reseller_id = ? AND status = 'connected' ORDER BY connected_at DESC LIMIT 1",
         [$resellerId]
     );
     
     if (!$session) {
-        return null;
+        // Se não tem sessão, verificar qual API está configurada como padrão
+        $defaultProvider = env('WHATSAPP_DEFAULT_PROVIDER', 'evolution');
+        error_log("WhatsApp Helper - Nenhuma sessão encontrada, usando provider padrão: " . $defaultProvider);
+        return $defaultProvider;
     }
     
-    // Verificar se o instance_name indica API nativa (formato: reseller_xxx)
-    if (strpos($session['instance_name'], 'reseller_') === 0 || strpos($session['instance_name'], 'ultragestor-') === 0) {
-        // Verificar se a API nativa está configurada
+    // Se tem sessão, usar o provider da sessão
+    $provider = $session['provider'] ?? 'evolution';
+    error_log("WhatsApp Helper - Provider da sessão: " . $provider);
+    
+    // Verificar se a API está realmente rodando
+    if ($provider === 'native') {
         $nativeApiUrl = env('WHATSAPP_NATIVE_API_URL', 'http://localhost:3000');
-        
-        // Tentar fazer um ping na API nativa
         $ch = curl_init($nativeApiUrl . '/health');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         
         if ($httpCode === 200) {
+            error_log("WhatsApp Helper - API Nativa confirmada online");
             return 'native';
+        } else {
+            error_log("WhatsApp Helper - API Nativa offline (HTTP: $httpCode), fallback para Evolution");
+            return 'evolution';
         }
     }
     
     // Fallback para Evolution API
-    return 'evolution';
+    error_log("WhatsApp Helper - Usando Evolution API");
+    return $provider;
 }
 
 /**
@@ -47,6 +56,13 @@ function getActiveWhatsAppProvider($resellerId) {
  */
 function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = null, $clientId = null, $invoiceId = null) {
     try {
+        // Formatar número de telefone
+        $formattedPhone = formatPhoneNumber($phoneNumber);
+        
+        // Detectar qual API usar
+        $provider = getActiveWhatsAppProvider($resellerId);
+        error_log("WhatsApp Helper - Provider detectado: " . $provider);
+        
         // Buscar sessão ativa do reseller
         $session = Database::fetch(
             "SELECT * FROM whatsapp_sessions WHERE reseller_id = ? AND status = 'connected' ORDER BY connected_at DESC LIMIT 1",
@@ -54,7 +70,8 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
         );
         
         if (!$session) {
-            throw new Exception('Nenhuma sessão WhatsApp ativa encontrada');
+            error_log("WhatsApp Helper - Nenhuma sessão encontrada para reseller: " . $resellerId);
+            throw new Exception('Nenhuma sessão WhatsApp ativa encontrada. Conecte o WhatsApp primeiro.');
         }
         
         // Buscar configurações
@@ -64,7 +81,24 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
         );
         
         if (!$settings) {
-            throw new Exception('Configurações WhatsApp não encontradas');
+            error_log("WhatsApp Helper - Criando configurações padrão para reseller: " . $resellerId);
+            // Criar configurações padrão
+            $settingsId = 'ws-' . uniqid();
+            Database::query(
+                "INSERT INTO whatsapp_settings (id, reseller_id, evolution_api_url, evolution_api_key, reminder_days) 
+                 VALUES (?, ?, ?, ?, JSON_ARRAY(3, 7))",
+                [
+                    $settingsId, 
+                    $resellerId, 
+                    env('EVOLUTION_API_URL', 'http://localhost:8081'),
+                    env('EVOLUTION_API_KEY', '')
+                ]
+            );
+            
+            $settings = Database::fetch(
+                "SELECT * FROM whatsapp_settings WHERE id = ?",
+                [$settingsId]
+            );
         }
         
         // Verificar horário comercial se configurado
@@ -75,9 +109,6 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
             }
         }
         
-        // Formatar número de telefone
-        $formattedPhone = formatPhoneNumber($phoneNumber);
-        
         // Criar registro da mensagem
         $messageId = 'msg-' . uniqid();
         Database::query(
@@ -86,17 +117,16 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
             [$messageId, $resellerId, $session['id'], $templateId, $clientId, $invoiceId, $formattedPhone, $message]
         );
         
-        // Detectar qual API usar
-        $provider = getActiveWhatsAppProvider($resellerId);
-        
         // Enviar mensagem via API apropriada
         if ($provider === 'native') {
             // Usar API Nativa
+            error_log("WhatsApp Helper - Enviando via API Nativa");
             require_once __DIR__ . '/whatsapp-native-api.php';
             $nativeApi = new WhatsAppNativeAPI();
-            $result = $nativeApi->sendMessage($resellerId, $formattedPhone, $message);
+            $result = $nativeApi->sendMessage($resellerId, $formattedPhone, $message, $templateId, $clientId, $invoiceId);
         } else {
             // Usar Evolution API
+            error_log("WhatsApp Helper - Enviando via Evolution API");
             $result = sendMessageToEvolution($settings['evolution_api_url'], $settings['evolution_api_key'], $session['instance_name'], $formattedPhone, $message);
         }
         
@@ -108,13 +138,13 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
                  evolution_message_id = ?, 
                  sent_at = CURRENT_TIMESTAMP 
                  WHERE id = ?",
-                [$result['message_id'], $messageId]
+                [$result['message_id'] ?? $result['whatsapp_message_id'] ?? null, $messageId]
             );
             
             return [
                 'success' => true,
                 'message_id' => $messageId,
-                'evolution_message_id' => $result['message_id']
+                'evolution_message_id' => $result['message_id'] ?? $result['whatsapp_message_id'] ?? null
             ];
         } else {
             // Atualizar status para erro
@@ -224,9 +254,9 @@ function processTemplate($templateMessage, $variables) {
 }
 
 /**
- * Enviar mensagem usando template
+ * Enviar mensagem usando template (via fila)
  */
-function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variables, $clientId = null, $invoiceId = null) {
+function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variables, $clientId = null, $invoiceId = null, $useQueue = true) {
     try {
         // Buscar template
         $template = Database::fetch(
@@ -258,8 +288,41 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
         // Processar template com variáveis
         $message = processTemplate($template['message'], $variables);
         
-        // Enviar mensagem
-        return sendWhatsAppMessage($resellerId, $phoneNumber, $message, $template['id'], $clientId, $invoiceId);
+        // Se useQueue = true, adicionar à fila ao invés de enviar direto
+        if ($useQueue) {
+            require_once __DIR__ . '/queue-helper.php';
+            
+            // Determinar prioridade baseado no tipo de template
+            $priority = 0; // Normal
+            if (in_array($templateType, ['expires_today', 'expired_1d'])) {
+                $priority = 1; // Alta prioridade para vencimentos urgentes
+            } elseif ($templateType === 'welcome') {
+                $priority = 2; // Prioridade máxima para boas-vindas
+            }
+            
+            $result = addMessageToQueue(
+                $resellerId,
+                $phoneNumber,
+                $message,
+                $template['id'],
+                $clientId,
+                $priority
+            );
+            
+            if ($result['success']) {
+                return [
+                    'success' => true,
+                    'queued' => true,
+                    'queue_id' => $result['queue_id'],
+                    'message' => 'Mensagem adicionada à fila'
+                ];
+            } else {
+                throw new Exception($result['error']);
+            }
+        } else {
+            // Enviar direto (modo legado)
+            return sendWhatsAppMessage($resellerId, $phoneNumber, $message, $template['id'], $clientId, $invoiceId);
+        }
         
     } catch (Exception $e) {
         return [
@@ -298,7 +361,7 @@ function formatPhoneNumber($phone) {
 /**
  * Enviar mensagem de boas-vindas para novo cliente
  */
-function sendWelcomeMessage($clientId) {
+function sendWelcomeMessage($clientId, $useQueue = true) {
     try {
         // Buscar dados do cliente
         $client = Database::fetch(
@@ -331,7 +394,7 @@ function sendWelcomeMessage($clientId) {
             'cliente_valor' => 'R$ ' . number_format($client['value'], 2, ',', '.')
         ];
         
-        return sendTemplateMessage($client['reseller_id'], $client['phone'], 'welcome', $variables, $clientId);
+        return sendTemplateMessage($client['reseller_id'], $client['phone'], 'welcome', $variables, $clientId, null, $useQueue);
         
     } catch (Exception $e) {
         return [
@@ -344,7 +407,7 @@ function sendWelcomeMessage($clientId) {
 /**
  * Enviar mensagem de fatura gerada
  */
-function sendInvoiceGeneratedMessage($invoiceId) {
+function sendInvoiceGeneratedMessage($invoiceId, $useQueue = true) {
     try {
         // Buscar dados da fatura e cliente
         $invoice = Database::fetch(
@@ -377,7 +440,7 @@ function sendInvoiceGeneratedMessage($invoiceId) {
             'fatura_periodo' => date('m/Y', strtotime($invoice['issue_date']))
         ];
         
-        return sendTemplateMessage($invoice['reseller_id'], $invoice['client_phone'], 'invoice_generated', $variables, $invoice['client_id'], $invoiceId);
+        return sendTemplateMessage($invoice['reseller_id'], $invoice['client_phone'], 'invoice_generated', $variables, $invoice['client_id'], $invoiceId, $useQueue);
         
     } catch (Exception $e) {
         return [
@@ -390,7 +453,7 @@ function sendInvoiceGeneratedMessage($invoiceId) {
 /**
  * Enviar mensagem de renovação confirmada
  */
-function sendRenewalMessage($clientId, $invoiceId) {
+function sendRenewalMessage($clientId, $invoiceId, $useQueue = true) {
     try {
         // Buscar dados do cliente e fatura
         $data = Database::fetch(
@@ -422,7 +485,7 @@ function sendRenewalMessage($clientId, $invoiceId) {
             'fatura_valor' => 'R$ ' . number_format($data['final_value'] ?: $data['value'], 2, ',', '.')
         ];
         
-        return sendTemplateMessage($data['reseller_id'], $data['phone'], 'renewed', $variables, $clientId, $invoiceId);
+        return sendTemplateMessage($data['reseller_id'], $data['phone'], 'renewed', $variables, $clientId, $invoiceId, $useQueue);
         
     } catch (Exception $e) {
         return [
@@ -430,5 +493,21 @@ function sendRenewalMessage($clientId, $invoiceId) {
             'error' => $e->getMessage()
         ];
     }
+}
+
+/**
+ * Adicionar mensagem à fila (atalho)
+ */
+function queueWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = null, $clientId = null, $priority = 0) {
+    require_once __DIR__ . '/queue-helper.php';
+    return addMessageToQueue($resellerId, $phoneNumber, $message, $templateId, $clientId, $priority);
+}
+
+/**
+ * Adicionar múltiplas mensagens à fila (atalho)
+ */
+function queueBulkWhatsAppMessages($resellerId, $messages) {
+    require_once __DIR__ . '/queue-helper.php';
+    return addBulkMessagesToQueue($resellerId, $messages);
 }
 ?>
