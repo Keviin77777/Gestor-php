@@ -1,6 +1,8 @@
 /**
- * Métodos de Pagamento - JavaScript
+ * Métodos de Pagamento - JavaScript Moderno
  */
+
+let currentProvider = null;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,15 +15,21 @@ document.addEventListener('DOMContentLoaded', () => {
  * Inicializar página de métodos de pagamento
  */
 function initPaymentMethods() {
-    loadMercadoPagoConfig();
+    loadAllProviders();
+}
+
+/**
+ * Carregar status de todos os provedores
+ */
+async function loadAllProviders() {
+    await loadMercadoPagoConfig();
+    await loadAsaasConfig();
     
-    // Carregar EFI Bank apenas se o formulário existir (apenas para admin)
-    const efiForm = document.getElementById('efiBankForm');
-    if (efiForm) {
-        loadEfiBankConfig();
+    // Carregar EFI Bank apenas se o card existir (apenas para admin)
+    const efiCard = document.querySelector('[data-provider="efibank"]');
+    if (efiCard) {
+        await loadEfiBankConfig();
     }
-    
-    setupFormHandlers();
 }
 
 /**
@@ -38,172 +46,38 @@ async function loadMercadoPagoConfig() {
         const result = await response.json();
         
         if (result.success && result.config) {
-            // Preencher formulário (ordem: Public Key primeiro, depois Access Token)
-            document.getElementById('mpPublicKey').value = result.config.public_key || '';
-            document.getElementById('mpAccessToken').value = result.config.access_token || '';
-            document.getElementById('mpEnabled').checked = result.config.enabled || false;
-            
-            // Atualizar status
-            updateMercadoPagoStatus(result.config.enabled);
+            updateProviderStatus('mercadopago', result.config.enabled);
         }
     } catch (error) {
-        }
-}
-
-/**
- * Atualizar status do Mercado Pago
- */
-function updateMercadoPagoStatus(enabled) {
-    const statusElement = document.getElementById('mpStatus');
-    const badge = statusElement.querySelector('.status-badge');
-    
-    if (enabled) {
-        badge.className = 'status-badge status-active';
-        badge.textContent = 'Ativo';
-    } else {
-        badge.className = 'status-badge status-inactive';
-        badge.textContent = 'Não Configurado';
+        console.error('Erro ao carregar Mercado Pago:', error);
     }
 }
 
 /**
- * Configurar handlers do formulário
+ * Carregar configuração do Asaas
  */
-function setupFormHandlers() {
-    const mpForm = document.getElementById('mercadoPagoForm');
-    const efiForm = document.getElementById('efiBankForm');
-    
-    if (mpForm) {
-        mpForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await saveMercadoPagoConfig();
-        });
-    }
-    
-    // Configurar EFI Bank apenas se o formulário existir (apenas para admin)
-    if (efiForm) {
-        efiForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await saveEfiBankConfig();
-        });
-    }
-}
-
-/**
- * Salvar configuração do Mercado Pago
- */
-async function saveMercadoPagoConfig() {
-    const form = document.getElementById('mercadoPagoForm');
-    const formData = new FormData(form);
-    
-    const config = {
-        public_key: formData.get('public_key'),
-        access_token: formData.get('access_token'),
-        enabled: formData.get('enabled') === 'on'
-    };
-    
+async function loadAsaasConfig() {
     try {
-        const response = await fetch('/api-payment-methods.php', {
-            method: 'POST',
+        const response = await fetch('/api-payment-methods.php?method=asaas', {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                method: 'mercadopago',
-                config: config
-            })
+            }
         });
         
         const result = await response.json();
         
-        if (result.success) {
-            alert('✅ Configuração salva com sucesso!');
-            updateMercadoPagoStatus(config.enabled);
-        } else {
-            alert('❌ Erro ao salvar: ' + result.error);
+        if (result.success && result.config) {
+            updateProviderStatus('asaas', result.config.enabled);
         }
     } catch (error) {
-        alert('❌ Erro ao salvar configuração');
+        console.error('Erro ao carregar Asaas:', error);
     }
 }
-
-/**
- * Testar conexão com Mercado Pago
- */
-async function testMercadoPagoConnection() {
-    const publicKey = document.getElementById('mpPublicKey').value;
-    const accessToken = document.getElementById('mpAccessToken').value;
-    
-    if (!publicKey || !accessToken) {
-        alert('⚠️ Por favor, preencha a Public Key e o Access Token');
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api-payment-methods.php?action=test', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                method: 'mercadopago',
-                public_key: publicKey,
-                access_token: accessToken
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            const info = result.account_info;
-            let message = '✅ Conexão testada com sucesso!\n\n';
-            message += '📋 Informações da Conta Mercado Pago:\n\n';
-            
-            if (info.collector_id) {
-                message += `🆔 Collector ID: ${info.collector_id}\n`;
-            }
-            
-            if (info.currency) {
-                message += `💰 Moeda: ${info.currency}\n`;
-            }
-            
-            message += `✅ Status: Credenciais válidas\n`;
-            
-            if (info.test_payment_id) {
-                message += `\n💡 Teste: Pagamento #${info.test_payment_id} criado\n`;
-            }
-            
-            message += `\n${info.message || '🎉 Mercado Pago configurado e pronto para uso!'}`;
-            
-            alert(message);
-        } else {
-            // Log detalhado no console
-            let errorMsg = '❌ Erro ao testar conexão:\n\n' + result.error;
-            
-            if (result.details) {
-                errorMsg += '\n\nDetalhes: ' + JSON.stringify(result.details, null, 2);
-            }
-            
-            alert(errorMsg);
-        }
-    } catch (error) {
-        alert('❌ Erro ao testar conexão');
-    }
-}
-
 
 /**
  * Carregar configuração do EFI Bank
  */
 async function loadEfiBankConfig() {
-    // Verificar se o formulário existe (apenas para admin)
-    const efiForm = document.getElementById('efiBankForm');
-    if (!efiForm) {
-        return; // Não é admin, não carregar
-    }
-    
     try {
         const response = await fetch('/api-payment-methods.php?method=efibank', {
             headers: {
@@ -214,35 +88,19 @@ async function loadEfiBankConfig() {
         const result = await response.json();
         
         if (result.success && result.config) {
-            // Preencher formulário
-            const clientIdEl = document.getElementById('efiClientId');
-            const clientSecretEl = document.getElementById('efiClientSecret');
-            const pixKeyEl = document.getElementById('efiPixKey');
-            const certificateEl = document.getElementById('efiCertificate');
-            const sandboxEl = document.getElementById('efiSandbox');
-            const enabledEl = document.getElementById('efiEnabled');
-            
-            if (clientIdEl) clientIdEl.value = result.config.client_id || '';
-            if (clientSecretEl) clientSecretEl.value = result.config.client_secret || '';
-            if (pixKeyEl) pixKeyEl.value = result.config.pix_key || '';
-            if (certificateEl) certificateEl.value = result.config.certificate || '';
-            if (sandboxEl) sandboxEl.checked = result.config.sandbox || false;
-            if (enabledEl) enabledEl.checked = result.config.enabled || false;
-            
-            // Atualizar status
-            updateEfiBankStatus(result.config.enabled);
+            updateProviderStatus('efibank', result.config.enabled);
         }
     } catch (error) {
-        // Erro silencioso - pode ser que não seja admin
+        console.error('Erro ao carregar EFI Bank:', error);
     }
 }
 
 /**
- * Atualizar status do EFI Bank
+ * Atualizar status visual do provedor
  */
-function updateEfiBankStatus(enabled) {
-    const statusElement = document.getElementById('efiStatus');
-    if (!statusElement) return; // Não é admin, elemento não existe
+function updateProviderStatus(provider, enabled) {
+    const statusElement = document.getElementById(`${provider === 'mercadopago' ? 'mp' : provider}Status`);
+    if (!statusElement) return;
     
     const badge = statusElement.querySelector('.status-badge');
     if (!badge) return;
@@ -252,30 +110,325 @@ function updateEfiBankStatus(enabled) {
         badge.textContent = 'Ativo';
     } else {
         badge.className = 'status-badge status-inactive';
-        badge.textContent = 'Não Configurado';
+        badge.textContent = 'Inativo';
     }
 }
 
 /**
- * Salvar configuração do EFI Bank
+ * Abrir modal de configuração
  */
-async function saveEfiBankConfig() {
-    const form = document.getElementById('efiBankForm');
-    if (!form) {
-        alert('❌ Acesso negado. Apenas administradores podem configurar EFI Bank.');
-        return;
-    }
+async function openProviderModal(provider) {
+    currentProvider = provider;
+    const modal = document.getElementById('providerModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
     
+    // Definir título
+    const titles = {
+        'mercadopago': 'Configurar Mercado Pago',
+        'asaas': 'Configurar Asaas',
+        'efibank': 'Configurar EFI Bank'
+    };
+    modalTitle.textContent = titles[provider] || 'Configurar Provedor';
+    
+    // Carregar formulário
+    modalBody.innerHTML = '<div style="text-align: center; padding: 2rem;">Carregando...</div>';
+    modal.classList.add('active');
+    
+    // Buscar configuração atual
+    try {
+        const response = await fetch(`/api-payment-methods.php?method=${provider}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const result = await response.json();
+        const config = result.config || {};
+        
+        // Renderizar formulário específico
+        if (provider === 'mercadopago') {
+            modalBody.innerHTML = getMercadoPagoForm(config);
+        } else if (provider === 'asaas') {
+            modalBody.innerHTML = getAsaasForm(config);
+        } else if (provider === 'efibank') {
+            modalBody.innerHTML = getEfiBankForm(config);
+        }
+        
+        // Configurar handler do formulário
+        setupModalFormHandler();
+        
+    } catch (error) {
+        modalBody.innerHTML = '<div style="color: red; padding: 2rem;">Erro ao carregar configuração</div>';
+    }
+}
+
+/**
+ * Fechar modal
+ */
+function closeProviderModal() {
+    const modal = document.getElementById('providerModal');
+    modal.classList.remove('active');
+    currentProvider = null;
+}
+
+/**
+ * Formulário Mercado Pago
+ */
+function getMercadoPagoForm(config) {
+    return `
+        <form id="providerForm" class="payment-form">
+            <div class="form-group">
+                <label for="publicKey">Public Key *</label>
+                <input 
+                    type="text" 
+                    id="publicKey" 
+                    name="public_key" 
+                    placeholder="APP_USR-XXXXXXXX-XXXXXX-XXXXXXXX"
+                    value="${config.public_key || ''}"
+                    required
+                >
+                <small class="form-help">
+                    Public Key para validação de pagamentos no frontend
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="accessToken">Access Token *</label>
+                <input 
+                    type="password" 
+                    id="accessToken" 
+                    name="access_token" 
+                    placeholder="APP_USR-XXXXXXXX-XXXXXX-XXXXXXXX"
+                    value="${config.access_token || ''}"
+                    required
+                >
+                <small class="form-help">
+                    Obtenha suas credenciais no 
+                    <a href="https://www.mercadopago.com.br/developers/panel/app" target="_blank">
+                        Painel de Desenvolvedores do Mercado Pago
+                    </a>
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="enabled" ${config.enabled ? 'checked' : ''}>
+                    <span>Ativar Mercado Pago</span>
+                </label>
+            </div>
+            
+            <div class="info-alert">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <p><strong>Importante:</strong> Use as credenciais de <strong>Produção</strong> para receber pagamentos reais.</p>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="testProviderConnection()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    Testar Conexão
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Salvar
+                </button>
+            </div>
+        </form>
+    `;
+}
+
+/**
+ * Formulário Asaas
+ */
+function getAsaasForm(config) {
+    return `
+        <form id="providerForm" class="payment-form">
+            <div class="form-group">
+                <label for="apiKey">API Key *</label>
+                <input 
+                    type="password" 
+                    id="apiKey" 
+                    name="api_key" 
+                    placeholder="$aact_YTU5YTE0M2M2N2I4MTliNzk0YTI5N2U5MzdjNWZmNDQ6OjAwMDAwMDAwMDAwMDAwMDAwMDA6OiRhYWNoXzRlNTU="
+                    value="${config.api_key || ''}"
+                    required
+                >
+                <small class="form-help">
+                    Obtenha sua API Key no 
+                    <a href="https://www.asaas.com/config/api" target="_blank">
+                        Painel Asaas → Integrações → API
+                    </a>
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="sandbox" ${config.sandbox ? 'checked' : ''}>
+                    <span>Modo Sandbox (Homologação)</span>
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="enabled" ${config.enabled ? 'checked' : ''}>
+                    <span>Ativar Asaas</span>
+                </label>
+            </div>
+            
+            <div class="info-alert">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <p><strong>Importante:</strong> Use o modo Sandbox para testes. Em produção, desmarque esta opção e use a API Key de produção.</p>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="testProviderConnection()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    Testar Conexão
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Salvar
+                </button>
+            </div>
+        </form>
+    `;
+}
+
+/**
+ * Formulário EFI Bank
+ */
+function getEfiBankForm(config) {
+    return `
+        <form id="providerForm" class="payment-form">
+            <div class="form-group">
+                <label for="clientId">Client ID *</label>
+                <input 
+                    type="text" 
+                    id="clientId" 
+                    name="client_id" 
+                    placeholder="Client_Id_XXXXXXXXXXXXXXXX"
+                    value="${config.client_id || ''}"
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="clientSecret">Client Secret *</label>
+                <input 
+                    type="password" 
+                    id="clientSecret" 
+                    name="client_secret" 
+                    placeholder="Client_Secret_XXXXXXXXXXXXXXXX"
+                    value="${config.client_secret || ''}"
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="pixKey">Chave PIX *</label>
+                <input 
+                    type="text" 
+                    id="pixKey" 
+                    name="pix_key" 
+                    placeholder="sua@chave.pix"
+                    value="${config.pix_key || ''}"
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="certificate">Certificado SSL (Opcional)</label>
+                <input 
+                    type="text" 
+                    id="certificate" 
+                    name="certificate" 
+                    placeholder="/caminho/para/certificado.pem"
+                    value="${config.certificate || ''}"
+                >
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="sandbox" ${config.sandbox ? 'checked' : ''}>
+                    <span>Modo Sandbox (Homologação)</span>
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="enabled" ${config.enabled ? 'checked' : ''}>
+                    <span>Ativar EFI Bank</span>
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="testProviderConnection()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    Testar Conexão
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Salvar
+                </button>
+            </div>
+        </form>
+    `;
+}
+
+/**
+ * Configurar handler do formulário no modal
+ */
+function setupModalFormHandler() {
+    const form = document.getElementById('providerForm');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await saveProviderConfig();
+        });
+    }
+}
+
+/**
+ * Salvar configuração do provedor
+ */
+async function saveProviderConfig() {
+    const form = document.getElementById('providerForm');
     const formData = new FormData(form);
     
-    const config = {
-        client_id: formData.get('client_id'),
-        client_secret: formData.get('client_secret'),
-        pix_key: formData.get('pix_key'),
-        certificate: formData.get('certificate') || '',
-        sandbox: formData.get('sandbox') === 'on',
-        enabled: formData.get('enabled') === 'on'
-    };
+    const config = {};
+    for (let [key, value] of formData.entries()) {
+        if (key === 'enabled' || key === 'sandbox') {
+            config[key] = formData.get(key) === 'on';
+        } else {
+            config[key] = value;
+        }
+    }
     
     try {
         const response = await fetch('/api-payment-methods.php', {
@@ -285,7 +438,7 @@ async function saveEfiBankConfig() {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
             body: JSON.stringify({
-                method: 'efibank',
+                method: currentProvider,
                 config: config
             })
         });
@@ -294,7 +447,8 @@ async function saveEfiBankConfig() {
         
         if (result.success) {
             alert('✅ Configuração salva com sucesso!');
-            updateEfiBankStatus(config.enabled);
+            updateProviderStatus(currentProvider, config.enabled);
+            closeProviderModal();
         } else {
             alert('❌ Erro ao salvar: ' + result.error);
         }
@@ -304,29 +458,22 @@ async function saveEfiBankConfig() {
 }
 
 /**
- * Testar conexão com EFI Bank
+ * Testar conexão com provedor
  */
-async function testEfiBankConnection() {
-    const clientIdEl = document.getElementById('efiClientId');
-    const clientSecretEl = document.getElementById('efiClientSecret');
-    const pixKeyEl = document.getElementById('efiPixKey');
-    const certificateEl = document.getElementById('efiCertificate');
-    const sandboxEl = document.getElementById('efiSandbox');
+async function testProviderConnection() {
+    const form = document.getElementById('providerForm');
+    const formData = new FormData(form);
     
-    if (!clientIdEl || !clientSecretEl || !pixKeyEl) {
-        alert('❌ Acesso negado. Apenas administradores podem testar EFI Bank.');
-        return;
-    }
+    const testData = {
+        method: currentProvider
+    };
     
-    const clientId = clientIdEl.value;
-    const clientSecret = clientSecretEl.value;
-    const pixKey = pixKeyEl.value;
-    const certificate = certificateEl ? certificateEl.value : '';
-    const sandbox = sandboxEl ? sandboxEl.checked : false;
-    
-    if (!clientId || !clientSecret || !pixKey) {
-        alert('⚠️ Por favor, preencha Client ID, Client Secret e Chave PIX');
-        return;
+    for (let [key, value] of formData.entries()) {
+        if (key === 'sandbox') {
+            testData[key] = formData.get(key) === 'on';
+        } else {
+            testData[key] = value;
+        }
     }
     
     try {
@@ -336,14 +483,7 @@ async function testEfiBankConnection() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
-            body: JSON.stringify({
-                method: 'efibank',
-                client_id: clientId,
-                client_secret: clientSecret,
-                pix_key: pixKey,
-                certificate: certificate,
-                sandbox: sandbox
-            })
+            body: JSON.stringify(testData)
         });
         
         const result = await response.json();
@@ -351,38 +491,31 @@ async function testEfiBankConnection() {
         if (result.success) {
             const info = result.account_info;
             let message = '✅ Conexão testada com sucesso!\n\n';
-            message += '📋 Informações da Conta EFI Bank:\n\n';
+            message += '📋 Informações da Conta:\n\n';
             
-            if (info.status) {
-                message += `${info.status}\n`;
+            for (let key in info) {
+                if (key !== 'message') {
+                    message += `${key}: ${info[key]}\n`;
+                }
             }
             
-            if (info.token_type) {
-                message += `🔑 Token Type: ${info.token_type}\n`;
+            if (info.message) {
+                message += `\n${info.message}`;
             }
-            
-            if (info.environment) {
-                message += `🌍 Ambiente: ${info.environment}\n`;
-            }
-            
-            if (info.expires_in) {
-                message += `⏱️ Token expira em: ${info.expires_in}s\n`;
-            }
-            
-            message += `\n${info.message || '🎉 EFI Bank configurado e pronto para uso!'}`;
-            message += '\n\n💾 Salvando configurações automaticamente...';
             
             alert(message);
-            
-            // Marcar como ativo e salvar automaticamente
-            document.getElementById('efiEnabled').checked = true;
-            await saveEfiBankConfig();
-            
         } else {
-            let errorMsg = '❌ Erro ao testar conexão:\n\n' + result.error;
-            alert(errorMsg);
+            alert('❌ Erro ao testar conexão:\n\n' + result.error);
         }
     } catch (error) {
         alert('❌ Erro ao testar conexão');
     }
 }
+
+// Fechar modal ao clicar fora
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('providerModal');
+    if (e.target === modal) {
+        closeProviderModal();
+    }
+});

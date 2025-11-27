@@ -23,6 +23,7 @@ require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/core/Auth.php';
 require_once __DIR__ . '/../app/core/Response.php';
 require_once __DIR__ . '/../app/helpers/EfiBankHelper.php';
+require_once __DIR__ . '/../app/helpers/AsaasHelper.php';
 
 // Verificar autenticação
 $user = Auth::user();
@@ -174,6 +175,11 @@ function handlePost($db) {
             Response::json(['success' => false, 'error' => 'Client ID, Client Secret e Chave PIX são obrigatórios'], 400);
             return;
         }
+    } elseif ($paymentMethod === 'asaas') {
+        if (empty($config['api_key'])) {
+            Response::json(['success' => false, 'error' => 'API Key é obrigatória'], 400);
+            return;
+        }
     }
     
     // Verificar se já existe
@@ -193,6 +199,11 @@ function handlePost($db) {
             'client_secret' => $config['client_secret'],
             'pix_key' => $config['pix_key'],
             'certificate' => $config['certificate'] ?? '',
+            'sandbox' => $config['sandbox'] ?? false
+        ]);
+    } elseif ($paymentMethod === 'asaas') {
+        $configJson = json_encode([
+            'api_key' => $config['api_key'],
             'sandbox' => $config['sandbox'] ?? false
         ]);
     } else {
@@ -256,6 +267,30 @@ function handleTestConnection($input) {
         
         // Testar conexão com Mercado Pago
         $result = testMercadoPagoConnection($accessToken);
+        
+        if ($result['success']) {
+            Response::json([
+                'success' => true,
+                'message' => 'Conexão testada com sucesso',
+                'account_info' => $result['account_info']
+            ]);
+        } else {
+            Response::json([
+                'success' => false,
+                'error' => $result['error']
+            ], 400);
+        }
+    } elseif ($paymentMethod === 'asaas') {
+        $apiKey = $input['api_key'] ?? null;
+        $sandbox = $input['sandbox'] ?? false;
+        
+        if (!$apiKey) {
+            Response::json(['success' => false, 'error' => 'API Key é obrigatória'], 400);
+            return;
+        }
+        
+        // Testar conexão com Asaas
+        $result = testAsaasConnection($apiKey, $sandbox);
         
         if ($result['success']) {
             Response::json([
@@ -422,6 +457,41 @@ function testMercadoPagoConnection($accessToken) {
     }
 }
 
+
+/**
+ * Testar conexão real com API do Asaas
+ */
+function testAsaasConnection($apiKey, $sandbox = false) {
+    try {
+        // Log para debug
+        error_log("Testando Asaas - API Key: " . substr($apiKey, 0, 20) . "...");
+        
+        $asaas = new AsaasHelper($apiKey, $sandbox);
+        $result = $asaas->testConnection();
+        
+        if ($result['success']) {
+            return [
+                'success' => true,
+                'account_info' => [
+                    'status' => '✅ Credenciais válidas',
+                    'environment' => $result['environment'],
+                    'message' => 'Asaas configurado e pronto para uso'
+                ]
+            ];
+        } else {
+            return [
+                'success' => false,
+                'error' => $result['error']
+            ];
+        }
+        
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'error' => 'Erro ao testar conexão: ' . $e->getMessage()
+        ];
+    }
+}
 
 /**
  * Testar conexão real com API do EFI Bank
