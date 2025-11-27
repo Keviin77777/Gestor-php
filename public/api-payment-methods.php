@@ -180,6 +180,8 @@ function handlePost($db) {
             Response::json(['success' => false, 'error' => 'API Key é obrigatória'], 400);
             return;
         }
+        // Sempre usar produção (não sandbox)
+        $config['sandbox'] = false;
     }
     
     // Verificar se já existe
@@ -204,7 +206,7 @@ function handlePost($db) {
     } elseif ($paymentMethod === 'asaas') {
         $configJson = json_encode([
             'api_key' => $config['api_key'],
-            'sandbox' => $config['sandbox'] ?? false
+            'sandbox' => false // Sempre produção
         ]);
     } else {
         Response::json(['success' => false, 'error' => 'Método de pagamento não suportado'], 400);
@@ -282,15 +284,14 @@ function handleTestConnection($input) {
         }
     } elseif ($paymentMethod === 'asaas') {
         $apiKey = $input['api_key'] ?? null;
-        $sandbox = $input['sandbox'] ?? false;
         
         if (!$apiKey) {
             Response::json(['success' => false, 'error' => 'API Key é obrigatória'], 400);
             return;
         }
         
-        // Testar conexão com Asaas
-        $result = testAsaasConnection($apiKey, $sandbox);
+        // Testar conexão com Asaas (sempre produção)
+        $result = testAsaasConnection($apiKey, false);
         
         if ($result['success']) {
             Response::json([

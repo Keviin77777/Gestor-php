@@ -273,13 +273,6 @@ function getAsaasForm(config) {
             
             <div class="form-group">
                 <label class="checkbox-label">
-                    <input type="checkbox" name="sandbox" ${config.sandbox ? 'checked' : ''}>
-                    <span>Modo Sandbox (Homologação)</span>
-                </label>
-            </div>
-            
-            <div class="form-group">
-                <label class="checkbox-label">
                     <input type="checkbox" name="enabled" ${config.enabled ? 'checked' : ''}>
                     <span>Ativar Asaas</span>
                 </label>
@@ -291,7 +284,7 @@ function getAsaasForm(config) {
                     <line x1="12" y1="9" x2="12" y2="13"></line>
                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
-                <p><strong>Importante:</strong> Use o modo Sandbox para testes. Em produção, desmarque esta opção e use a API Key de produção.</p>
+                <p><strong>Importante:</strong> Use a API Key de produção do Asaas. Certifique-se de que sua conta está aprovada para usar PIX.</p>
             </div>
             
             <div class="form-actions">
