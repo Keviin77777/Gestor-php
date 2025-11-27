@@ -268,8 +268,8 @@ function prepareTemplateVariables($template, $client) {
         'cliente_servidor' => $client['server'] ?? 'N/A'
     ];
 
-    // Adicionar payment_link para templates de fatura e lembretes
-    if (in_array($template['type'], ['invoice_generated', 'expires_today', 'expires_3d', 'expires_7d', 'expired_1d', 'expired_3d'])) {
+    // Sempre tentar adicionar payment_link se houver fatura pendente
+    if (true) {
         // Buscar fatura mais recente do cliente
         $invoice = Database::fetch(
             "SELECT id FROM invoices 
@@ -291,14 +291,38 @@ function prepareTemplateVariables($template, $client) {
                 $baseUrl = $protocol . '://' . $host;
             }
             
-            $variables['payment_link'] = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
+            // Verificar qual método de pagamento está ativo para o revendedor
+            $resellerId = $client['reseller_id'] ?? null;
+            $paymentLink = '';
+            
+            if ($resellerId) {
+                // Buscar métodos de pagamento ativos (prioridade: Asaas > Mercado Pago > EFI Bank)
+                $activeMethod = Database::fetch(
+                    "SELECT provider FROM payment_methods 
+                     WHERE reseller_id = ? AND is_active = 1
+                     ORDER BY FIELD(provider, 'asaas', 'mercadopago', 'efibank')
+                     LIMIT 1",
+                    [$resellerId]
+                );
+                
+                if ($activeMethod) {
+                    $paymentLink = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
+                } else {
+                    $paymentLink = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
+                }
+            } else {
+                // Sem reseller_id, usar checkout padrão
+                $paymentLink = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
+            }
+            
+            $variables['payment_link'] = $paymentLink;
         } else {
             $variables['payment_link'] = '';
         }
     }
 
     // Adicionar variáveis específicas do template se necessário
-    if ($template['variables']) {
+    if (isset($template['variables']) && $template['variables']) {
         $templateVars = json_decode($template['variables'], true);
         if (is_array($templateVars)) {
             $variables = array_merge($variables, $templateVars);

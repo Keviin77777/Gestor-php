@@ -35,9 +35,6 @@ try {
     if ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
         
-        // Log dos dados recebidos
-        error_log('WhatsApp Send API - Dados recebidos: ' . json_encode($data));
-        
         if (!$data) {
             throw new Exception('Dados inválidos');
         }
@@ -52,8 +49,7 @@ try {
         $templateId = $data['template_id'] ?? null;
         $clientId = $data['client_id'] ?? null;
         
-        error_log("WhatsApp Send API - Enviando para: $phoneNumber");
-        error_log("WhatsApp Send API - Template ID: " . ($templateId ?? 'nenhum'));
+
         
         // Se tem template_id, processar o template no backend
         if ($templateId && $clientId) {
@@ -64,9 +60,9 @@ try {
             );
             
             if ($template) {
-                // Buscar dados do cliente
+                // Buscar dados do cliente (incluindo reseller_id)
                 $client = Database::fetch(
-                    "SELECT * FROM clients WHERE id = ?",
+                    "SELECT c.*, c.reseller_id FROM clients c WHERE c.id = ?",
                     [$clientId]
                 );
                 
@@ -78,18 +74,16 @@ try {
                     // Processar template
                     $message = $template['message'];
                     foreach ($variables as $key => $value) {
+                        // Suportar tanto {{variavel}} quanto {variavel}
                         $message = str_replace('{{' . $key . '}}', $value, $message);
+                        $message = str_replace('{' . $key . '}', $value, $message);
                     }
                 }
             }
         }
         
-        error_log("WhatsApp Send API - Mensagem processada: " . substr($message, 0, 100) . "...");
-        
         // Enviar mensagem
         $result = sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId, $clientId);
-        
-        error_log('WhatsApp Send API - Resultado: ' . json_encode($result));
         
         // Verificar se houve erro
         if (!$result['success']) {

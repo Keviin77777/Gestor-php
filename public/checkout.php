@@ -43,14 +43,17 @@ try {
     die('Erro ao buscar fatura: ' . $e->getMessage() . '<br>Trace: ' . $e->getTraceAsString());
 }
 
-// Verificar se tem método de pagamento configurado
-$hasPaymentMethod = Database::fetch(
-    "SELECT id FROM payment_methods 
-     WHERE reseller_id = ? AND provider = 'mercadopago' AND is_active = 1
+// Verificar se tem método de pagamento configurado (qualquer provedor ativo)
+$paymentMethod = Database::fetch(
+    "SELECT provider FROM payment_methods 
+     WHERE reseller_id = ? AND is_active = 1
+     ORDER BY FIELD(provider, 'asaas', 'mercadopago', 'efibank')
      LIMIT 1",
     [$invoice['reseller_id']]
 );
 
+$hasPaymentMethod = $paymentMethod !== null;
+$paymentProvider = $paymentMethod['provider'] ?? 'mercadopago';
 $canPayOnline = $hasPaymentMethod && $invoice['status'] !== 'paid';
 ?>
 <!DOCTYPE html>
@@ -438,7 +441,11 @@ $canPayOnline = $hasPaymentMethod && $invoice['status'] !== 'paid';
                     <div class="payment-info">
                         <i class="fas fa-shield-alt"></i>
                         <p>
-                            Pagamento seguro via Mercado Pago.<br>
+                            Pagamento seguro via PIX<?php 
+                                if ($paymentProvider === 'asaas') echo ' (Asaas)';
+                                elseif ($paymentProvider === 'mercadopago') echo ' (Mercado Pago)';
+                                elseif ($paymentProvider === 'efibank') echo ' (EFI Bank)';
+                            ?>.<br>
                             Após o pagamento, sua fatura será atualizada automaticamente.
                         </p>
                     </div>

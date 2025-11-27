@@ -21,6 +21,7 @@ require_once __DIR__ . '/../app/core/Auth.php';
 require_once __DIR__ . '/../app/core/Response.php';
 require_once __DIR__ . '/../app/helpers/MercadoPagoHelper.php';
 require_once __DIR__ . '/../app/helpers/EfiBankHelper.php';
+require_once __DIR__ . '/../app/helpers/AsaasHelper.php';
 
 // Verificar autenticação
 $user = Auth::user();
@@ -90,23 +91,31 @@ try {
     
     error_log("Usuário encontrado: {$userData['email']}");
     
-    // Verificar qual método de pagamento está ativo (prioridade: EFI Bank > Mercado Pago)
+    // Verificar qual método de pagamento está ativo (prioridade: Asaas > EFI Bank > Mercado Pago)
     $paymentProvider = null;
     $providerName = '';
     
-    // Tentar EFI Bank primeiro
-    $efi = new EfiBankHelper();
-    if ($efi->isEnabled()) {
-        $paymentProvider = $efi;
-        $providerName = 'efibank';
-        error_log("EFI Bank habilitado, usando como provedor");
+    // Tentar Asaas primeiro
+    $asaas = new AsaasHelper();
+    if ($asaas->isEnabled()) {
+        $paymentProvider = $asaas;
+        $providerName = 'asaas';
+        error_log("Asaas habilitado, usando como provedor");
     } else {
-        // Fallback para Mercado Pago
-        $mp = new MercadoPagoHelper();
-        if ($mp->isEnabled()) {
-            $paymentProvider = $mp;
-            $providerName = 'mercadopago';
-            error_log("Mercado Pago habilitado, usando como provedor");
+        // Tentar EFI Bank
+        $efi = new EfiBankHelper();
+        if ($efi->isEnabled()) {
+            $paymentProvider = $efi;
+            $providerName = 'efibank';
+            error_log("EFI Bank habilitado, usando como provedor");
+        } else {
+            // Fallback para Mercado Pago
+            $mp = new MercadoPagoHelper();
+            if ($mp->isEnabled()) {
+                $paymentProvider = $mp;
+                $providerName = 'mercadopago';
+                error_log("Mercado Pago habilitado, usando como provedor");
+            }
         }
     }
     
@@ -122,27 +131,40 @@ try {
     error_log("Provedor $providerName habilitado, criando pagamento...");
     
     // Preparar dados do pagamento baseado no provedor
-    if ($providerName === 'efibank') {
-        // Limpar e validar CPF/CNPJ
+    if ($providerName === 'asaas') {
+        // Asaas
+        $paymentData = [
+            'amount' => (float)$plan['price'],
+            'description' => "Renovação - {$plan['name']} ({$plan['duration_days']} dias)",
+            'customer_name' => $userData['name'] ?? $userData['email'] ?? 'Revendedor',
+            'customer_email' => $userData['email'] ?? null,
+            'customer_phone' => $userData['phone'] ?? null,
+            'customer_doc' => $userData['cpf_cnpj'] ?? null,
+            'external_reference' => "RENEW_USER_{$user['id']}_PLAN_{$planId}"
+        ];
+        
+        error_log("Renovação Asaas - Payment Data: " . json_encode($paymentData));
+        
+    } elseif ($providerName === 'efibank') {
+        // EFI Bank
         $docNumber = '';
         if (!empty($userData['cpf_cnpj'])) {
             $docNumber = preg_replace('/[^0-9]/', '', $userData['cpf_cnpj']);
         }
         
-        // Log do documento
         error_log("Renovação EFI - Documento original: " . ($userData['cpf_cnpj'] ?? 'vazio'));
         error_log("Renovação EFI - Documento limpo: " . ($docNumber ?: 'vazio'));
-        error_log("Renovação EFI - Tamanho do documento: " . strlen($docNumber));
         
         $paymentData = [
             'amount' => (float)$plan['price'],
             'description' => "Renovação - {$plan['name']} ({$plan['duration_days']} dias)",
             'payer_name' => $userData['name'] ?? $userData['email'] ?? 'Revendedor',
-            'payer_doc_number' => $docNumber, // Pode ser vazio, EFI Bank aceita
+            'payer_doc_number' => $docNumber,
             'external_reference' => "RENEW_USER_{$user['id']}_PLAN_{$planId}"
         ];
         
         error_log("Renovação EFI - Payment Data: " . json_encode($paymentData));
+        
     } else {
         // Mercado Pago
         $paymentData = [
@@ -160,6 +182,8 @@ try {
         if (strpos($appUrl, 'localhost') === false && strpos($appUrl, '127.0.0.1') === false) {
             $paymentData['notification_url'] = $appUrl . '/webhook-mercadopago.php';
         }
+        
+        error_log("Renovação MP - Payment Data: " . json_encode($paymentData));
     }
     
     // Criar pagamento PIX

@@ -28,9 +28,10 @@ class AsaasHelper {
         }
         
         // Definir URL base conforme ambiente
+        // Sandbox usa o mesmo domínio, mas com credenciais diferentes
         $this->baseUrl = $this->sandbox ? 
             'https://sandbox.asaas.com/api/v3' : 
-            'https://api.asaas.com/v3';
+            'https://www.asaas.com/api/v3';
     }
     
     /**
@@ -81,12 +82,21 @@ class AsaasHelper {
     private function makeRequest($endpoint, $method = 'GET', $data = null) {
         $url = $this->baseUrl . $endpoint;
         
+        // Log para debug
+        error_log("Asaas Request - URL: {$url}");
+        error_log("Asaas Request - Method: {$method}");
+        error_log("Asaas Request - API Key: " . substr($this->apiKey, 0, 30) . "...");
+        error_log("Asaas Request - Environment: " . ($this->sandbox ? 'Sandbox' : 'Production'));
+        
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        
+        // Asaas usa o header "access_token" (sem Bearer)
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'access_token: ' . $this->apiKey,
-            'Content-Type: application/json'
+            'access_token: ' . trim($this->apiKey),
+            'Content-Type: application/json',
+            'User-Agent: UltraGestor/1.0'
         ]);
         
         if ($method === 'POST') {
@@ -116,7 +126,12 @@ class AsaasHelper {
         $error = curl_error($ch);
         curl_close($ch);
         
+        // Log da resposta
+        error_log("Asaas Response - HTTP Code: {$httpCode}");
+        error_log("Asaas Response - Body: " . substr($response, 0, 500));
+        
         if ($error) {
+            error_log("Asaas cURL Error: {$error}");
             return [
                 'success' => false,
                 'error' => 'Erro de conexão: ' . $error
@@ -124,6 +139,11 @@ class AsaasHelper {
         }
         
         $result = json_decode($response, true);
+        
+        // Se houver erro de autenticação, logar detalhes
+        if ($httpCode === 401 || $httpCode === 403) {
+            error_log("Asaas Auth Error - Details: " . json_encode($result));
+        }
         
         return [
             'success' => $httpCode >= 200 && $httpCode < 300,
@@ -366,18 +386,42 @@ class AsaasHelper {
      */
     public function testConnection() {
         try {
+            // Validar formato da API Key
+            $apiKeyValidation = $this->validateApiKey();
+            if (!$apiKeyValidation['valid']) {
+                return [
+                    'success' => false,
+                    'error' => $apiKeyValidation['message']
+                ];
+            }
+            
             $result = $this->makeRequest('/customers?limit=1');
             
             if ($result['success']) {
                 return [
                     'success' => true,
                     'message' => 'Conexão estabelecida com sucesso',
-                    'environment' => $this->sandbox ? 'Sandbox' : 'Produção'
+                    'environment' => $this->sandbox ? 'Sandbox (Homologação)' : 'Produção'
                 ];
             } else {
+                $errorMsg = 'Erro desconhecido';
+                if (isset($result['data']['errors'][0])) {
+                    $error = $result['data']['errors'][0];
+                    $errorMsg = $error['description'] ?? $error['code'] ?? 'Erro desconhecido';
+                }
+                
+                // Mensagem mais clara para erro de autenticação
+                if ($result['http_code'] === 401) {
+                    $errorMsg = "API Key inválida. Verifique:\n\n";
+                    $errorMsg .= "1. Se você está usando a API Key correta do ambiente " . ($this->sandbox ? 'SANDBOX' : 'PRODUÇÃO') . "\n";
+                    $errorMsg .= "2. A API Key deve começar com '\$aact_' (produção) ou ser a chave de homologação\n";
+                    $errorMsg .= "3. Acesse: " . ($this->sandbox ? 'https://sandbox.asaas.com/customerConfigIntegrations/index' : 'https://www.asaas.com/config/api') . "\n\n";
+                    $errorMsg .= "Erro original: " . ($result['data']['errors'][0]['description'] ?? 'Chave inválida');
+                }
+                
                 return [
                     'success' => false,
-                    'error' => 'Falha na autenticação: ' . ($result['data']['errors'][0]['description'] ?? 'Erro desconhecido')
+                    'error' => $errorMsg
                 ];
             }
         } catch (Exception $e) {
@@ -386,5 +430,37 @@ class AsaasHelper {
                 'error' => 'Erro ao testar conexão: ' . $e->getMessage()
             ];
         }
+    }
+    
+    /**
+     * Validar formato da API Key
+     */
+    private function validateApiKey() {
+        if (empty($this->apiKey)) {
+            return [
+                'valid' => false,
+                'message' => 'API Key não fornecida'
+            ];
+        }
+        
+        // Remover espaços em branco
+        $this->apiKey = trim($this->apiKey);
+        
+        // API Key do Asaas geralmente tem formato específico
+        // Produção: $aact_YTU5YTE0M2M2N2I4MTliNzk0YTI5N2U5MzdjNWZmNDQ6OjAwMDAwMDAwMDAwMDAwMDAwMDA6OiRhYWNoXzRlNTU=
+        // Sandbox: pode ser UUID simples ou formato similar
+        
+        // Verificar se tem tamanho mínimo razoável
+        if (strlen($this->apiKey) < 20) {
+            return [
+                'valid' => false,
+                'message' => 'API Key muito curta. Verifique se copiou a chave completa.'
+            ];
+        }
+        
+        return [
+            'valid' => true,
+            'message' => 'API Key válida'
+        ];
     }
 }
