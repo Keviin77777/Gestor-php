@@ -118,7 +118,7 @@ try {
                             </div>
                             <div class="provider-info">
                                 <h3>Asaas</h3>
-                                <p>Pagamentos via PIX e Boleto</p>
+                                <p>Pagamentos via PIX com QR Code</p>
                             </div>
                             <div class="provider-status" id="asaasStatus">
                                 <span class="status-badge status-inactive">Inativo</span>
