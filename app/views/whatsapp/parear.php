@@ -186,7 +186,13 @@
                                 </svg>
                             </div>
                             <div class="rate-limit-info">
-                                <h3>⚙️ Configuração de Limites de Envio</h3>
+                                <h3>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; display: inline-block; vertical-align: middle; margin-right: 8px;">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    Configuração de Limites de Envio
+                                </h3>
                                 <p>Configure os limites para evitar bloqueios do WhatsApp</p>
                             </div>
                         </div>

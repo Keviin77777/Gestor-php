@@ -3,6 +3,9 @@
 -- Execute este script na VPS de produção
 -- ============================================
 
+-- Selecionar o banco de dados
+USE ultragestor_php;
+
 -- 1. Adicionar campo provider à tabela whatsapp_sessions
 ALTER TABLE whatsapp_sessions 
 ADD COLUMN IF NOT EXISTS provider ENUM('evolution', 'native') DEFAULT 'evolution' AFTER status;
