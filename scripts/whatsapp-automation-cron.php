@@ -120,7 +120,7 @@ try {
         writeLog("ℹ️  Nota: Lembretes só são enviados se:");
         writeLog("   • auto_send_reminders = TRUE nas configurações");
         writeLog("   • Template NÃO tem agendamento ativo (is_scheduled = 0)");
-        $report = runWhatsAppReminderAutomation();
+        $report = runWhatsAppReminderAutomation($resellerId);
         
         if ($report['reminders_sent'] > 0) {
             writeLog("✅ Lembretes de vencimento: {$report['reminders_sent']} enviados");

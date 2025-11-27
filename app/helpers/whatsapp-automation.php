@@ -419,9 +419,10 @@ function sendAutomaticInvoiceMessage($invoiceId) {
 
 /**
  * Executar automação de lembretes de vencimento
+ * @param string|null $resellerId ID do revendedor (opcional, se null processa todos)
  * @return array Relatório da execução
  */
-function runWhatsAppReminderAutomation() {
+function runWhatsAppReminderAutomation($resellerId = null) {
     try {
         $report = [
             'execution_time' => date('Y-m-d H:i:s'),
@@ -431,17 +432,24 @@ function runWhatsAppReminderAutomation() {
         ];
 
         // Buscar clientes ativos com vencimento próximo
-        $clients = Database::fetchAll(
-            "SELECT 
+        $sql = "SELECT 
                 c.id, c.name, c.phone, c.value, c.renewal_date, c.plan, c.server, c.reseller_id,
                 DATEDIFF(c.renewal_date, CURDATE()) as days_until_renewal
              FROM clients c
              WHERE c.status = 'active' 
              AND c.phone IS NOT NULL 
              AND c.phone != ''
-             AND DATEDIFF(c.renewal_date, CURDATE()) IN (0, 3, 7, -1, -3)
-             ORDER BY c.renewal_date ASC"
-        );
+             AND DATEDIFF(c.renewal_date, CURDATE()) IN (0, 3, 7, -1, -3)";
+        
+        $params = [];
+        if ($resellerId) {
+            $sql .= " AND c.reseller_id = ?";
+            $params[] = $resellerId;
+        }
+        
+        $sql .= " ORDER BY c.renewal_date ASC";
+        
+        $clients = Database::fetchAll($sql, $params);
         
         error_log("WhatsApp Automation: Total de clientes encontrados: " . count($clients));
 
