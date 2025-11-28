@@ -73,10 +73,14 @@ try {
         exit(0);
     }
     
-    // Buscar todos os revendedores ativos
+    // Buscar todos os resellers ativos (baseado nos clientes)
     $db = Database::connect();
-    $stmt = $db->query("SELECT id, name, email FROM resellers WHERE status = 'active'");
-    $resellers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $resellers = Database::fetchAll("SELECT DISTINCT reseller_id FROM clients WHERE reseller_id IS NOT NULL");
+    
+    if (empty($resellers)) {
+        writeLog("⚠️  Nenhum reseller encontrado");
+        exit(0);
+    }
     
     writeLog("Encontrados " . count($resellers) . " revendedores ativos");
     
@@ -90,9 +94,10 @@ try {
     
     // Executar automação para cada revendedor
     foreach ($resellers as $reseller) {
-        writeLog("Processando revendedor: {$reseller['name']} (ID: {$reseller['id']})");
+        $resellerId = $reseller['reseller_id'];
+        writeLog("\n--- Processando Reseller: {$resellerId} ---");
         
-        $report = runInvoiceAutomation($reseller['id']);
+        $report = runInvoiceAutomation($resellerId);
         
         // Consolidar relatórios
         $totalReport['total_clients_checked'] += $report['total_clients_checked'];
