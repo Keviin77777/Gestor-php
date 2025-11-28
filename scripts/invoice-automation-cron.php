@@ -73,8 +73,39 @@ try {
         exit(0);
     }
     
-    // Executar automação
-    $report = runInvoiceAutomation();
+    // Buscar todos os revendedores ativos
+    $db = Database::connect();
+    $stmt = $db->query("SELECT id, name, email FROM resellers WHERE status = 'active'");
+    $resellers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    writeLog("Encontrados " . count($resellers) . " revendedores ativos");
+    
+    $totalReport = [
+        'total_clients_checked' => 0,
+        'invoices_generated' => 0,
+        'clients_processed' => [],
+        'errors' => [],
+        'skipped_clients' => []
+    ];
+    
+    // Executar automação para cada revendedor
+    foreach ($resellers as $reseller) {
+        writeLog("Processando revendedor: {$reseller['name']} (ID: {$reseller['id']})");
+        
+        $report = runInvoiceAutomation($reseller['id']);
+        
+        // Consolidar relatórios
+        $totalReport['total_clients_checked'] += $report['total_clients_checked'];
+        $totalReport['invoices_generated'] += $report['invoices_generated'];
+        $totalReport['clients_processed'] = array_merge($totalReport['clients_processed'], $report['clients_processed']);
+        $totalReport['errors'] = array_merge($totalReport['errors'], $report['errors']);
+        $totalReport['skipped_clients'] = array_merge($totalReport['skipped_clients'], $report['skipped_clients']);
+        
+        writeLog("  -> Clientes verificados: {$report['total_clients_checked']}");
+        writeLog("  -> Faturas geradas: {$report['invoices_generated']}");
+    }
+    
+    $report = $totalReport;
     
     // Log do relatório
     writeLog("Clientes verificados: " . $report['total_clients_checked']);
