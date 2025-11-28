@@ -176,7 +176,9 @@ if (!$user) {
 
 
 
+    <script src="/assets/js/common.js"></script>
     <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/mobile-responsive.js"></script>
     <script src="/assets/js/whatsapp-queue.js"></script>
 </body>
 </html>
