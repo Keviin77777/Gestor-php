@@ -104,6 +104,29 @@ try {
         exit();
     }
     
+    // Detectar qual API está rodando
+    $detectedProvider = 'evolution'; // Padrão
+    
+    // Verificar se API nativa está rodando
+    $nativeApiUrl = getenv('WHATSAPP_NATIVE_API_URL') ?: 'http://localhost:3000';
+    $ch = curl_init($nativeApiUrl . '/health');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode === 200) {
+        $responseData = json_decode($response, true);
+        if (isset($responseData['status']) && $responseData['status'] === 'online') {
+            $detectedProvider = 'native';
+            error_log("WhatsApp Connect - API Nativa detectada e online");
+        }
+    }
+    
+    error_log("WhatsApp Connect - Provider detectado: " . $detectedProvider);
+    
     // Criar ou atualizar sessão no banco
     $sessionId = $existingSession['id'] ?? 'ws-' . uniqid();
     
@@ -112,16 +135,16 @@ try {
             "UPDATE whatsapp_sessions SET 
              status = 'connecting', 
              qr_code = NULL,
-             provider = 'evolution',
+             provider = ?,
              updated_at = CURRENT_TIMESTAMP 
              WHERE id = ?",
-            [$sessionId]
+            [$detectedProvider, $sessionId]
         );
     } else {
         Database::query(
             "INSERT INTO whatsapp_sessions (id, reseller_id, session_name, instance_name, status, provider) 
-             VALUES (?, ?, ?, ?, 'connecting', 'evolution')",
-            [$sessionId, $resellerId, $instanceName, $instanceName]
+             VALUES (?, ?, ?, ?, 'connecting', ?)",
+            [$sessionId, $resellerId, $instanceName, $instanceName, $detectedProvider]
         );
     }
     
