@@ -22,33 +22,57 @@ function getActiveWhatsAppProvider($resellerId) {
         return $defaultProvider;
     }
     
-    // Se tem sessão, usar o provider da sessão
-    $provider = $session['provider'] ?? 'evolution';
-    error_log("WhatsApp Helper - Provider da sessão: " . $provider);
+    // Detectar provider baseado no nome da instância
+    // API Nativa usa formato: reseller_XXXXX
+    // Evolution API usa formato: ultragestor-usr-XXXXX
+    $instanceName = $session['instance_name'] ?? '';
     
-    // Verificar se a API está realmente rodando
-    if ($provider === 'native') {
+    if (strpos($instanceName, 'reseller_') === 0) {
+        // É API Nativa
+        error_log("WhatsApp Helper - Detectado API Nativa pelo nome da instância: " . $instanceName);
+        
+        // Verificar se a API está online
         $nativeApiUrl = env('WHATSAPP_NATIVE_API_URL', 'http://localhost:3000');
         $ch = curl_init($nativeApiUrl . '/health');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         
         if ($httpCode === 200) {
             error_log("WhatsApp Helper - API Nativa confirmada online");
+            
+            // Atualizar provider na sessão se estiver errado
+            if (($session['provider'] ?? '') !== 'native') {
+                Database::query(
+                    "UPDATE whatsapp_sessions SET provider = 'native' WHERE id = ?",
+                    [$session['id']]
+                );
+                error_log("WhatsApp Helper - Provider atualizado para 'native' na sessão");
+            }
+            
             return 'native';
         } else {
-            error_log("WhatsApp Helper - API Nativa offline (HTTP: $httpCode), fallback para Evolution");
-            return 'evolution';
+            error_log("WhatsApp Helper - API Nativa offline (HTTP: $httpCode)");
+            throw new Exception('API WhatsApp Nativa está offline. Verifique o serviço.');
         }
+    } else {
+        // É Evolution API
+        error_log("WhatsApp Helper - Detectado Evolution API pelo nome da instância: " . $instanceName);
+        
+        // Atualizar provider na sessão se estiver errado
+        if (($session['provider'] ?? '') !== 'evolution') {
+            Database::query(
+                "UPDATE whatsapp_sessions SET provider = 'evolution' WHERE id = ?",
+                [$session['id']]
+            );
+            error_log("WhatsApp Helper - Provider atualizado para 'evolution' na sessão");
+        }
+        
+        return 'evolution';
     }
-    
-    // Fallback para Evolution API
-    error_log("WhatsApp Helper - Usando Evolution API");
-    return $provider;
 }
 
 /**
