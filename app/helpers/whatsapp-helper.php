@@ -366,6 +366,53 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
                 error_log("Template '{$templateType}' tem agendamento - Scheduled at: " . ($scheduledAt ?: 'NULL'));
             }
             
+            // Verificar se já existe mensagem pendente deste template para este cliente
+            if ($clientId && $template['id']) {
+                $existingMessage = Database::fetch(
+                    "SELECT id, scheduled_at FROM whatsapp_message_queue 
+                     WHERE client_id = ? 
+                     AND template_id = ? 
+                     AND status = 'pending'
+                     ORDER BY created_at DESC 
+                     LIMIT 1",
+                    [$clientId, $template['id']]
+                );
+                
+                if ($existingMessage) {
+                    // Se o agendamento mudou, atualizar a mensagem existente
+                    if ($scheduledAt && $existingMessage['scheduled_at'] !== $scheduledAt) {
+                        Database::query(
+                            "UPDATE whatsapp_message_queue 
+                             SET scheduled_at = ?, message = ?, updated_at = NOW() 
+                             WHERE id = ?",
+                            [$scheduledAt, $message, $existingMessage['id']]
+                        );
+                        
+                        error_log("Queue Helper - Mensagem atualizada: ID={$existingMessage['id']}, Novo horário: {$scheduledAt}");
+                        
+                        return [
+                            'success' => true,
+                            'queued' => true,
+                            'queue_id' => $existingMessage['id'],
+                            'updated' => true,
+                            'message' => 'Mensagem atualizada na fila'
+                        ];
+                    } else {
+                        // Já existe e o horário é o mesmo, não fazer nada
+                        error_log("Queue Helper - Mensagem já existe na fila: ID={$existingMessage['id']}");
+                        
+                        return [
+                            'success' => true,
+                            'queued' => true,
+                            'queue_id' => $existingMessage['id'],
+                            'already_exists' => true,
+                            'message' => 'Mensagem já está na fila'
+                        ];
+                    }
+                }
+            }
+            
+            // Se não existe, adicionar nova mensagem
             $result = addMessageToQueue(
                 $resellerId,
                 $phoneNumber,
