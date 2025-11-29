@@ -341,8 +341,9 @@ async function disconnectWhatsApp() {
     try {
         // Marcar que estamos desconectando manualmente
         isManuallyDisconnecting = true;
+        connectionStatus = 'disconnected';
         
-        // Parar todas as verificações
+        // Parar TODAS as verificações imediatamente
         if (qrCheckInterval) {
             clearInterval(qrCheckInterval);
             qrCheckInterval = null;
@@ -352,6 +353,12 @@ async function disconnectWhatsApp() {
             statusCheckInterval = null;
         }
         
+        // Limpar interface imediatamente
+        hideQRCode();
+        hideAccountInfo();
+        currentQRCode = null;
+        updateConnectionStatus('disconnected');
+        
         await window.LoadingManager.withLoading(async () => {
             const response = await fetch('/api-whatsapp-disconnect.php', {
                 method: 'POST'
@@ -360,11 +367,20 @@ async function disconnectWhatsApp() {
             const data = await response.json();
 
             if (data.success) {
-                updateConnectionStatus('disconnected');
-                hideQRCode();
-                hideAccountInfo();
-                currentQRCode = null;
                 showNotification('WhatsApp desconectado com sucesso!', 'success');
+                
+                // Reiniciar verificação de status após 3 segundos
+                setTimeout(() => {
+                    isManuallyDisconnecting = false;
+                    // Reiniciar apenas o statusCheckInterval
+                    if (!statusCheckInterval) {
+                        statusCheckInterval = setInterval(() => {
+                            if (!isManuallyDisconnecting) {
+                                checkConnectionStatus();
+                            }
+                        }, 5000);
+                    }
+                }, 3000);
             } else {
                 throw new Error(data.error || 'Erro ao desconectar');
             }
@@ -372,11 +388,6 @@ async function disconnectWhatsApp() {
             type: 'global',
             id: 'disconnect-whatsapp'
         });
-        
-        // Aguardar 2 segundos antes de permitir reconexão automática
-        setTimeout(() => {
-            isManuallyDisconnecting = false;
-        }, 2000);
         
     } catch (error) {
         isManuallyDisconnecting = false;

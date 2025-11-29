@@ -29,7 +29,11 @@ router.post('/instance/connect', async (req, res) => {
             return res.status(400).json({ success: false, error: 'reseller_id é obrigatório' });
         }
 
-        // Criar ou recuperar instância
+        // Criar sessão no banco
+        const instanceName = `reseller_${reseller_id}`;
+        await db.createSession(reseller_id, instanceName);
+
+        // Criar instância no gerenciador
         await instanceManager.getInstance(reseller_id);
         
         res.json({ 
@@ -53,16 +57,18 @@ router.get('/instance/qrcode/:reseller_id', async (req, res) => {
         
         // Verificar se já está conectado
         if (instanceManager.isConnected(reseller_id)) {
-            const session = await db.getOrCreateSession(reseller_id);
-            return res.json({
-                success: true,
-                connected: true,
-                profile_name: session.profile_name,
-                phone_number: session.phone_number
-            });
+            const session = await db.getSession(reseller_id);
+            if (session) {
+                return res.json({
+                    success: true,
+                    connected: true,
+                    profile_name: session.profile_name,
+                    phone_number: session.phone_number
+                });
+            }
         }
 
-        // Buscar QR Code
+        // Buscar QR Code apenas se houver instância ativa
         const qrCode = instanceManager.getQRCode(reseller_id);
         
         if (qrCode) {
@@ -76,7 +82,7 @@ router.get('/instance/qrcode/:reseller_id', async (req, res) => {
                 success: true, 
                 connected: false,
                 qr_code: null,
-                message: 'Aguardando QR Code...'
+                message: 'Nenhuma instância ativa'
             });
         }
     } catch (error) {
@@ -92,12 +98,13 @@ router.get('/instance/qrcode/:reseller_id', async (req, res) => {
 router.get('/instance/status/:reseller_id', async (req, res) => {
     try {
         const { reseller_id } = req.params;
-        const session = await db.getOrCreateSession(reseller_id);
+        const session = await db.getSession(reseller_id);
         const connected = instanceManager.isConnected(reseller_id);
         
         res.json({
             success: true,
             connected,
+            has_session: session !== null,
             status: session.status,
             profile_name: session.profile_name,
             phone_number: session.phone_number

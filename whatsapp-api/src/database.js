@@ -29,26 +29,27 @@ class Database {
     }
 
     /**
-     * Buscar ou criar sessão
+     * Buscar sessão (SEM criar automaticamente)
      */
-    async getOrCreateSession(resellerId) {
+    async getSession(resellerId) {
         const sessions = await this.query(
-            'SELECT * FROM whatsapp_sessions WHERE reseller_id = ? ORDER BY created_at DESC LIMIT 1',
+            'SELECT * FROM whatsapp_sessions WHERE reseller_id = ? AND status IN ("connecting", "qr_code", "connected") ORDER BY created_at DESC LIMIT 1',
             [resellerId]
         );
 
-        if (sessions.length > 0) {
-            return sessions[0];
-        }
+        return sessions.length > 0 ? sessions[0] : null;
+    }
 
-        // Criar nova sessão
+    /**
+     * Criar nova sessão (apenas quando explicitamente solicitado)
+     */
+    async createSession(resellerId, instanceName) {
         const sessionId = `ws-${Date.now()}-${resellerId}`;
-        const instanceName = `reseller_${resellerId}`;
         
         await this.query(
             `INSERT INTO whatsapp_sessions 
-            (id, reseller_id, session_name, instance_name, status) 
-            VALUES (?, ?, ?, ?, 'connecting')`,
+            (id, reseller_id, session_name, instance_name, status, provider) 
+            VALUES (?, ?, ?, ?, 'connecting', 'native')`,
             [sessionId, resellerId, instanceName, instanceName]
         );
 
@@ -56,7 +57,8 @@ class Database {
             id: sessionId,
             reseller_id: resellerId,
             instance_name: instanceName,
-            status: 'connecting'
+            status: 'connecting',
+            provider: 'native'
         };
     }
 
@@ -64,7 +66,12 @@ class Database {
      * Atualizar sessão
      */
     async updateSession(resellerId, data) {
-        const session = await this.getOrCreateSession(resellerId);
+        const session = await this.getSession(resellerId);
+        
+        if (!session) {
+            console.log(`Sessão não encontrada para reseller ${resellerId}`);
+            return;
+        }
         
         const fields = [];
         const values = [];
@@ -87,7 +94,11 @@ class Database {
      */
     async createMessage(resellerId, data) {
         const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const session = await this.getOrCreateSession(resellerId);
+        const session = await this.getSession(resellerId);
+        
+        if (!session) {
+            throw new Error('Sessão não encontrada para este reseller');
+        }
         
         await this.query(
             `INSERT INTO whatsapp_messages 

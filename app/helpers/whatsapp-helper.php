@@ -317,13 +317,63 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
                 $priority = 2; // Prioridade máxima para boas-vindas
             }
             
+            // Verificar se o template tem agendamento ativo
+            $scheduledAt = null;
+            if ($template['is_scheduled'] && $template['scheduled_time']) {
+                // Calcular próximo horário de envio baseado no agendamento
+                $currentDay = strtolower(date('l')); // monday, tuesday, etc.
+                $scheduledDays = json_decode($template['scheduled_days'], true) ?: [];
+                
+                // Se hoje está nos dias agendados
+                if (in_array($currentDay, $scheduledDays)) {
+                    $scheduledTime = $template['scheduled_time'];
+                    $todayScheduled = date('Y-m-d') . ' ' . $scheduledTime;
+                    
+                    // Se o horário ainda não passou hoje, usar hoje
+                    if (strtotime($todayScheduled) > time()) {
+                        $scheduledAt = $todayScheduled;
+                    } else {
+                        // Horário já passou hoje, encontrar próximo dia agendado
+                        $daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                        $currentDayIndex = array_search($currentDay, $daysOfWeek);
+                        
+                        for ($i = 1; $i <= 7; $i++) {
+                            $nextDayIndex = ($currentDayIndex + $i) % 7;
+                            $nextDay = $daysOfWeek[$nextDayIndex];
+                            
+                            if (in_array($nextDay, $scheduledDays)) {
+                                $scheduledAt = date('Y-m-d', strtotime("+{$i} days")) . ' ' . $scheduledTime;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    // Hoje não está nos dias agendados, encontrar o próximo dia
+                    $daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                    $currentDayIndex = array_search($currentDay, $daysOfWeek);
+                    
+                    for ($i = 1; $i <= 7; $i++) {
+                        $nextDayIndex = ($currentDayIndex + $i) % 7;
+                        $nextDay = $daysOfWeek[$nextDayIndex];
+                        
+                        if (in_array($nextDay, $scheduledDays)) {
+                            $scheduledAt = date('Y-m-d', strtotime("+{$i} days")) . ' ' . $template['scheduled_time'];
+                            break;
+                        }
+                    }
+                }
+                
+                error_log("Template '{$templateType}' tem agendamento - Scheduled at: " . ($scheduledAt ?: 'NULL'));
+            }
+            
             $result = addMessageToQueue(
                 $resellerId,
                 $phoneNumber,
                 $message,
                 $template['id'],
                 $clientId,
-                $priority
+                $priority,
+                $scheduledAt
             );
             
             if ($result['success']) {

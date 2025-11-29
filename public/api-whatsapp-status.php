@@ -30,9 +30,13 @@ try {
         throw new Exception('Método não permitido');
     }
     
-    // Buscar sessão mais recente do reseller
+    // Buscar APENAS sessões ativas (não desconectadas)
     $session = Database::fetch(
-        "SELECT * FROM whatsapp_sessions WHERE reseller_id = ? ORDER BY created_at DESC LIMIT 1",
+        "SELECT * FROM whatsapp_sessions 
+         WHERE reseller_id = ? 
+         AND status IN ('connecting', 'qr_code', 'connected')
+         ORDER BY created_at DESC 
+         LIMIT 1",
         [$resellerId]
     );
     

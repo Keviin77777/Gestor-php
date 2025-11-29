@@ -44,41 +44,56 @@ try {
         exit();
     }
     
-    // Buscar configurações
-    $settings = Database::fetch(
-        "SELECT * FROM whatsapp_settings WHERE reseller_id = ?",
-        [$resellerId]
-    );
+    $provider = $session['provider'] ?? 'evolution';
+    error_log("Desconectando sessão {$session['id']} - Provider: {$provider}");
     
-    if ($settings) {
-        // Tentar desconectar da Evolution API
-        $disconnectResult = disconnectEvolutionInstance(
-            $settings['evolution_api_url'], 
-            $settings['evolution_api_key'], 
-            $session['instance_name']
+    // Desconectar da API apropriada
+    if ($provider === 'native') {
+        // API Premium (porta 3000)
+        $nativeApiUrl = env('WHATSAPP_NATIVE_API_URL', 'http://localhost:3000');
+        $instanceName = $session['instance_name'];
+        
+        error_log("Desconectando da API Premium: {$nativeApiUrl}/instance/{$instanceName}/logout");
+        
+        $ch = curl_init($nativeApiUrl . '/instance/' . $instanceName . '/logout');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        error_log("API Premium logout - HTTP Code: {$httpCode}, Response: " . $response);
+    } else {
+        // Evolution API
+        $settings = Database::fetch(
+            "SELECT * FROM whatsapp_settings WHERE reseller_id = ?",
+            [$resellerId]
         );
         
-        if (!$disconnectResult['success']) {
-            error_log("Erro ao desconectar da Evolution API: " . $disconnectResult['error']);
+        if ($settings) {
+            $disconnectResult = disconnectEvolutionInstance(
+                $settings['evolution_api_url'], 
+                $settings['evolution_api_key'], 
+                $session['instance_name']
+            );
+            
+            if (!$disconnectResult['success']) {
+                error_log("Erro ao desconectar da Evolution API: " . $disconnectResult['error']);
+            }
         }
     }
     
-    // Atualizar status no banco
+    // DELETAR a sessão do banco (não apenas atualizar status)
     try {
         Database::query(
-            "UPDATE whatsapp_sessions SET 
-             status = 'disconnected', 
-             qr_code = NULL,
-             profile_name = NULL,
-             profile_picture = NULL,
-             phone_number = NULL,
-             updated_at = CURRENT_TIMESTAMP
-             WHERE id = ?",
+            "DELETE FROM whatsapp_sessions WHERE id = ?",
             [$session['id']]
         );
+        error_log("Sessão {$session['id']} deletada do banco de dados");
     } catch (Exception $dbError) {
-        error_log("Erro ao atualizar sessão: " . $dbError->getMessage());
-        throw new Exception("Erro ao atualizar status da sessão");
+        error_log("Erro ao deletar sessão: " . $dbError->getMessage());
+        throw new Exception("Erro ao remover sessão");
     }
     
     echo json_encode([
