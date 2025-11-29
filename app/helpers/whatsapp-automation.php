@@ -262,9 +262,11 @@ function getClientsForTemplate($template, $resellerId) {
 function prepareTemplateVariables($template, $client) {
     $variables = [
         'cliente_nome' => $client['name'],
+        'cliente_usuario' => $client['username'] ?? 'N/A',
+        'cliente_senha' => $client['iptv_password'] ?? 'N/A',
         'cliente_vencimento' => date('d/m/Y', strtotime($client['renewal_date'])),
-        'cliente_valor' => number_format($client['value'], 2, ',', '.'),
-        'cliente_plano' => $client['plan'],
+        'cliente_valor' => 'R$ ' . number_format($client['value'], 2, ',', '.'),
+        'cliente_plano' => $client['plan'] ?? 'N/A',
         'cliente_servidor' => $client['server'] ?? 'N/A'
     ];
 
