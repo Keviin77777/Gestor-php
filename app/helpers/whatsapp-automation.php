@@ -270,19 +270,26 @@ function prepareTemplateVariables($template, $client) {
         'cliente_servidor' => $client['server'] ?? 'N/A'
     ];
 
-    // Sempre tentar adicionar payment_link se houver fatura pendente
-    if (true) {
-        // Buscar fatura mais recente do cliente
-        $invoice = Database::fetch(
-            "SELECT id FROM invoices 
-             WHERE client_id = ? 
-             AND status = 'pending'
-             ORDER BY created_at DESC 
-             LIMIT 1",
-            [$client['id']]
-        );
+    // Buscar fatura mais recente do cliente (pendente ou paga)
+    $invoice = Database::fetch(
+        "SELECT * FROM invoices 
+         WHERE client_id = ? 
+         ORDER BY created_at DESC 
+         LIMIT 1",
+        [$client['id']]
+    );
+    
+    if ($invoice) {
+        // Variáveis de fatura
+        $variables['fatura_valor'] = 'R$ ' . number_format($invoice['final_value'], 2, ',', '.');
+        $variables['fatura_vencimento'] = date('d/m/Y', strtotime($invoice['due_date']));
         
-        if ($invoice) {
+        // Calcular período da fatura (mês/ano)
+        $issueDate = new DateTime($invoice['issue_date']);
+        $variables['fatura_periodo'] = strftime('%B/%Y', $issueDate->getTimestamp());
+        
+        // Se a fatura estiver pendente, adicionar payment_link
+        if ($invoice['status'] === 'pending') {
             // Obter domínio do sistema - priorizar APP_URL do .env
             $baseUrl = env('APP_URL');
             
@@ -293,34 +300,16 @@ function prepareTemplateVariables($template, $client) {
                 $baseUrl = $protocol . '://' . $host;
             }
             
-            // Verificar qual método de pagamento está ativo para o revendedor
-            $resellerId = $client['reseller_id'] ?? null;
-            $paymentLink = '';
-            
-            if ($resellerId) {
-                // Buscar métodos de pagamento ativos (prioridade: Asaas > Mercado Pago > EFI Bank)
-                $activeMethod = Database::fetch(
-                    "SELECT provider FROM payment_methods 
-                     WHERE reseller_id = ? AND is_active = 1
-                     ORDER BY FIELD(provider, 'asaas', 'mercadopago', 'efibank')
-                     LIMIT 1",
-                    [$resellerId]
-                );
-                
-                if ($activeMethod) {
-                    $paymentLink = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
-                } else {
-                    $paymentLink = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
-                }
-            } else {
-                // Sem reseller_id, usar checkout padrão
-                $paymentLink = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
-            }
-            
-            $variables['payment_link'] = $paymentLink;
+            $variables['payment_link'] = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
         } else {
             $variables['payment_link'] = '';
         }
+    } else {
+        // Sem fatura, usar valores do cliente
+        $variables['fatura_valor'] = 'R$ ' . number_format($client['value'], 2, ',', '.');
+        $variables['fatura_vencimento'] = date('d/m/Y', strtotime($client['renewal_date']));
+        $variables['fatura_periodo'] = strftime('%B/%Y', strtotime($client['renewal_date']));
+        $variables['payment_link'] = '';
     }
 
     // Adicionar variáveis específicas do template se necessário
