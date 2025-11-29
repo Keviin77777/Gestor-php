@@ -284,9 +284,16 @@ function prepareTemplateVariables($template, $client) {
         $variables['fatura_valor'] = 'R$ ' . number_format($invoice['final_value'], 2, ',', '.');
         $variables['fatura_vencimento'] = date('d/m/Y', strtotime($invoice['due_date']));
         
-        // Calcular período da fatura (mês/ano)
+        // Calcular período da fatura (mês/ano) - usando IntlDateFormatter para PHP 8.1+
         $issueDate = new DateTime($invoice['issue_date']);
-        $variables['fatura_periodo'] = strftime('%B/%Y', $issueDate->getTimestamp());
+        $monthNames = [
+            1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
+            5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
+            9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
+        ];
+        $month = (int)$issueDate->format('n');
+        $year = $issueDate->format('Y');
+        $variables['fatura_periodo'] = $monthNames[$month] . '/' . $year;
         
         // Se a fatura estiver pendente, adicionar payment_link
         if ($invoice['status'] === 'pending') {
@@ -308,7 +315,17 @@ function prepareTemplateVariables($template, $client) {
         // Sem fatura, usar valores do cliente
         $variables['fatura_valor'] = 'R$ ' . number_format($client['value'], 2, ',', '.');
         $variables['fatura_vencimento'] = date('d/m/Y', strtotime($client['renewal_date']));
-        $variables['fatura_periodo'] = strftime('%B/%Y', strtotime($client['renewal_date']));
+        
+        // Calcular período baseado na data de renovação
+        $renewalDate = new DateTime($client['renewal_date']);
+        $monthNames = [
+            1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
+            5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
+            9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
+        ];
+        $month = (int)$renewalDate->format('n');
+        $year = $renewalDate->format('Y');
+        $variables['fatura_periodo'] = $monthNames[$month] . '/' . $year;
         $variables['payment_link'] = '';
     }
 

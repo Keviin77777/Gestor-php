@@ -3,6 +3,10 @@
  * API para enviar mensagens WhatsApp
  */
 
+// Suprimir warnings e notices para não quebrar o JSON
+error_reporting(E_ERROR | E_PARSE);
+ini_set('display_errors', '0');
+
 // Limpar qualquer output anterior
 if (ob_get_level()) {
     ob_clean();
