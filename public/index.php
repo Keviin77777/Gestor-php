@@ -152,6 +152,22 @@ switch ($path) {
         }
         break;
         
+    case '/clients/import':
+        // Página de importação de clientes
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $importFile = __DIR__ . '/../app/views/clients/import.php';
+        if (file_exists($importFile)) {
+            include $importFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
     case '/servers':
     case '/servidores':
         // Página de servidores (suporta ambas as rotas)

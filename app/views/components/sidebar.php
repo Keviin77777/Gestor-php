@@ -215,7 +215,7 @@ try {
         
         <!-- Menu Comum: Clientes (para todos os usuários) -->
             <div class="nav-group">
-                <a href="#" class="nav-item has-submenu <?= in_array($currentPath, ['/clients', '/plans', '/applications']) ? 'active' : '' ?>" onclick="toggleSubmenu(event, 'clients-submenu')">
+                <a href="#" class="nav-item has-submenu <?= in_array($currentPath, ['/clients', '/clients/import', '/plans', '/applications']) ? 'active' : '' ?>" onclick="toggleSubmenu(event, 'clients-submenu')">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                         <circle cx="9" cy="7" r="4"></circle>
@@ -227,7 +227,7 @@ try {
                         <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
                 </a>
-                <div class="submenu <?= in_array($currentPath, ['/clients', '/plans', '/applications']) ? 'expanded' : '' ?>" id="clients-submenu">
+                <div class="submenu <?= in_array($currentPath, ['/clients', '/clients/import', '/plans', '/applications']) ? 'expanded' : '' ?>" id="clients-submenu">
                     <a href="/clients" class="submenu-item <?= $currentPath === '/clients' ? 'active' : '' ?>">
                         <svg class="submenu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -251,6 +251,14 @@ try {
                             <line x1="12" y1="17" x2="12" y2="21"></line>
                         </svg>
                         <span>Aplicativos</span>
+                    </a>
+                    <a href="/clients/import" class="submenu-item <?= $currentPath === '/clients/import' ? 'active' : '' ?>">
+                        <svg class="submenu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span>Importar</span>
                     </a>
                 </div>
             </div>

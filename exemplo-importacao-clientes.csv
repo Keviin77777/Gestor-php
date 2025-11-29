@@ -1,0 +1,4 @@
+nome,usuario_iptv,senha_iptv,whatsapp,vencimento,servidor,aplicativo,mac,plano,email
+João Silva,joao123,senha123,11987654321,2024-12-31,Servidor Principal,NextApp,00:1A:2B:3C:4D:5E,Premium,joao.silva@email.com
+Maria Santos,maria456,senha456,11976543210,2024-12-25,Servidor Principal,SmartIPTV,00:1A:2B:3C:4D:5F,Básico,maria.santos@email.com
+Pedro Oliveira,pedro789,senha789,11965432109,2024-12-20,Servidor Secundário,IPTV Smarters,00:1A:2B:3C:4D:60,VIP,pedro.oliveira@email.com
