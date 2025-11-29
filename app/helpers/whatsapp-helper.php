@@ -324,29 +324,12 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
                 $currentDay = strtolower(date('l')); // monday, tuesday, etc.
                 $scheduledDays = json_decode($template['scheduled_days'], true) ?: [];
                 
-                // Se hoje está nos dias agendados
+                // Se hoje está nos dias agendados, SEMPRE usar hoje (mesmo se o horário já passou)
                 if (in_array($currentDay, $scheduledDays)) {
                     $scheduledTime = $template['scheduled_time'];
-                    $todayScheduled = date('Y-m-d') . ' ' . $scheduledTime;
+                    $scheduledAt = date('Y-m-d') . ' ' . $scheduledTime;
                     
-                    // Se o horário ainda não passou hoje, usar hoje
-                    if (strtotime($todayScheduled) > time()) {
-                        $scheduledAt = $todayScheduled;
-                    } else {
-                        // Horário já passou hoje, encontrar próximo dia agendado
-                        $daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-                        $currentDayIndex = array_search($currentDay, $daysOfWeek);
-                        
-                        for ($i = 1; $i <= 7; $i++) {
-                            $nextDayIndex = ($currentDayIndex + $i) % 7;
-                            $nextDay = $daysOfWeek[$nextDayIndex];
-                            
-                            if (in_array($nextDay, $scheduledDays)) {
-                                $scheduledAt = date('Y-m-d', strtotime("+{$i} days")) . ' ' . $scheduledTime;
-                                break;
-                            }
-                        }
-                    }
+                    error_log("Template '{$templateType}' agendado para HOJE: {$scheduledAt}");
                 } else {
                     // Hoje não está nos dias agendados, encontrar o próximo dia
                     $daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -361,9 +344,9 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
                             break;
                         }
                     }
+                    
+                    error_log("Template '{$templateType}' agendado para próximo dia: {$scheduledAt}");
                 }
-                
-                error_log("Template '{$templateType}' tem agendamento - Scheduled at: " . ($scheduledAt ?: 'NULL'));
             }
             
             // Verificar se já existe mensagem pendente deste template para este cliente

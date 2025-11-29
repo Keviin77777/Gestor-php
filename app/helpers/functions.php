@@ -3,6 +3,9 @@
  * Funções auxiliares globais
  */
 
+// Definir timezone padrão para todo o sistema
+date_default_timezone_set('America/Sao_Paulo');
+
 /**
  * Carregar variáveis de ambiente do arquivo .env
  */

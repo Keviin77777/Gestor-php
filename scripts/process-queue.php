@@ -7,6 +7,9 @@
  * Ou configure no cron: * * * * * php /caminho/scripts/process-queue.php
  */
 
+// Definir timezone
+date_default_timezone_set('America/Sao_Paulo');
+
 require_once __DIR__ . '/../app/helpers/functions.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../app/core/Database.php';
