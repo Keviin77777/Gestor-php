@@ -90,7 +90,7 @@ try {
  * GET - Obter configurações de um método de pagamento
  */
 function handleGet($db) {
-    global $isAdmin;
+    global $isAdmin, $user;
     
     $paymentMethod = $_GET['method'] ?? null;
     
@@ -105,13 +105,13 @@ function handleGet($db) {
         return;
     }
     
-    // Buscar configuração no banco
+    // Buscar configuração no banco para o reseller específico
     $stmt = $db->prepare("
         SELECT config_value, enabled, updated_at 
         FROM payment_methods 
-        WHERE method_name = ?
+        WHERE method_name = ? AND reseller_id = ?
     ");
-    $stmt->execute([$paymentMethod]);
+    $stmt->execute([$paymentMethod, $user['id']]);
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($result) {
@@ -139,7 +139,7 @@ function handleGet($db) {
  * POST - Salvar ou testar configurações
  */
 function handlePost($db) {
-    global $isAdmin;
+    global $isAdmin, $user;
     
     $input = json_decode(file_get_contents('php://input'), true);
     $action = $_GET['action'] ?? 'save';
@@ -184,9 +184,9 @@ function handlePost($db) {
         $config['sandbox'] = false;
     }
     
-    // Verificar se já existe
-    $stmt = $db->prepare("SELECT id FROM payment_methods WHERE method_name = ?");
-    $stmt->execute([$paymentMethod]);
+    // Verificar se já existe para este reseller
+    $stmt = $db->prepare("SELECT id FROM payment_methods WHERE method_name = ? AND reseller_id = ?");
+    $stmt->execute([$paymentMethod, $user['id']]);
     $exists = $stmt->fetch();
     
     // Preparar configuração baseada no método
@@ -218,20 +218,22 @@ function handlePost($db) {
         $stmt = $db->prepare("
             UPDATE payment_methods 
             SET config_value = ?, enabled = ?, updated_at = NOW()
-            WHERE method_name = ?
+            WHERE method_name = ? AND reseller_id = ?
         ");
         $stmt->execute([
             $configJson,
             $config['enabled'] ? 1 : 0,
-            $paymentMethod
+            $paymentMethod,
+            $user['id']
         ]);
     } else {
         // Inserir
         $stmt = $db->prepare("
-            INSERT INTO payment_methods (method_name, config_value, enabled, created_at, updated_at)
-            VALUES (?, ?, ?, NOW(), NOW())
+            INSERT INTO payment_methods (reseller_id, method_name, config_value, enabled, created_at, updated_at)
+            VALUES (?, ?, ?, ?, NOW(), NOW())
         ");
         $stmt->execute([
+            $user['id'],
             $paymentMethod,
             $configJson,
             $config['enabled'] ? 1 : 0

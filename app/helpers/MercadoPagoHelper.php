@@ -30,13 +30,22 @@ class MercadoPagoHelper {
      */
     private function loadConfig() {
         try {
+            // Obter reseller_id da sessão ou contexto
+            $resellerId = $this->getResellerId();
+            
+            if (!$resellerId) {
+                error_log("Mercado Pago: reseller_id não encontrado");
+                $this->enabled = false;
+                return;
+            }
+            
             $db = Database::connect();
             $stmt = $db->prepare("
                 SELECT config_value, enabled 
                 FROM payment_methods 
-                WHERE method_name = 'mercadopago'
+                WHERE method_name = 'mercadopago' AND reseller_id = ?
             ");
-            $stmt->execute();
+            $stmt->execute([$resellerId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($result) {
@@ -51,6 +60,29 @@ class MercadoPagoHelper {
             error_log("Erro ao carregar config Mercado Pago: " . $e->getMessage());
             $this->enabled = false;
         }
+    }
+    
+    /**
+     * Obter reseller_id do contexto atual
+     */
+    private function getResellerId() {
+        // Tentar obter da sessão
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (isset($_SESSION['user_id'])) {
+            return $_SESSION['user_id'];
+        }
+        
+        // Tentar obter do Auth
+        require_once __DIR__ . '/../core/Auth.php';
+        $user = Auth::user();
+        if ($user && isset($user['id'])) {
+            return $user['id'];
+        }
+        
+        return null;
     }
     
     /**

@@ -223,6 +223,9 @@ try {
             // Criar configurações WhatsApp padrão
             createDefaultWhatsAppSettings($userId);
             
+            // Criar métodos de pagamento padrão (vazios)
+            createDefaultPaymentMethods($userId);
+            
             // Iniciar sessão
             session_start();
             $_SESSION['user_id'] = $userId;
@@ -512,6 +515,56 @@ function createDefaultWhatsAppSettings($userId) {
     } catch (Exception $e) {
         error_log('Error creating WhatsApp settings: ' . $e->getMessage());
     }
+}
+
+/**
+ * Criar métodos de pagamento padrão (vazios) para novo usuário
+ */
+function createDefaultPaymentMethods($userId) {
+    error_log("Criando métodos de pagamento padrão para usuário: $userId");
+    
+    $paymentMethods = [
+        [
+            'method_name' => 'mercadopago',
+            'config_value' => json_encode([
+                'public_key' => '',
+                'access_token' => ''
+            ]),
+            'enabled' => 0
+        ],
+        [
+            'method_name' => 'asaas',
+            'config_value' => json_encode([
+                'api_key' => '',
+                'sandbox' => false
+            ]),
+            'enabled' => 0
+        ]
+    ];
+    
+    foreach ($paymentMethods as $method) {
+        try {
+            error_log("Criando método de pagamento: " . $method['method_name'] . " para usuário: $userId");
+            
+            Database::query(
+                "INSERT INTO payment_methods (reseller_id, method_name, config_value, enabled, created_at, updated_at) 
+                 VALUES (?, ?, ?, ?, NOW(), NOW())",
+                [
+                    $userId,
+                    $method['method_name'],
+                    $method['config_value'],
+                    $method['enabled']
+                ]
+            );
+            
+            error_log("Método de pagamento criado com sucesso: " . $method['method_name']);
+        } catch (Exception $e) {
+            // Log error but continue with other methods
+            error_log('Error creating payment method ' . $method['method_name'] . ': ' . $e->getMessage());
+        }
+    }
+    
+    error_log("Finalizada criação de métodos de pagamento para usuário: $userId");
 }
 
 // Garantir que não há output extra
