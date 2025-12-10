@@ -115,6 +115,16 @@
                         </div>
                     </div>
 
+                    <div class="alert alert-success">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4"></path>
+                            <circle cx="12" cy="12" r="10"></circle>
+                        </svg>
+                        <div>
+                            <strong>SUPORTE SIGMA:</strong> O sistema detecta automaticamente exportações do painel Sigma (CSV) e mapeia os campos corretamente
+                        </div>
+                    </div>
+
                     <div class="fields-grid">
                         <div class="field-card required">
                             <div class="field-icon">
@@ -221,7 +231,7 @@
 
                 <div class="upload-section">
                     <div class="upload-area" id="uploadArea">
-                        <input type="file" id="fileInput" accept=".xlsx" style="display: none;" onchange="handleFileSelect(event)">
+                        <input type="file" id="fileInput" accept=".xlsx,.csv" style="display: none;" onchange="handleFileSelect(event)">
                         <div class="upload-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -229,7 +239,7 @@
                             </svg>
                         </div>
                         <h3>Arraste o arquivo aqui ou clique para selecionar</h3>
-                        <p>Apenas arquivos .xlsx são aceitos</p>
+                        <p>Arquivos .xlsx ou .csv são aceitos</p>
                         <button class="btn-secondary" onclick="document.getElementById('fileInput').click()">
                             Selecionar Arquivo
                         </button>
@@ -254,9 +264,20 @@
                         </button>
                     </div>
 
-                    <button class="btn-primary btn-large" id="continueBtn" style="display: none;" onclick="processFile()">
-                        Continuar para Preview
-                    </button>
+                    <div class="upload-buttons">
+                        <button class="btn-secondary btn-compact" id="csvConvertBtn" style="display: none;" onclick="convertCsvToXlsx()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Baixar como XLSX
+                        </button>
+
+                        <button class="btn-primary btn-large" id="continueBtn" style="display: none;" onclick="processFile()">
+                            Continuar para Preview
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -315,42 +336,72 @@
                 </div>
 
                 <div class="import-actions-top">
-                    <div class="bulk-actions">
-                        <div class="bulk-action-group">
-                            <label>Servidor para Todos</label>
-                            <select id="bulkServer" onchange="applyBulkServer(this.value)">
-                                <option value="">Selecione...</option>
-                            </select>
+                    <div class="bulk-actions-row">
+                        <div class="bulk-actions">
+                            <div class="bulk-action-group">
+                                <label>Servidor para Todos</label>
+                                <select id="bulkServer" onchange="applyBulkServer(this.value)">
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                            <div class="bulk-action-group">
+                                <label>Plano para Todos</label>
+                                <select id="bulkPlan" onchange="applyBulkPlan(this.value)">
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                            <div class="bulk-action-group">
+                                <label>App para Todos</label>
+                                <select id="bulkApp" onchange="applyBulkApp(this.value)">
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="bulk-action-group">
-                            <label>Plano para Todos</label>
-                            <select id="bulkPlan" onchange="applyBulkPlan(this.value)">
-                                <option value="">Selecione...</option>
-                            </select>
-                        </div>
-                        <div class="bulk-action-group">
-                            <label>App para Todos</label>
-                            <select id="bulkApp" onchange="applyBulkApp(this.value)">
-                                <option value="">Selecione...</option>
-                            </select>
+                        <div class="action-buttons">
+                            <button class="btn-secondary-action" onclick="showUploadStep()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                                    <polyline points="12 19 5 12 12 5"></polyline>
+                                </svg>
+                                Cancelar
+                            </button>
+                            <button class="btn-primary-action" id="importBtn" onclick="importClients()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                Importar Clientes
+                            </button>
                         </div>
                     </div>
-                    <div class="action-buttons">
-                        <button class="btn-secondary-action" onclick="showUploadStep()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="19" y1="12" x2="5" y2="12"></line>
-                                <polyline points="12 19 5 12 12 5"></polyline>
-                            </svg>
-                            Cancelar
-                        </button>
-                        <button class="btn-primary-action" id="importBtn" onclick="importClients()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="17 8 12 3 7 8"></polyline>
-                                <line x1="12" y1="3" x2="12" y2="15"></line>
-                            </svg>
-                            Importar Clientes
-                        </button>
+                    
+                    <div class="quick-actions-row">
+                        <label>Ações Rápidas</label>
+                        <div class="quick-actions-buttons">
+                            <button class="btn-create-plans" onclick="createPlansFromSpreadsheet()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Criar Planos
+                            </button>
+                            <button class="btn-remove-expired" onclick="removeExpiredClients()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                                </svg>
+                                Excluir Vencidos
+                            </button>
+                            <button class="btn-remove-tests" onclick="removeTestClients()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                Excluir Testes
+                            </button>
+                        </div>
                     </div>
                 </div>
 

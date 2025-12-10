@@ -86,12 +86,20 @@ try {
 
     foreach ($clients as $client) {
         try {
-            // Validar campos obrigatórios
+            // Validar campos obrigatórios (email é opcional)
             if (empty($client['name']) || empty($client['username']) || 
                 empty($client['iptv_password']) || empty($client['phone']) || 
-                empty($client['renewal_date']) || empty($client['server']) || 
-                empty($client['email'])) {
-                $errors[] = "Cliente {$client['index']}: Campos obrigatórios faltando";
+                empty($client['renewal_date']) || empty($client['server'])) {
+                
+                $missingFields = [];
+                if (empty($client['name'])) $missingFields[] = 'nome';
+                if (empty($client['username'])) $missingFields[] = 'usuário';
+                if (empty($client['iptv_password'])) $missingFields[] = 'senha';
+                if (empty($client['phone'])) $missingFields[] = 'telefone';
+                if (empty($client['renewal_date'])) $missingFields[] = 'vencimento';
+                if (empty($client['server'])) $missingFields[] = 'servidor';
+                
+                $errors[] = "Cliente {$client['index']}: Campos obrigatórios faltando (" . implode(', ', $missingFields) . ")";
                 continue;
             }
 
@@ -104,7 +112,7 @@ try {
             // Formatar data de vencimento
             $renewalDate = formatDateForDB($client['renewal_date']);
             if (!$renewalDate) {
-                $errors[] = "Cliente {$client['index']}: Data de vencimento inválida";
+                $errors[] = "Cliente {$client['index']}: Data de vencimento inválida ('{$client['renewal_date']}')";
                 continue;
             }
 
@@ -117,7 +125,7 @@ try {
                 $applicationId = $applicationMap[$client['application']];
             }
 
-            // Inserir cliente
+            // Inserir cliente (email pode ser vazio)
             Database::insert(
                 "INSERT INTO clients (
                     id, reseller_id, name, email, phone, username, iptv_password, 
@@ -128,7 +136,7 @@ try {
                     $clientId,
                     $user['id'],
                     $client['name'],
-                    $client['email'],
+                    $client['email'] ?? '',
                     $client['phone'],
                     $client['username'],
                     $client['iptv_password'],
@@ -216,6 +224,11 @@ function formatDateForDB($dateString) {
     // Se já estiver no formato YYYY-MM-DD, retornar
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateString)) {
         return $dateString;
+    }
+
+    // Formato Sigma: YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD
+    if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $dateString)) {
+        return explode(' ', $dateString)[0];
     }
 
     // Converter DD/MM/YYYY para YYYY-MM-DD

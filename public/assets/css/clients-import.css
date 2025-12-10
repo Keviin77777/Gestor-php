@@ -227,11 +227,36 @@ body {
 }
 
 .btn-large {
-    padding: 1.25rem 2.5rem;
-    font-size: 1.125rem;
+    padding: 0.875rem 1.75rem;
+    font-size: 0.9375rem;
     width: 100%;
-    max-width: 400px;
-    margin: 2rem auto 0;
+    max-width: 280px;
+    margin: 1rem auto 0;
+}
+
+.btn-large svg {
+    width: 18px;
+    height: 18px;
+}
+
+.btn-compact {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    max-width: 220px;
+    margin: 0.75rem auto 0;
+}
+
+.btn-compact svg {
+    width: 16px;
+    height: 16px;
+}
+
+.upload-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
 }
 
 /* Required Fields */
@@ -577,17 +602,17 @@ body {
     background: var(--bg-tertiary);
 }
 
-/* Larguras específicas para cada coluna (8 colunas) */
-.preview-table th:nth-child(1) { width: 4%; text-align: center; } /* # */
-.preview-table th:nth-child(2) { width: 18%; } /* Nome */
-.preview-table th:nth-child(3) { width: 12%; } /* Usuário */
-.preview-table th:nth-child(4) { width: 12%; } /* Senha */
-.preview-table th:nth-child(5) { width: 12%; } /* WhatsApp */
-.preview-table th:nth-child(6) { width: 11%; } /* Vencimento */
-.preview-table th:nth-child(7) { width: 13%; } /* Servidor */
+/* Larguras específicas para cada coluna (10 colunas) */
+.preview-table th:nth-child(1) { width: 3%; text-align: center; } /* # */
+.preview-table th:nth-child(2) { width: 16%; } /* Nome */
+.preview-table th:nth-child(3) { width: 11%; } /* Usuário */
+.preview-table th:nth-child(4) { width: 11%; } /* Senha */
+.preview-table th:nth-child(5) { width: 11%; } /* WhatsApp */
+.preview-table th:nth-child(6) { width: 13%; } /* Vencimento - AUMENTADO */
+.preview-table th:nth-child(7) { width: 12%; } /* Servidor */
 .preview-table th:nth-child(8) { width: 11%; } /* Plano */
-.preview-table th:nth-child(9) { width: 12%; } /* App */
-.preview-table th:nth-child(10) { width: 10%; text-align: center; } /* Status */
+.preview-table th:nth-child(9) { width: 11%; } /* App */
+.preview-table th:nth-child(10) { width: 9%; text-align: center; } /* Status */
 
 .preview-table td {
     padding: 0.75rem;
@@ -671,6 +696,19 @@ body {
 
 .preview-table input[type="date"] {
     cursor: pointer;
+    min-width: 140px; /* Largura mínima para mostrar dd/mm/yyyy completo */
+}
+
+/* Ajustar ícone do calendário no Chrome/Edge */
+.preview-table input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    margin-left: 0.25rem;
+}
+
+.preview-table input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
 }
 
 .preview-table input[type="text"]:read-only {
@@ -726,14 +764,21 @@ body {
 /* Import Actions Top */
 .import-actions-top {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1.5rem;
+    flex-direction: column;
+    gap: 0;
     margin-bottom: 1.5rem;
     padding: 1rem 1.5rem;
     background: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: 12px;
+}
+
+.bulk-actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .bulk-actions {
@@ -785,10 +830,111 @@ body {
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
+.btn-create-plans {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: linear-gradient(135deg, var(--success), #059669);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-create-plans:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-create-plans svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.quick-actions-row {
+    width: 100%;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.quick-actions-row > label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+}
+
+.quick-actions-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.btn-create-plans,
+.btn-remove-expired,
+.btn-remove-tests {
+    flex: 1;
+    min-width: 0;
+}
+
+.btn-remove-expired,
+.btn-remove-tests {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-remove-expired {
+    background: linear-gradient(135deg, var(--danger), #dc2626);
+}
+
+.btn-remove-expired:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-remove-tests {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+}
+
+.btn-remove-tests:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-remove-expired svg,
+.btn-remove-tests svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
 .action-buttons {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 1rem;
+    flex-shrink: 0;
 }
 
 .btn-primary-action,
@@ -907,7 +1053,7 @@ body {
 
     /* Manter layout da tabela igual ao desktop */
     .preview-table {
-        min-width: 1000px; /* Força largura mínima para scroll horizontal (8 colunas) */
+        min-width: 1100px; /* Força largura mínima para scroll horizontal (10 colunas) */
     }
 
     /* Manter tamanhos dos campos */
@@ -957,6 +1103,12 @@ body {
         padding: 1rem;
     }
 
+    .bulk-actions-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
     .bulk-actions {
         flex-direction: column;
         width: 100%;
@@ -969,23 +1121,24 @@ body {
     }
 
     .action-buttons {
-        flex-direction: column;
+        flex-direction: column-reverse;
         width: 100%;
         gap: 0.75rem;
+        align-items: stretch;
     }
 
     .btn-primary-action,
     .btn-secondary-action {
         width: 100%;
         justify-content: center;
-        padding: 0.75rem 1.5rem;
-        font-size: 0.875rem;
+        padding: 0.875rem 1.5rem;
+        font-size: 0.9375rem;
     }
 
     .btn-primary-action svg,
     .btn-secondary-action svg {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
     }
 
     .alert {
@@ -996,6 +1149,37 @@ body {
     .alert svg {
         width: 18px;
         height: 18px;
+    }
+
+    .btn-large,
+    .btn-compact {
+        max-width: 100%;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.875rem;
+    }
+
+    .upload-buttons {
+        width: 100%;
+    }
+
+    .btn-create-plans,
+    .btn-remove-expired,
+    .btn-remove-tests {
+        width: 100%;
+        justify-content: center;
+        padding: 0.75rem 1rem;
+        font-size: 0.8125rem;
+        min-width: auto;
+    }
+    
+    .quick-actions-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .quick-actions-row {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
     }
 
     /* Indicador de scroll */
@@ -1019,6 +1203,6 @@ body {
 
     /* Manter largura mínima da tabela para scroll */
     .preview-table {
-        min-width: 950px;
+        min-width: 1100px;
     }
 }
