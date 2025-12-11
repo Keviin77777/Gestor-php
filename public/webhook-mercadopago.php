@@ -138,16 +138,22 @@ try {
             
             // Buscar dados do cliente para renovar acesso
             $stmt = $db->prepare("
-                SELECT c.*, i.value, i.due_date, c.reseller_id
+                SELECT c.*, i.value, i.due_date, c.reseller_id, p.duration_days
                 FROM invoices i
                 JOIN clients c ON i.client_id = c.id
+                LEFT JOIN plans p ON c.plan_id = p.id
                 WHERE i.id = ?
             ");
             $stmt->execute([$invoiceId]);
             $client = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($client) {
-                // Calcular nova data de renovação (adicionar 30 dias à data atual de renovação)
+                // Buscar duração do plano (padrão 30 dias se não encontrar)
+                $durationDays = $client['duration_days'] ?? 30;
+                
+                file_put_contents($logFile, "📅 Duração do plano: {$durationDays} dias\n", FILE_APPEND);
+                
+                // Calcular nova data de renovação
                 $currentRenewal = new DateTime($client['renewal_date']);
                 $now = new DateTime();
                 
@@ -156,8 +162,8 @@ try {
                     $currentRenewal = $now;
                 }
                 
-                // Adicionar 30 dias (ou período da fatura)
-                $currentRenewal->modify('+30 days');
+                // Adicionar dias conforme duração do plano
+                $currentRenewal->modify("+{$durationDays} days");
                 
                 // Atualizar cliente no gestor
                 $stmt = $db->prepare("
@@ -304,7 +310,20 @@ try {
             
             file_put_contents($logFile, "✅ Fatura #$invoiceId marcada como PAGA\n", FILE_APPEND);
             
-            // Renovar cliente automaticamente (adicionar 30 dias)
+            // Buscar duração do plano do cliente
+            $stmt = $db->prepare("
+                SELECT p.duration_days 
+                FROM clients c
+                LEFT JOIN plans p ON c.plan_id = p.id
+                WHERE c.id = ?
+            ");
+            $stmt->execute([$invoice['client_id']]);
+            $planData = $stmt->fetch(PDO::FETCH_ASSOC);
+            $durationDays = $planData['duration_days'] ?? 30;
+            
+            file_put_contents($logFile, "📅 Duração do plano: {$durationDays} dias\n", FILE_APPEND);
+            
+            // Renovar cliente automaticamente
             $currentRenewal = new DateTime($invoice['renewal_date']);
             $now = new DateTime();
             
@@ -313,8 +332,8 @@ try {
                 $currentRenewal = $now;
             }
             
-            // Adicionar 30 dias
-            $currentRenewal->modify('+30 days');
+            // Adicionar dias conforme duração do plano
+            $currentRenewal->modify("+{$durationDays} days");
             
             // Atualizar cliente no gestor
             $stmt = $db->prepare("

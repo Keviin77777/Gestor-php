@@ -137,16 +137,22 @@ try {
         
         error_log("✅ Fatura marcada como paga: {$payment['invoice_id']}");
         
-        // Buscar dados completos do cliente
+        // Buscar dados completos do cliente COM duração do plano
         $client = Database::fetch(
-            "SELECT c.*, i.value, i.due_date
+            "SELECT c.*, i.value, i.due_date, p.duration_days
              FROM clients c
              JOIN invoices i ON i.client_id = c.id
+             LEFT JOIN plans p ON c.plan_id = p.id
              WHERE i.id = ?",
             [$payment['invoice_id']]
         );
         
         if ($client) {
+            // Buscar duração do plano (padrão 30 dias se não encontrar)
+            $durationDays = $client['duration_days'] ?? 30;
+            
+            error_log("📅 Duração do plano: {$durationDays} dias");
+            
             // Calcular nova data de renovação
             $currentRenewal = new DateTime($client['renewal_date']);
             $now = new DateTime();
@@ -155,7 +161,7 @@ try {
                 $currentRenewal = $now;
             }
             
-            $currentRenewal->modify('+30 days');
+            $currentRenewal->modify("+{$durationDays} days");
             $newRenewalDate = $currentRenewal->format('Y-m-d');
             
             // Atualizar cliente no gestor
