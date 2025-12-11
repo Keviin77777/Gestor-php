@@ -123,9 +123,9 @@ try {
                     
                     $clientRenewed = true;
                     
-                    // Sincronizar renovação com Sigma
+                    // Renovar cliente no Sigma após pagamento
                     try {
-                        error_log("🔄 INICIANDO SINCRONIZAÇÃO SIGMA - RENOVAÇÃO POR PAGAMENTO");
+                        error_log("🔄 INICIANDO RENOVAÇÃO SIGMA - PAGAMENTO CONFIRMADO");
                         error_log("Cliente ID: {$clientId}");
                         error_log("Fatura ID: {$invoiceId}");
                         
@@ -138,7 +138,8 @@ try {
                         );
                         
                         if ($clientData) {
-                            $sigmaResult = syncClientWithSigmaAfterSave($clientData, $user['id']);
+                            // Usar função específica de renovação após pagamento
+                            $sigmaResult = renewClientInSigmaAfterPayment($clientData, $user['id']);
                             
                             if ($sigmaResult['success']) {
                                 error_log("✅ Cliente renovado no Sigma com sucesso: " . $sigmaResult['message']);
@@ -146,11 +147,11 @@ try {
                                 error_log("❌ Erro ao renovar cliente no Sigma: " . $sigmaResult['message']);
                             }
                         } else {
-                            error_log("⚠️ Cliente não encontrado para sincronização Sigma");
+                            error_log("⚠️ Cliente não encontrado para renovação Sigma");
                             $sigmaResult = ['success' => false, 'message' => 'Cliente não encontrado'];
                         }
                     } catch (Exception $e) {
-                        error_log("❌ Exceção na sincronização Sigma: " . $e->getMessage());
+                        error_log("❌ Exceção na renovação Sigma: " . $e->getMessage());
                     }
                     
                     // Enviar mensagem WhatsApp de renovação

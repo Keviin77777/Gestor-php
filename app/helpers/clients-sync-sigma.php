@@ -182,23 +182,26 @@ function syncClientWithSigmaAfterSave($clientData, $reseller_id) {
         }
         
         if ($existingCustomer) {
-            // Cliente existe - renovar
-            error_log("🔄 Renovando cliente no Sigma...");
+            // Cliente existe - APENAS sincronizar status, NÃO renovar
+            // A renovação só deve acontecer quando uma fatura for paga ou renovação manual
+            error_log("ℹ️ Cliente já existe no Sigma - sincronizando apenas status (sem renovar)");
             
-            $renewResult = $sigmaAPI->renewCustomer($username, $packageId);
-            
-            // Atualizar status
+            // Atualizar apenas o status se necessário
             $sigmaStatus = ($clientData['status'] === 'active') ? 'ACTIVE' : 'INACTIVE';
-            $sigmaAPI->updateCustomerStatus($username, $sigmaStatus);
             
-            error_log("✅ Cliente renovado no Sigma com sucesso");
+            try {
+                $sigmaAPI->updateCustomerStatus($username, $sigmaStatus);
+                error_log("✅ Status do cliente atualizado no Sigma: " . $sigmaStatus);
+            } catch (Exception $e) {
+                error_log("⚠️ Erro ao atualizar status: " . $e->getMessage());
+            }
             
             return [
                 'success' => true,
-                'action' => 'renewed',
-                'message' => 'Cliente renovado no Sigma',
+                'action' => 'synced',
+                'message' => 'Cliente já existe no Sigma - status sincronizado (data de vencimento mantida)',
                 'username' => $username,
-                'data' => $renewResult
+                'note' => 'Para renovar o cliente no Sigma, marque uma fatura como paga ou use a opção de renovação manual'
             ];
             
         } else {
@@ -250,6 +253,146 @@ function syncClientWithSigmaAfterSave($clientData, $reseller_id) {
         return [
             'success' => false,
             'message' => 'Erro na sincronização Sigma: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Renovar cliente no Sigma após pagamento de fatura
+ * Esta função DEVE ser chamada apenas quando uma fatura for paga
+ */
+function renewClientInSigmaAfterPayment($clientData, $reseller_id) {
+    try {
+        error_log("🔥 RENOVAÇÃO SIGMA - PAGAMENTO CONFIRMADO - Cliente: " . $clientData['name']);
+        
+        // Buscar servidor Sigma configurado para este reseller
+        $server = Database::fetch(
+            "SELECT id, panel_url, reseller_user, sigma_token 
+             FROM servers 
+             WHERE user_id = ? AND panel_type = 'sigma' AND status = 'active' 
+             LIMIT 1",
+            [$reseller_id]
+        );
+        
+        if (!$server) {
+            error_log("⚠️ Nenhum servidor Sigma configurado para reseller: " . $reseller_id);
+            return [
+                'success' => true, 
+                'message' => 'Nenhum servidor Sigma configurado - renovação ignorada'
+            ];
+        }
+        
+        // Validar configuração Sigma
+        if (empty($server['panel_url']) || empty($server['sigma_token']) || empty($server['reseller_user'])) {
+            error_log("❌ Configuração Sigma incompleta");
+            return [
+                'success' => false,
+                'message' => 'Configuração Sigma incompleta'
+            ];
+        }
+        
+        // Criar instância da API Sigma
+        $sigmaAPI = new SigmaAPI($server['panel_url'], $server['sigma_token'], $server['reseller_user']);
+        
+        // Obter userId correto
+        $userResponse = $sigmaAPI->getUsers(1, $server['reseller_user']);
+        
+        if (!isset($userResponse['data']) || empty($userResponse['data'])) {
+            return [
+                'success' => false,
+                'message' => "Não foi possível obter o ID do usuário '{$server['reseller_user']}' no Sigma"
+            ];
+        }
+        
+        $userData = $userResponse['data'];
+        $user = is_array($userData) && isset($userData[0]) ? $userData[0] : $userData;
+        $userId = $user['id'] ?? null;
+        
+        if (!$userId) {
+            return [
+                'success' => false,
+                'message' => "Não foi possível obter o ID do usuário no Sigma"
+            ];
+        }
+        
+        $sigmaAPI->setUserId($userId);
+        
+        // Buscar packages disponíveis
+        $packagesResponse = $sigmaAPI->getPackages();
+        
+        if (!isset($packagesResponse['data']) || empty($packagesResponse['data'])) {
+            return [
+                'success' => false,
+                'message' => 'Nenhum package disponível no Sigma'
+            ];
+        }
+        
+        $packages = $packagesResponse['data'];
+        
+        // Procurar por um package pago (não trial)
+        $packageId = null;
+        $trialPackageId = null;
+        
+        foreach ($packages as $package) {
+            $isTrial = ($package['is_trial'] ?? 'NO') === 'YES';
+            $isActive = ($package['status'] ?? 'INACTIVE') === 'ACTIVE';
+            
+            if ($isTrial) {
+                if (!$trialPackageId && $isActive) {
+                    $trialPackageId = $package['id'];
+                }
+            } else {
+                if (!$packageId && $isActive) {
+                    $packageId = $package['id'];
+                    error_log("✅ Package pago encontrado para renovação: " . $package['id']);
+                }
+            }
+        }
+        
+        if (!$packageId) {
+            $packageId = $trialPackageId;
+            error_log("⚠️ Usando package trial para renovação: " . $packageId);
+        }
+        
+        if (!$packageId) {
+            return [
+                'success' => false,
+                'message' => 'Nenhum package encontrado para renovação'
+            ];
+        }
+        
+        $username = $clientData['username'];
+        
+        if (empty($username)) {
+            return [
+                'success' => false,
+                'message' => 'Username do cliente não encontrado'
+            ];
+        }
+        
+        // RENOVAR o cliente no Sigma (adicionar +30 dias)
+        error_log("🔄 RENOVANDO cliente no Sigma após pagamento: " . $username);
+        
+        $renewResult = $sigmaAPI->renewCustomer($username, $packageId);
+        
+        // Atualizar status para ACTIVE
+        $sigmaAPI->updateCustomerStatus($username, 'ACTIVE');
+        
+        error_log("✅ Cliente renovado no Sigma com sucesso após pagamento");
+        
+        return [
+            'success' => true,
+            'action' => 'renewed',
+            'message' => 'Cliente renovado no Sigma após pagamento',
+            'username' => $username,
+            'data' => $renewResult
+        ];
+        
+    } catch (Exception $e) {
+        error_log("❌ Erro na renovação Sigma após pagamento: " . $e->getMessage());
+        return [
+            'success' => false,
+            'message' => 'Erro na renovação Sigma: ' . $e->getMessage()
         ];
     }
 }
