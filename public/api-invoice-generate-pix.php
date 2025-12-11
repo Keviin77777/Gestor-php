@@ -56,16 +56,17 @@ try {
         throw new Exception('Esta fatura já foi paga');
     }
 
-    // Buscar métodos de pagamento ativos (prioridade: Asaas > Mercado Pago > EFI Bank)
+    // Buscar métodos de pagamento ativos DESTE RESELLER (prioridade: Asaas > Mercado Pago > EFI Bank)
     $paymentMethods = Database::fetchAll(
         "SELECT method_name, config_value, enabled 
          FROM payment_methods 
-         WHERE enabled = 1
-         ORDER BY FIELD(method_name, 'asaas', 'mercadopago', 'efibank')"
+         WHERE reseller_id = ? AND enabled = 1
+         ORDER BY FIELD(method_name, 'asaas', 'mercadopago', 'efibank')",
+        [$invoice['reseller_id']]
     );
 
     if (empty($paymentMethods)) {
-        throw new Exception('Nenhum método de pagamento configurado. Acesse "Métodos de Pagamento" para configurar.');
+        throw new Exception('Nenhum método de pagamento configurado para este revendedor. Entre em contato com o fornecedor.');
     }
 
     // Usar o primeiro método ativo (já ordenado por prioridade)

@@ -43,11 +43,11 @@ try {
     die('Erro ao buscar fatura: ' . $e->getMessage() . '<br>Trace: ' . $e->getTraceAsString());
 }
 
-// Verificar se tem método de pagamento configurado (qualquer provedor ativo)
+// Verificar se tem método de pagamento configurado DESTE RESELLER (qualquer provedor ativo)
 $paymentMethod = Database::fetch(
-    "SELECT provider FROM payment_methods 
-     WHERE reseller_id = ? AND is_active = 1
-     ORDER BY FIELD(provider, 'asaas', 'mercadopago', 'efibank')
+    "SELECT method_name as provider FROM payment_methods 
+     WHERE reseller_id = ? AND enabled = 1
+     ORDER BY FIELD(method_name, 'asaas', 'mercadopago', 'efibank')
      LIMIT 1",
     [$invoice['reseller_id']]
 );
