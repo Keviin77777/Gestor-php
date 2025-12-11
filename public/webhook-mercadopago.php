@@ -175,19 +175,19 @@ try {
                 
                 file_put_contents($logFile, "✅ Cliente #{$client['id']} renovado no gestor até {$currentRenewal->format('Y-m-d')}\n", FILE_APPEND);
                 
-                // Sincronizar com Sigma se configurado
+                // Renovar cliente no Sigma após pagamento aprovado
                 try {
                     require_once __DIR__ . '/../app/helpers/clients-sync-sigma.php';
                     
-                    $sigmaResult = syncClientWithSigmaAfterSave($client, $client['reseller_id']);
+                    $sigmaResult = renewClientInSigmaAfterPayment($client, $client['reseller_id']);
                     
                     if ($sigmaResult['success']) {
-                        file_put_contents($logFile, "✅ Cliente sincronizado com Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                        file_put_contents($logFile, "✅ Cliente renovado no Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
                     } else {
-                        file_put_contents($logFile, "⚠️ Erro na sincronização Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                        file_put_contents($logFile, "⚠️ Erro na renovação Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
                     }
                 } catch (Exception $e) {
-                    file_put_contents($logFile, "⚠️ Erro ao sincronizar com Sigma: " . $e->getMessage() . "\n", FILE_APPEND);
+                    file_put_contents($logFile, "⚠️ Erro ao renovar no Sigma: " . $e->getMessage() . "\n", FILE_APPEND);
                 }
                 
                 // Enviar mensagem WhatsApp de renovação
@@ -332,11 +332,11 @@ try {
             
             file_put_contents($logFile, "✅ Cliente #{$invoice['client_id']} renovado no gestor até {$currentRenewal->format('Y-m-d')}\n", FILE_APPEND);
             
-            // Sincronizar com Sigma se configurado
+            // Renovar cliente no Sigma após pagamento aprovado
             try {
                 require_once __DIR__ . '/../app/helpers/clients-sync-sigma.php';
                 
-                // Preparar dados do cliente para sincronização
+                // Preparar dados do cliente para renovação
                 $clientData = [
                     'id' => $invoice['client_id'],
                     'name' => $invoice['name'],
@@ -350,15 +350,15 @@ try {
                     'renewal_date' => $currentRenewal->format('Y-m-d')
                 ];
                 
-                $sigmaResult = syncClientWithSigmaAfterSave($clientData, $invoice['reseller_id']);
+                $sigmaResult = renewClientInSigmaAfterPayment($clientData, $invoice['reseller_id']);
                 
                 if ($sigmaResult['success']) {
-                    file_put_contents($logFile, "✅ Cliente sincronizado com Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                    file_put_contents($logFile, "✅ Cliente renovado no Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
                 } else {
-                    file_put_contents($logFile, "⚠️ Erro na sincronização Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                    file_put_contents($logFile, "⚠️ Erro na renovação Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
                 }
             } catch (Exception $e) {
-                file_put_contents($logFile, "⚠️ Erro ao sincronizar com Sigma: " . $e->getMessage() . "\n", FILE_APPEND);
+                file_put_contents($logFile, "⚠️ Erro ao renovar no Sigma: " . $e->getMessage() . "\n", FILE_APPEND);
             }
             
             // Enviar mensagem WhatsApp de renovação
