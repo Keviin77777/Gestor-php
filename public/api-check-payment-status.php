@@ -1,6 +1,8 @@
 <?php
 /**
  * API para verificar status de pagamento PIX
+ * Consulta diretamente na API do provedor (Mercado Pago/Asaas/EFI)
+ * Funciona SEM webhook - usa polling
  */
 
 header('Content-Type: application/json; charset=utf-8');
@@ -17,21 +19,13 @@ require_once __DIR__ . '/../app/helpers/functions.php';
 loadEnv(__DIR__ . '/../.env');
 
 require_once __DIR__ . '/../app/core/Database.php';
-require_once __DIR__ . '/../app/core/Auth.php';
-require_once __DIR__ . '/../app/core/Response.php';
 require_once __DIR__ . '/../app/helpers/MercadoPagoHelper.php';
+require_once __DIR__ . '/../app/helpers/AsaasHelper.php';
 require_once __DIR__ . '/../app/helpers/EfiBankHelper.php';
 
-// Verificar autenticação
-$user = Auth::user();
-
-if (!$user) {
-    Response::json(['success' => false, 'error' => 'Não autorizado'], 401);
-    exit;
-}
-
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    Response::json(['success' => false, 'error' => 'Método não permitido'], 405);
+    http_response_code(405);
+    echo json_encode(['success' => false, 'error' => 'Método não permitido']);
     exit;
 }
 
@@ -39,45 +33,29 @@ try {
     $paymentId = $_GET['payment_id'] ?? null;
     
     if (!$paymentId) {
-        Response::json(['success' => false, 'error' => 'ID do pagamento é obrigatório'], 400);
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'ID do pagamento é obrigatório']);
         exit;
     }
     
-    // Verificar se é pagamento de renovação ou fatura
-    $db = Database::connect();
-    
-    // Tentar buscar em renewal_payments primeiro
-    $stmt = $db->prepare("
-        SELECT * FROM renewal_payments 
-        WHERE payment_id = ? AND user_id = ?
-    ");
-    $stmt->execute([$paymentId, $user['id']]);
-    $payment = $stmt->fetch(PDO::FETCH_ASSOC);
-    $paymentType = 'renewal';
-    $paymentProvider = $payment['payment_provider'] ?? 'mercadopago';
-    
-    // Se não encontrou, buscar em invoice_payments
-    if (!$payment) {
-        $stmt = $db->prepare("
-            SELECT ip.*, i.client_id, i.value as invoice_value
-            FROM invoice_payments ip
-            JOIN invoices i ON ip.invoice_id = i.id
-            JOIN clients c ON i.client_id = c.id
-            WHERE ip.payment_id = ? AND c.reseller_id = ?
-        ");
-        $stmt->execute([$paymentId, $user['id']]);
-        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
-        $paymentType = 'invoice';
-    }
+    // Buscar pagamento no banco
+    $payment = Database::fetch(
+        "SELECT ip.*, i.client_id, i.reseller_id, i.id as invoice_id, i.value as invoice_value
+         FROM invoice_payments ip
+         JOIN invoices i ON ip.invoice_id = i.id
+         WHERE ip.payment_id = ?",
+        [$paymentId]
+    );
     
     if (!$payment) {
-        Response::json(['success' => false, 'error' => 'Pagamento não encontrado'], 404);
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'Pagamento não encontrado']);
         exit;
     }
     
     // Se já está aprovado, retornar status
     if ($payment['status'] === 'approved') {
-        Response::json([
+        echo json_encode([
             'success' => true,
             'status' => 'approved',
             'message' => 'Pagamento já aprovado'
@@ -85,139 +63,149 @@ try {
         exit;
     }
     
-    // Consultar status no provedor correto
-    if ($paymentProvider === 'efibank') {
-        $provider = new EfiBankHelper();
-    } else {
-        $provider = new MercadoPagoHelper();
-    }
+    // Buscar credenciais do provedor para este revendedor
+    $paymentProvider = $payment['payment_provider'] ?? 'mercadopago';
     
-    $result = $provider->getPaymentStatus($paymentId);
+    $credentials = Database::fetch(
+        "SELECT config_value FROM payment_methods 
+         WHERE reseller_id = ? AND method_name = ? AND enabled = 1",
+        [$payment['reseller_id'], $paymentProvider]
+    );
     
-    if (!$result['success']) {
-        Response::json([
-            'success' => false,
-            'error' => $result['error']
-        ], 400);
+    if (!$credentials) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Provedor de pagamento não configurado']);
         exit;
     }
     
-    // Atualizar status no banco conforme tipo
-    if ($paymentType === 'renewal') {
-        $stmt = $db->prepare("
-            UPDATE renewal_payments 
-            SET status = ?, updated_at = NOW()
-            WHERE payment_id = ?
-        ");
-        $stmt->execute([$result['status'], $paymentId]);
-        
-        // Se foi aprovado, renovar o acesso do usuário
-        if ($result['status'] === 'approved') {
-            // Buscar dados do plano
-            $stmt = $db->prepare("SELECT * FROM reseller_plans WHERE id = ?");
-            $stmt->execute([$payment['plan_id']]);
-            $plan = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($plan) {
-                // Calcular nova data de expiração
-                $currentExpires = new DateTime($user['plan_expires_at'] ?? 'now');
-                $now = new DateTime();
-                
-                // Se o plano já expirou, começar de hoje
-                if ($currentExpires < $now) {
-                    $currentExpires = $now;
-                }
-                
-                // Adicionar dias do novo plano
-                $currentExpires->modify("+{$plan['duration_days']} days");
-                
-                // Atualizar usuário
-                $stmt = $db->prepare("
-                    UPDATE users 
-                    SET 
-                        current_plan_id = ?,
-                        plan_expires_at = ?,
-                        updated_at = NOW()
-                    WHERE id = ?
-                ");
-                $stmt->execute([
-                    $plan['id'],
-                    $currentExpires->format('Y-m-d H:i:s'),
-                    $user['id']
-                ]);
-                
-                error_log("Acesso renovado - User: {$user['id']}, Plan: {$plan['name']}, Expires: {$currentExpires->format('Y-m-d')}");
-            }
-        }
+    $config = json_decode($credentials['config_value'], true);
+    
+    // Criar instância do provedor correto
+    if ($paymentProvider === 'asaas') {
+        $provider = new AsaasHelper($config['api_key'] ?? '', $config['sandbox'] ?? false);
+    } elseif ($paymentProvider === 'efibank') {
+        $provider = new EfiBankHelper(
+            $config['client_id'] ?? '',
+            $config['client_secret'] ?? '',
+            $config['certificate'] ?? '',
+            $config['sandbox'] ?? false
+        );
     } else {
-        // Pagamento de fatura
-        $stmt = $db->prepare("
-            UPDATE invoice_payments 
-            SET status = ?, 
-                approved_at = ?,
-                updated_at = NOW()
-            WHERE payment_id = ?
-        ");
-        $approvedAt = $result['status'] === 'approved' ? date('Y-m-d H:i:s') : null;
-        $stmt->execute([$result['status'], $approvedAt, $paymentId]);
+        // Mercado Pago
+        $provider = new MercadoPagoHelper($config['public_key'] ?? '', $config['access_token'] ?? '');
+    }
+    
+    // Consultar status na API do provedor
+    $result = $provider->getPaymentStatus($paymentId);
+    
+    if (!$result['success']) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $result['error'] ?? 'Erro ao consultar pagamento'
+        ]);
+        exit;
+    }
+    
+    // Atualizar status no banco
+    Database::query(
+        "UPDATE invoice_payments 
+         SET status = ?, 
+             approved_at = ?,
+             updated_at = NOW()
+         WHERE payment_id = ?",
+        [
+            $result['status'],
+            $result['status'] === 'approved' ? date('Y-m-d H:i:s') : null,
+            $paymentId
+        ]
+    );
+    
+    // Se foi aprovado, processar renovação
+    if ($result['status'] === 'approved') {
+        error_log("💰 Pagamento aprovado via polling: {$paymentId}");
         
-        // Se foi aprovado, marcar fatura como paga e renovar cliente
-        if ($result['status'] === 'approved') {
-            // Marcar fatura como paga
-            $stmt = $db->prepare("
-                UPDATE invoices 
-                SET 
-                    status = 'paid',
-                    paid_at = NOW(),
-                    payment_method = 'pix_mercadopago',
-                    updated_at = NOW()
-                WHERE id = ?
-            ");
-            $stmt->execute([$payment['invoice_id']]);
+        // Marcar fatura como paga
+        Database::query(
+            "UPDATE invoices 
+             SET status = 'paid',
+                 payment_date = NOW(),
+                 updated_at = NOW()
+             WHERE id = ?",
+            [$payment['invoice_id']]
+        );
+        
+        error_log("✅ Fatura marcada como paga: {$payment['invoice_id']}");
+        
+        // Buscar dados completos do cliente
+        $client = Database::fetch(
+            "SELECT c.*, i.value, i.due_date
+             FROM clients c
+             JOIN invoices i ON i.client_id = c.id
+             WHERE i.id = ?",
+            [$payment['invoice_id']]
+        );
+        
+        if ($client) {
+            // Calcular nova data de renovação
+            $currentRenewal = new DateTime($client['renewal_date']);
+            $now = new DateTime();
             
-            // Renovar cliente
-            $stmt = $db->prepare("
-                SELECT c.*, i.value, i.due_date
-                FROM invoices i
-                JOIN clients c ON i.client_id = c.id
-                WHERE i.id = ?
-            ");
-            $stmt->execute([$payment['invoice_id']]);
-            $client = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($currentRenewal < $now) {
+                $currentRenewal = $now;
+            }
             
-            if ($client) {
-                $currentRenewal = new DateTime($client['renewal_date']);
-                $now = new DateTime();
+            $currentRenewal->modify('+30 days');
+            $newRenewalDate = $currentRenewal->format('Y-m-d');
+            
+            // Atualizar cliente no gestor
+            Database::query(
+                "UPDATE clients 
+                 SET renewal_date = ?,
+                     status = 'active',
+                     updated_at = NOW()
+                 WHERE id = ?",
+                [$newRenewalDate, $client['id']]
+            );
+            
+            error_log("✅ Cliente renovado no gestor: {$client['id']} até {$newRenewalDate}");
+            
+            // Renovar no Sigma (se configurado)
+            try {
+                require_once __DIR__ . '/../app/helpers/clients-sync-sigma.php';
                 
-                if ($currentRenewal < $now) {
-                    $currentRenewal = $now;
+                $sigmaResult = renewClientInSigmaAfterPayment($client, $payment['reseller_id']);
+                
+                if ($sigmaResult['success']) {
+                    error_log("✅ Cliente renovado no Sigma: {$client['id']}");
+                } else {
+                    error_log("⚠️ Erro ao renovar no Sigma: {$sigmaResult['message']}");
                 }
+            } catch (Exception $e) {
+                error_log("⚠️ Erro ao renovar no Sigma: " . $e->getMessage());
+            }
+            
+            // Enviar WhatsApp (se configurado)
+            try {
+                require_once __DIR__ . '/../app/helpers/whatsapp-helper.php';
                 
-                $currentRenewal->modify('+30 days');
+                $whatsappResult = sendRenewalMessage($client['id'], $payment['invoice_id']);
                 
-                $stmt = $db->prepare("
-                    UPDATE clients 
-                    SET 
-                        renewal_date = ?,
-                        status = 'active',
-                        updated_at = NOW()
-                    WHERE id = ?
-                ");
-                $stmt->execute([
-                    $currentRenewal->format('Y-m-d'),
-                    $client['id']
-                ]);
-                
-                error_log("Cliente renovado - ID: {$client['id']}, Novo vencimento: {$currentRenewal->format('Y-m-d')}");
+                if ($whatsappResult['success']) {
+                    error_log("✅ WhatsApp de renovação enviado: {$client['id']}");
+                }
+            } catch (Exception $e) {
+                error_log("⚠️ Erro ao enviar WhatsApp: " . $e->getMessage());
             }
         }
     }
     
-    Response::json([
+    echo json_encode([
         'success' => true,
         'status' => $result['status'],
         'status_detail' => $result['status_detail'] ?? null,
-        'amount' => $result['amount'] ?? null
+        'amount' => $result['amount'] ?? null,
+        'message' => $result['status'] === 'approved' ? 'Pagamento aprovado! Cliente renovado automaticamente.' : 'Aguardando pagamento...'
     ]);
     
 } catch (Exception $e) {
