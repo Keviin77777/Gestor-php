@@ -81,16 +81,24 @@ try {
             
             // Se o status mudou para "paid", renovar o cliente
             if ($oldStatus !== 'paid') {
-                // Buscar data de vencimento atual do cliente
+                // Buscar data de vencimento atual do cliente E duração do plano
                 $client = Database::fetch(
-                    "SELECT renewal_date FROM clients WHERE id = ? AND reseller_id = ?",
+                    "SELECT c.renewal_date, c.plan_id, p.duration_days 
+                     FROM clients c
+                     LEFT JOIN plans p ON c.plan_id = p.id
+                     WHERE c.id = ? AND c.reseller_id = ?",
                     [$clientId, $user['id']]
                 );
                 
                 if ($client) {
-                    // Adicionar 30 dias à data de vencimento atual
+                    // Buscar duração do plano (padrão 30 dias se não encontrar)
+                    $durationDays = $client['duration_days'] ?? 30;
+                    
+                    error_log("📅 Baixa manual - Duração do plano: {$durationDays} dias");
+                    
+                    // Adicionar dias conforme duração do plano
                     $currentRenewalDate = $client['renewal_date'];
-                    $newRenewalDate = date('Y-m-d', strtotime($currentRenewalDate . ' +30 days'));
+                    $newRenewalDate = date('Y-m-d', strtotime($currentRenewalDate . " +{$durationDays} days"));
                     
                     // Atualizar data de renovação do cliente
                     Database::query(
