@@ -29,11 +29,20 @@ router.post('/instance/connect', async (req, res) => {
             return res.status(400).json({ success: false, error: 'reseller_id é obrigatório' });
         }
 
+        // IMPORTANTE: Desconectar instância antiga se existir
+        console.log(`🔄 Verificando instância existente para ${reseller_id}...`);
+        try {
+            await instanceManager.disconnect(reseller_id);
+            console.log(`✅ Instância antiga removida para ${reseller_id}`);
+        } catch (disconnectError) {
+            console.log(`ℹ️ Nenhuma instância anterior para ${reseller_id}`);
+        }
+
         // Criar sessão no banco
         const instanceName = `reseller_${reseller_id}`;
         await db.createSession(reseller_id, instanceName);
 
-        // Criar instância no gerenciador
+        // Criar nova instância no gerenciador
         await instanceManager.getInstance(reseller_id);
         
         res.json({ 

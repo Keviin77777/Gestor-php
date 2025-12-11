@@ -367,11 +367,14 @@ async function disconnectWhatsApp() {
             const data = await response.json();
 
             if (data.success) {
-                showNotification('WhatsApp desconectado com sucesso!', 'success');
+                showNotification('✅ WhatsApp desconectado com sucesso!', 'success');
                 
-                // Reiniciar verificação de status após 3 segundos
+                // Resetar completamente o estado após 1 segundo
                 setTimeout(() => {
                     isManuallyDisconnecting = false;
+                    currentQRCode = null;
+                    connectionStatus = 'disconnected';
+                    
                     // Reiniciar apenas o statusCheckInterval
                     if (!statusCheckInterval) {
                         statusCheckInterval = setInterval(() => {
@@ -380,7 +383,12 @@ async function disconnectWhatsApp() {
                             }
                         }, 5000);
                     }
-                }, 3000);
+                    
+                    // Garantir que a interface está no estado correto
+                    updateConnectionStatus('disconnected');
+                    hideQRCode();
+                    hideAccountInfo();
+                }, 1000);
             } else {
                 throw new Error(data.error || 'Erro ao desconectar');
             }
@@ -391,7 +399,16 @@ async function disconnectWhatsApp() {
         
     } catch (error) {
         isManuallyDisconnecting = false;
-        showNotification('Erro ao desconectar: ' + error.message, 'error');
+        showNotification('❌ Erro ao desconectar: ' + error.message, 'error');
+        
+        // Reiniciar statusCheckInterval mesmo em caso de erro
+        if (!statusCheckInterval) {
+            statusCheckInterval = setInterval(() => {
+                if (!isManuallyDisconnecting) {
+                    checkConnectionStatus();
+                }
+            }, 5000);
+        }
     }
 }
 
