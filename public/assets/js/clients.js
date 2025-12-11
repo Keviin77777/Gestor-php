@@ -2084,7 +2084,8 @@ async function processMarkAsPaid(paymentId) {
             if (data.success) {
                 let message = 'Pagamento marcado como pago!';
                 if (data.client_renewed) {
-                    message += '\n\n✅ Cliente renovado automaticamente por +30 dias!';
+                    const days = data.renewal_days || 30;
+                    message += `\n\n✅ Cliente renovado automaticamente por +${days} dias!`;
                 }
                 showNotification(message, 'success');
 

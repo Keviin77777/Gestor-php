@@ -189,7 +189,8 @@ try {
             $response = [
                 'success' => true,
                 'message' => 'Fatura marcada como paga com sucesso',
-                'client_renewed' => $clientRenewed
+                'client_renewed' => $clientRenewed,
+                'renewal_days' => $clientRenewed ? ($durationDays ?? 30) : null
             ];
             
             // Adicionar informação sobre sincronização Sigma se disponível
