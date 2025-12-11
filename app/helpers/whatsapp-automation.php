@@ -392,9 +392,19 @@ function sendAutomaticInvoiceMessage($invoiceId) {
         $variables = prepareTemplateVariables($template, $invoice);
         
         // Adicionar variáveis específicas para template de fatura
-        $variables['fatura_valor'] = $variables['cliente_valor'];
+        $variables['fatura_valor'] = 'R$ ' . number_format($invoice['final_value'], 2, ',', '.');
         $variables['fatura_vencimento'] = date('d/m/Y', strtotime($invoice['due_date']));
-        $variables['fatura_periodo'] = date('m/Y', strtotime($invoice['due_date']));
+        
+        // Calcular período da fatura (mês/ano)
+        $dueDate = new DateTime($invoice['due_date']);
+        $monthNames = [
+            1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
+            5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
+            9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
+        ];
+        $month = (int)$dueDate->format('n');
+        $year = $dueDate->format('Y');
+        $variables['fatura_periodo'] = $month . '/' . $year;
         
         // Substituir variáveis no template (suporta {var} e {{var}})
         $message = $template['message'];

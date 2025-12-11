@@ -80,7 +80,8 @@ function generateAutomaticInvoice($client) {
         
         // Calcular datas
         $issueDate = date('Y-m-d');
-        $dueDate = date('Y-m-d', strtotime('+5 days')); // 5 dias para pagamento
+        // Usar a data de renovação do cliente como vencimento da fatura
+        $dueDate = $client['renewal_date'];
         
         // Dados da fatura
         $value = (float)$client['value'];
