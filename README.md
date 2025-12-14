@@ -56,21 +56,77 @@ Sistema completo de gestão para provedores IPTV com integração WhatsApp, auto
 - MySQL 8.0+
 - Node.js 18+
 - Apache/Nginx
-- Composer (opcional)
+- PM2 (para gerenciar a API WhatsApp)
 
-### Deploy Automático
+### Instalação Rápida
+
+#### 1. Clone o repositório
 ```bash
-# Clone o repositório
 git clone https://github.com/Keviin77777/Gestor-php.git
 cd Gestor-php
+```
 
-# Execute o script de deploy
+#### 2. Configure o banco de dados
+```bash
+# Importe o schema
+mysql -u root -p < database/schema.sql
+```
+
+#### 3. Configure o .env
+```bash
+# Copie e edite o arquivo .env
+cp .env.example .env
+nano .env
+```
+
+#### 4. Instale a API WhatsApp Nativa
+```bash
+cd whatsapp-api
+npm install
+```
+
+#### 5. Configure o .env da API
+```bash
+# Edite whatsapp-api/.env com suas credenciais do banco
+nano .env
+```
+
+### Iniciar o Projeto
+
+#### Opção 1: Desenvolvimento (Windows)
+```cmd
+# Terminal 1 - Servidor PHP (na raiz do projeto)
+php -S localhost:8000 -t public
+
+# Terminal 2 - API WhatsApp (na pasta whatsapp-api)
+cd whatsapp-api
+npm start
+```
+
+#### Opção 2: Produção (Linux/VPS)
+```bash
+# Instalar PM2 globalmente
+npm install -g pm2
+
+# Iniciar API WhatsApp com PM2
+cd whatsapp-api
+pm2 start server.js --name whatsapp-api
+pm2 save
+pm2 startup
+
+# Configurar Apache/Nginx para servir a aplicação PHP
+# Veja DEPLOY-PRODUCTION.md para detalhes
+```
+
+### Acessar o Sistema
+- **Aplicação:** http://localhost:8000
+- **API WhatsApp:** http://localhost:3000/health
+
+### Deploy Automático (VPS)
+```bash
 chmod +x scripts/deploy-production.sh
 bash scripts/deploy-production.sh
 ```
-
-### Instalação Manual
-Consulte o arquivo [`DEPLOY-PRODUCTION.md`](DEPLOY-PRODUCTION.md) para instruções detalhadas.
 
 ## ⚙️ Configuração
 
@@ -110,10 +166,24 @@ sudo systemctl start whatsapp-gestor
 
 ## 📱 Configuração WhatsApp
 
+### Verificar se a API está rodando
+```bash
+# Verificar status
+curl http://localhost:3000/health
+
+# Ver logs (se usando PM2)
+pm2 logs whatsapp-api
+
+# Reiniciar API (se necessário)
+pm2 restart whatsapp-api
+```
+
 ### 1. Pareamento
 1. Acesse **WhatsApp → Parear WhatsApp**
-2. Escaneie o QR Code com seu WhatsApp Business
-3. Aguarde a confirmação de conexão
+2. Selecione **API Premium** (recomendado) ou **API Básica**
+3. Clique em **Conectar**
+4. Escaneie o QR Code com seu WhatsApp Business
+5. Aguarde a confirmação de conexão
 
 ### 2. Templates
 1. Acesse **WhatsApp → Templates**
@@ -124,6 +194,33 @@ sudo systemctl start whatsapp-gestor
 1. Acesse **WhatsApp → Agendamentos**
 2. Configure dias da semana e horários
 3. Ative os templates desejados
+
+### Solução de Problemas
+
+#### Erro ao reconectar WhatsApp
+Se após desconectar você não conseguir reconectar:
+```bash
+# Parar a API
+pm2 stop whatsapp-api
+
+# Limpar sessões antigas
+cd whatsapp-api
+rm -rf sessions/*
+rm -rf .wwebjs_cache/*
+
+# Reiniciar
+pm2 start whatsapp-api
+```
+
+#### API não inicia
+```bash
+# Verificar se a porta 3000 está livre
+netstat -ano | findstr :3000  # Windows
+lsof -i :3000                 # Linux/Mac
+
+# Verificar logs de erro
+pm2 logs whatsapp-api --err
+```
 
 ## 🔧 Uso
 

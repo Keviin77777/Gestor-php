@@ -90,6 +90,16 @@ class Database {
     }
 
     /**
+     * Deletar sessão completamente (para reconexão limpa)
+     */
+    async deleteSession(resellerId) {
+        await this.query(
+            'DELETE FROM whatsapp_sessions WHERE reseller_id = ?',
+            [resellerId]
+        );
+    }
+
+    /**
      * Criar registro de mensagem
      */
     async createMessage(resellerId, data) {

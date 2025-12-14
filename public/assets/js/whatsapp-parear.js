@@ -369,26 +369,27 @@ async function disconnectWhatsApp() {
             if (data.success) {
                 showNotification('✅ WhatsApp desconectado com sucesso!', 'success');
                 
-                // Resetar completamente o estado após 1 segundo
-                setTimeout(() => {
-                    isManuallyDisconnecting = false;
-                    currentQRCode = null;
-                    connectionStatus = 'disconnected';
-                    
-                    // Reiniciar apenas o statusCheckInterval
-                    if (!statusCheckInterval) {
-                        statusCheckInterval = setInterval(() => {
-                            if (!isManuallyDisconnecting) {
-                                checkConnectionStatus();
-                            }
-                        }, 5000);
-                    }
-                    
-                    // Garantir que a interface está no estado correto
-                    updateConnectionStatus('disconnected');
-                    hideQRCode();
-                    hideAccountInfo();
-                }, 1000);
+                // Aguardar 3 segundos para garantir limpeza completa no backend
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                // Resetar completamente o estado
+                isManuallyDisconnecting = false;
+                currentQRCode = null;
+                connectionStatus = 'disconnected';
+                
+                // Reiniciar apenas o statusCheckInterval
+                if (!statusCheckInterval) {
+                    statusCheckInterval = setInterval(() => {
+                        if (!isManuallyDisconnecting) {
+                            checkConnectionStatus();
+                        }
+                    }, 5000);
+                }
+                
+                // Garantir que a interface está no estado correto
+                updateConnectionStatus('disconnected');
+                hideQRCode();
+                hideAccountInfo();
             } else {
                 throw new Error(data.error || 'Erro ao desconectar');
             }
