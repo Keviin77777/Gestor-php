@@ -88,7 +88,7 @@
 
         <!-- Action Buttons -->
         <div class="action-buttons-bar">
-            <button class="btn btn-primary" id="newClientBtn" onclick="openClientModal()">
+            <button class="btn btn-primary" id="newClientBtn" onclick="window.location.href='/clients/add'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -400,143 +400,7 @@
         </div>
     </div>
 
-    <!-- Modal Adicionar/Editar Cliente -->
-    <div class="modern-modal" id="clientModal">
-        <div class="modern-modal-overlay" onclick="closeClientModal()"></div>
-        <div class="modern-modal-content">
-            <!-- Header -->
-            <div class="modern-modal-header">
-                <div class="modal-title-section">
-                    <h2 id="modalTitle">Adicionar Novo Cliente</h2>
-                    <p class="modal-subtitle">Preencha os detalhes do novo cliente.</p>
-                </div>
-                <button class="modern-modal-close" onclick="closeClientModal()">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Body -->
-            <div class="modern-modal-body">
-                <form id="clientForm">
-                    <div class="modern-form-grid">
-                        <!-- Nome Sistema -->
-                        <div class="modern-form-group">
-                            <label for="clientName">Nome Sistema</label>
-                            <input type="text" id="clientName" name="name" placeholder="Nome" required>
-                        </div>
-
-                        <!-- Usuário IPTV -->
-                        <div class="modern-form-group">
-                            <label for="clientUsername">Usuário IPTV</label>
-                            <input type="text" id="clientUsername" name="username" placeholder="Opcional">
-                        </div>
-
-                        <!-- Senha IPTV -->
-                        <div class="modern-form-group">
-                            <label for="clientIptvPassword">Senha IPTV</label>
-                            <div class="input-with-actions">
-                                <input type="text" id="clientIptvPassword" name="iptv_password" placeholder="Opcional">
-                                <button type="button" class="input-action-btn" onclick="generateIptvPassword()">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M12 20h9"></path>
-                                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- WhatsApp -->
-                        <div class="modern-form-group">
-                            <label for="clientPhone">WhatsApp</label>
-                            <input type="tel" id="clientPhone" name="phone" placeholder="WhatsApp">
-                        </div>
-
-                        <!-- Vencimento -->
-                        <div class="modern-form-group">
-                            <label for="clientRenewalDate">Vencimento</label>
-                            <input type="date" id="clientRenewalDate" name="renewal_date" placeholder="dd/mm/aaaa" required>
-                        </div>
-
-                        <!-- Servidor -->
-                        <div class="modern-form-group">
-                            <label for="clientServer">Servidor</label>
-                            <select id="clientServer" name="server">
-                                <option value="">Carregando servidores...</option>
-                            </select>
-                        </div>
-
-                        <!-- Aplicativo -->
-                        <div class="modern-form-group">
-                            <label for="clientApplication">Aplicativo</label>
-                            <select id="clientApplication" name="application_id">
-                                <option value="">Carregando aplicativos...</option>
-                            </select>
-                        </div>
-
-                        <!-- MAC -->
-                        <div class="modern-form-group">
-                            <label for="clientMac">MAC</label>
-                            <input type="text" id="clientMac" name="mac" placeholder="MAC">
-                        </div>
-
-                        <!-- Notificações -->
-                        <div class="modern-form-group">
-                            <label for="clientNotifications">Notificações</label>
-                            <select id="clientNotifications" name="notifications">
-                                <option value="sim">Sim</option>
-                                <option value="nao">Não</option>
-                            </select>
-                        </div>
-
-                        <!-- Plano -->
-                        <div class="modern-form-group">
-                            <label for="clientPlan">Plano</label>
-                            <select id="clientPlan" name="plan">
-                                <option value="">Selecionar plano</option>
-                                <option value="basic">Básico - R$ 25,00</option>
-                                <option value="premium">Premium - R$ 35,00</option>
-                                <option value="vip">VIP - R$ 50,00</option>
-                                <option value="custom">Personalizado</option>
-                            </select>
-                        </div>
-
-                        <!-- Valor -->
-                        <div class="modern-form-group">
-                            <label for="clientValue">Valor Mensal</label>
-                            <input type="number" id="clientValue" name="value" step="0.01" min="0" placeholder="0,00" required>
-                        </div>
-
-                        <!-- Email -->
-                        <div class="modern-form-group">
-                            <label for="clientEmail">Email</label>
-                            <input type="email" id="clientEmail" name="email" placeholder="email@exemplo.com">
-                        </div>
-                    </div>
-
-                    <!-- Número de Telas -->
-                    <div class="modern-form-group full-width">
-                        <label for="clientScreens">Número de Telas *</label>
-                        <input type="number" id="clientScreens" name="screens" min="1" max="10" value="1" required placeholder="Número de Telas">
-                    </div>
-
-                    <!-- Notas -->
-                    <div class="modern-form-group full-width">
-                        <label for="clientNotes">Notas</label>
-                        <textarea id="clientNotes" name="notes" rows="4" placeholder="Notas"></textarea>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Footer -->
-            <div class="modern-modal-footer">
-                <button type="button" class="btn-modern btn-secondary" onclick="closeClientModal()">Cancelar</button>
-                <button type="submit" form="clientForm" class="btn-modern btn-primary" id="submitBtn">Adicionar</button>
-            </div>
-        </div>
-    </div>
+    <!-- Modal de adicionar cliente removido - agora usa página separada -->
 
     <script src="/assets/js/common.js"></script>
     <!-- Modal WhatsApp -->

@@ -690,75 +690,16 @@ function handlePlanChange() {
 
 
 /**
- * Editar cliente
+ * Editar cliente - Redireciona para página de edição
  */
-async function editClient(clientId) {
-    const client = clients.find(c => c.id == clientId);
-    if (!client) {
-        alert('Cliente não encontrado!');
+function editClient(clientId) {
+    if (!clientId) {
+        showNotification('Cliente não encontrado!', 'error');
         return;
     }
-
-    // Marcar como edição ANTES de preencher campos
-    const form = document.getElementById('clientForm');
-    form.dataset.editing = String(clientId); // Converter para string sempre
-
-    // Preencher dropdowns com dados reais primeiro
-    populatePlansDropdown();
-    await populateServersDropdown();
-    await populateApplicationsDropdown();
-
-    // Usar setTimeout para garantir que os dropdowns foram preenchidos
-    setTimeout(() => {
-        // Preencher o modal com os dados do cliente
-        document.getElementById('clientName').value = client.name || '';
-        document.getElementById('clientEmail').value = client.email || '';
-        document.getElementById('clientPhone').value = client.phone || '';
-        document.getElementById('clientUsername').value = client.username || '';
-        document.getElementById('clientIptvPassword').value = client.iptv_password || '';
-
-        // Preencher plano, servidor e aplicativo
-        const planSelect = document.getElementById('clientPlan');
-        const serverSelect = document.getElementById('clientServer');
-        const applicationSelect = document.getElementById('clientApplication');
-
-        if (planSelect) {
-            planSelect.value = client.plan || '';
-        }
-
-        if (serverSelect) {
-            serverSelect.value = client.server || '';
-        }
-
-        if (applicationSelect) {
-            // O client.application_id pode estar no formato numérico ou string
-            applicationSelect.value = client.application_id || '';
-        }
-
-        document.getElementById('clientValue').value = client.value || '';
-        document.getElementById('clientRenewalDate').value = client.renewal_date || '';
-        document.getElementById('clientMac').value = client.mac || '';
-        document.getElementById('clientNotifications').value = client.notifications || 'sim';
-        document.getElementById('clientScreens').value = client.screens || '1';
-        document.getElementById('clientNotes').value = client.notes || '';
-    }, 200);
-
-    // Alterar título do modal
-    const modalTitle = document.getElementById('modalTitle');
-    const submitBtn = document.getElementById('submitBtn');
-    if (modalTitle) {
-        modalTitle.textContent = 'Editar Cliente';
-    }
-    if (submitBtn) {
-        submitBtn.textContent = 'Salvar Alterações';
-    }
-
-    // Abrir modal
-    const modal = document.getElementById('clientModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.classList.add('active');
-    }
+    
+    // Redirecionar para a página de edição
+    window.location.href = `/clients/edit/${clientId}`;
 }
 
 
@@ -969,76 +910,16 @@ function showNotification(message, type = 'info') {
         setTimeout(() => document.body.removeChild(notification), 300);
     }, 3000);
 }/**
-
- * Editar cliente
+ * Editar cliente - Redireciona para página de edição (igual aos planos)
  */
-async function editClient(clientId) {
-    const client = clients.find(c => c.id == clientId);
-    if (!client) {
-        alert('Cliente não encontrado!');
+function editClient(clientId) {
+    if (!clientId) {
+        showNotification('Cliente não encontrado!', 'error');
         return;
     }
-
-    // Marcar como edição ANTES de preencher campos
-    const form = document.getElementById('clientForm');
-    form.dataset.editing = String(clientId); // Converter para string sempre
-
-    // Preencher dropdowns com dados reais primeiro
-    populatePlansDropdown();
-    await populateServersDropdown();
-    await populateApplicationsDropdown();
-
-    // Usar setTimeout para garantir que os dropdowns foram preenchidos
-    setTimeout(() => {
-        // Preencher o modal com os dados do cliente
-        document.getElementById('clientName').value = client.name || '';
-        document.getElementById('clientEmail').value = client.email || '';
-        document.getElementById('clientPhone').value = client.phone || '';
-        document.getElementById('clientUsername').value = client.username || '';
-        document.getElementById('clientIptvPassword').value = client.iptv_password || '';
-
-        // Preencher plano, servidor e aplicativo
-        const planSelect = document.getElementById('clientPlan');
-        const serverSelect = document.getElementById('clientServer');
-        const applicationSelect = document.getElementById('clientApplication');
-
-        if (planSelect) {
-            planSelect.value = client.plan || '';
-        }
-
-        if (serverSelect) {
-            serverSelect.value = client.server || '';
-        }
-
-        if (applicationSelect) {
-            // O client.application_id pode estar no formato numérico ou string
-            applicationSelect.value = client.application_id || '';
-        }
-
-        document.getElementById('clientValue').value = client.value || '';
-        document.getElementById('clientRenewalDate').value = client.renewal_date || '';
-        document.getElementById('clientMac').value = client.mac || '';
-        document.getElementById('clientNotifications').value = client.notifications || 'sim';
-        document.getElementById('clientScreens').value = client.screens || '1';
-        document.getElementById('clientNotes').value = client.notes || '';
-    }, 200);
-
-    // Alterar título do modal
-    const modalTitle = document.getElementById('modalTitle');
-    const submitBtn = document.getElementById('submitBtn');
-    if (modalTitle) {
-        modalTitle.textContent = 'Editar Cliente';
-    }
-    if (submitBtn) {
-        submitBtn.textContent = 'Salvar Alterações';
-    }
-
-    // Abrir modal
-    const modal = document.getElementById('clientModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.classList.add('active');
-    }
+    
+    // Redirecionar para a página de edição usando query string (igual aos planos)
+    window.location.href = `/clients/add?id=${clientId}`;
 }
 
 /**
@@ -1190,50 +1071,11 @@ async function processClientDeletion(clientId, client) {
 
 /**
  * Abrir modal de novo cliente
+ * DESABILITADO - Agora usa página separada /clients/add
  */
 async function openClientModal() {
-    // Limpar formulário
-    const form = document.getElementById('clientForm');
-    if (form) {
-        form.reset();
-        delete form.dataset.editing;
-    }
-
-    // Alterar título do modal
-    const modalTitle = document.getElementById('modalTitle');
-    const submitBtn = document.getElementById('submitBtn');
-    if (modalTitle) {
-        modalTitle.textContent = 'Adicionar Novo Cliente';
-    }
-    if (submitBtn) {
-        submitBtn.textContent = 'Adicionar';
-    }
-
-    // Definir data padrão (30 dias a partir de hoje)
-    const renewalDate = document.getElementById('clientRenewalDate');
-    if (renewalDate) {
-        const today = new Date();
-        today.setDate(today.getDate() + 30);
-        renewalDate.value = today.toISOString().split('T')[0];
-    }
-
-    // Definir número de telas padrão
-    const screensField = document.getElementById('clientScreens');
-    if (screensField) {
-        screensField.value = '1';
-    }
-
-    // Preencher dropdowns com dados reais
-    populatePlansDropdown();
-    await populateServersDropdown();
-    await populateApplicationsDropdown();
-
-    // Abrir modal
-    const modal = document.getElementById('clientModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.classList.add('active');
-    }
+    // Redirecionar para página de adicionar cliente
+    window.location.href = '/clients/add';
 }
 
 /**

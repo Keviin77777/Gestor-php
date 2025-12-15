@@ -545,4 +545,5 @@ setInterval(function() {
         lastUpdateTime = now;
     }
 }, 60000);
+
 </script>

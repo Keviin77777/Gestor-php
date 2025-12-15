@@ -781,6 +781,7 @@
         padding: 0.5rem;
     }
 }
+
 /* Cor
 reção específica para centralização do dropdown do perfil em mobile */
 @media (max-width: 768px) {
@@ -813,7 +814,9 @@ reção específica para centralização do dropdown do perfil em mobile */
         right: auto !important;
         transform: translateX(-50%) !important;
     }
-}/* Co
+}
+
+/* Co
 rreção específica para o botão do menu mobile no Android */
 @media (max-width: 768px) {
     .top-header-menu .mobile-menu-btn {
@@ -828,7 +831,7 @@ rreção específica para o botão do menu mobile no Android */
         touch-action: manipulation !important;
         -webkit-tap-highlight-color: transparent !important;
     }
-    
+
     .top-header-menu .mobile-menu-btn span {
         display: block !important;
         width: 24px !important;
@@ -850,4 +853,48 @@ rreção específica para o botão do menu mobile no Android */
         background: var(--bg-primary) !important;
         border-bottom: 1px solid var(--border) !important;
     }
+}
+
+
+/* Header Icon Button Base */
+.header-icon-btn {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.header-icon-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+.header-icon-btn svg {
+    width: 20px;
+    height: 20px;
+    color: var(--text-primary);
+}
+
+/* Notification Badge */
+.notification-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--danger);
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.125rem 0.375rem;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    display: none;
 }

@@ -33,11 +33,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function setupEvents() {
     // Menu mobile - removido daqui, agora está no common.js
 
-    // Busca
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            filterPlans(this.value);
+    // Busca de planos
+    const searchPlans = document.getElementById('searchPlans');
+    if (searchPlans) {
+        searchPlans.addEventListener('input', function() {
+            renderPlans();
         });
     }
 
@@ -58,6 +58,20 @@ function setupEvents() {
             savePlan();
         });
     }
+}
+
+/**
+ * Limpar todos os filtros
+ */
+function clearFilters() {
+    const searchPlans = document.getElementById('searchPlans');
+    const serverFilter = document.getElementById('serverFilter');
+    
+    if (searchPlans) searchPlans.value = '';
+    if (serverFilter) serverFilter.value = '';
+    
+    currentServerFilter = '';
+    renderPlans();
 }
 
 /**
@@ -191,10 +205,31 @@ function renderPlans() {
     const container = document.getElementById('plansContainer');
     if (!container) return;
 
+    // Obter valor da pesquisa
+    const searchInput = document.getElementById('searchPlans');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
     // Filtrar planos por servidor se selecionado
     let filteredPlans = plansData;
+    
+    // Filtro por servidor
     if (currentServerFilter) {
-        filteredPlans = plansData.filter(plan => plan.server_id == currentServerFilter);
+        filteredPlans = filteredPlans.filter(plan => plan.server_id == currentServerFilter);
+    }
+    
+    // Filtro por pesquisa
+    if (searchTerm) {
+        filteredPlans = filteredPlans.filter(plan => {
+            const name = (plan.name || '').toLowerCase();
+            const serverName = (plan.server_name || '').toLowerCase();
+            const price = (plan.price || '').toString();
+            const description = (plan.description || '').toLowerCase();
+            
+            return name.includes(searchTerm) || 
+                   serverName.includes(searchTerm) || 
+                   price.includes(searchTerm) ||
+                   description.includes(searchTerm);
+        });
     }
 
     // Agrupar planos por servidor
@@ -218,97 +253,89 @@ function renderPlans() {
         return;
     }
 
-    // Renderizar grupos
-    container.innerHTML = Object.values(groupedPlans).map(group => `
-        <div class="server-group">
-            <div class="server-group-header">
-                <div class="server-info">
-                    <div class="server-details">
-                        <h3 class="server-name">${escapeHtml(group.serverName)}</h3>
-                        <div class="server-stats">
-                            <span class="server-plan-count">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 0.25rem;">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                                </svg>
-                                ${group.plans.length} plano${group.plans.length !== 1 ? 's' : ''}
-                            </span>
-                            <span class="server-status active">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 0.25rem;">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <polyline points="16 12 12 8 8 12"></polyline>
-                                </svg>
-                                Online
-                            </span>
-                        </div>
-                    </div>
-                </div>
+    // Renderizar tabela única com todos os planos
+    container.innerHTML = `
+        <div class="plans-table">
+            <div class="plans-table-header">
+                <div class="table-col col-server">Servidor</div>
+                <div class="table-col col-name">Nome</div>
+                <div class="table-col col-value">Valor</div>
+                <div class="table-col col-duration">Duração</div>
+                <div class="table-col col-connections">Conexões</div>
+                <div class="table-col col-status">Status</div>
+                <div class="table-col col-actions">Ações</div>
             </div>
-            <div class="plans-grid">
-                ${group.plans.map(plan => renderPlanCard(plan)).join('')}
+            <div class="plans-table-body">
+                ${filteredPlans.map(plan => renderPlanCard(plan)).join('')}
             </div>
         </div>
-    `).join('');
+    `;
     
     // Adicionar event listeners para os botões
     setupPlanActionListeners();
 }
 
 /**
- * Renderizar card de plano
+ * Renderizar card de plano - Layout Horizontal
  */
 function renderPlanCard(plan) {
     const statusClass = plan.status === 'active' ? 'active' : 'inactive';
     const statusText = plan.status === 'active' ? 'Ativo' : 'Inativo';
     
+    const serverName = plan.server_name || 'Sem servidor';
+    const serverColorClass = getServerColorClass(serverName);
+    
     return `
-        <div class="plan-card ${statusClass}" data-plan-id="${plan.id}">
-            <div class="plan-header">
-                <h4 class="plan-name">${escapeHtml(plan.name)}</h4>
-                <span class="plan-status status-${statusClass}">${statusText}</span>
+        <div class="plan-table-row ${statusClass}" data-plan-id="${plan.id}">
+            <div class="table-col col-server">
+                <span class="server-badge ${serverColorClass}">${escapeHtml(serverName)}</span>
             </div>
             
-            <div class="plan-price">
-                <span class="price-currency">R$</span>
-                <span class="price-value">${formatPrice(plan.price)}</span>
-                <span class="price-period">/mês</span>
+            <div class="table-col col-name">
+                <span class="plan-name">${escapeHtml(plan.name)}</span>
             </div>
             
-            <div class="plan-details">
-                <div class="plan-detail">
-                    <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
-                    <span>${plan.duration_days} dias</span>
-                </div>
-                <div class="plan-detail">
-                    <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                        <line x1="8" y1="21" x2="16" y2="21"></line>
-                        <line x1="12" y1="17" x2="12" y2="21"></line>
-                    </svg>
-                    <span>${plan.max_screens} tela${plan.max_screens !== 1 ? 's' : ''}</span>
-                </div>
+            <div class="table-col col-value">
+                <span class="plan-price">
+                    <span class="currency">R$</span>
+                    <span class="amount">${formatPrice(plan.price)}</span>
+                    <span class="period">/mês</span>
+                </span>
             </div>
             
-            ${plan.description && plan.description.trim() ? `<p class="plan-description">${escapeHtml(plan.description)}</p>` : ''}
+            <div class="table-col col-duration">
+                <svg class="col-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>${plan.duration_days} dias</span>
+            </div>
             
-            <div class="plan-actions">
-                <button class="btn-action btn-edit" data-plan-id="${plan.id}" title="Editar">
+            <div class="table-col col-connections">
+                <svg class="col-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+                <span>${plan.max_screens} ${plan.max_screens === 1 ? 'tela' : 'telas'}</span>
+            </div>
+            
+            <div class="table-col col-status">
+                <span class="status-badge status-${statusClass}">${statusText}</span>
+            </div>
+            
+            <div class="table-col col-actions">
+                <button class="plan-action-btn edit-btn" data-plan-id="${plan.id}" title="Editar">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                 </button>
-                <button class="btn-action btn-delete danger" data-plan-id="${plan.id}" title="Excluir">
+                <button class="plan-action-btn delete-btn" data-plan-id="${plan.id}" title="Excluir">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3,6 5,6 21,6"></polyline>
-                        <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
                     </svg>
                 </button>
             </div>
@@ -344,7 +371,7 @@ function renderEmptyState() {
  */
 function setupPlanActionListeners() {
     // Botões de editar
-    document.querySelectorAll('.btn-edit').forEach(btn => {
+    document.querySelectorAll('.edit-btn, .btn-edit').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -354,7 +381,7 @@ function setupPlanActionListeners() {
     });
     
     // Botões de excluir
-    document.querySelectorAll('.btn-delete').forEach(btn => {
+    document.querySelectorAll('.delete-btn, .btn-delete').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -516,7 +543,7 @@ async function savePlan() {
  * Editar plano
  */
 function editPlan(planId) {
-    openPlanModal(planId);
+    window.location.href = `/plans/add?id=${planId}`;
 }
 
 /**
@@ -553,15 +580,47 @@ async function deletePlan(planId) {
 
 /**
  * Funções globais para compatibilidade
+ * DESABILITADO - Agora usa página separada /plans/add
  */
-window.openPlanModalGlobal = openPlanModal;
-window.closePlanModalGlobal = closePlanModal;
+window.openPlanModalGlobal = function() {
+    window.location.href = '/plans/add';
+};
+window.closePlanModalGlobal = function() {
+    window.location.href = '/plans';
+};
 
 /**
  * Formatar preço
  */
 function formatPrice(price) {
     return parseFloat(price).toFixed(2).replace('.', ',');
+}
+
+/**
+ * Gerar classe de cor para servidor baseada no nome
+ */
+function getServerColorClass(serverName) {
+    // Gerar hash simples do nome do servidor
+    let hash = 0;
+    for (let i = 0; i < serverName.length; i++) {
+        hash = serverName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Array de cores visíveis em tema escuro
+    const colors = [
+        'server-blue',
+        'server-green', 
+        'server-purple',
+        'server-orange',
+        'server-cyan',
+        'server-pink',
+        'server-teal',
+        'server-yellow'
+    ];
+    
+    // Usar o hash para selecionar uma cor
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
 }
 
 /**

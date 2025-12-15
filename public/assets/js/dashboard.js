@@ -752,20 +752,30 @@ function drawEmptyChart() {
  */
 function updateBalanceCards(data) {
     // Saldo Mensal
-    updateCard('monthlyBalance', formatCurrency(data.monthlyBalance || 0));
-    updateCard('monthlyRevenue', formatCurrency(data.monthlyRevenue || 0));
-    updateCard('monthlyExpenses', formatCurrency(data.monthlyExpenses || 0));
-    updateChange('monthlyBalanceChange', `+${data.monthlyBalanceChange || 0}%`);
+    const monthlyBalanceEl = document.getElementById('monthlyBalance');
+    if (monthlyBalanceEl) {
+        const formattedValue = formatCurrency(data.monthlyBalance || 0);
+        monthlyBalanceEl.setAttribute('data-real-value', formattedValue);
+        // Manter oculto se já estiver oculto
+        if (monthlyBalanceEl.getAttribute('data-visible') === 'false') {
+            monthlyBalanceEl.textContent = '••••••';
+        } else {
+            monthlyBalanceEl.textContent = formattedValue;
+        }
+    }
 
     // Saldo Anual
-    updateCard('annualBalance', formatCurrency(data.annualBalance || 0));
-    updateCard('annualRevenue', formatCurrency(data.annualRevenue || 0));
-    updateCard('annualExpenses', formatCurrency(data.annualExpenses || 0));
-    updateChange('annualBalanceChange', `+${data.annualBalanceChange || 0}%`);
-
-    // Aplicar cores baseadas no saldo
-    applyBalanceColors(data.monthlyBalance || 0, 'monthly');
-    applyBalanceColors(data.annualBalance || 0, 'annual');
+    const annualBalanceEl = document.getElementById('annualBalance');
+    if (annualBalanceEl) {
+        const formattedValue = formatCurrency(data.annualBalance || 0);
+        annualBalanceEl.setAttribute('data-real-value', formattedValue);
+        // Manter oculto se já estiver oculto
+        if (annualBalanceEl.getAttribute('data-visible') === 'false') {
+            annualBalanceEl.textContent = '••••••';
+        } else {
+            annualBalanceEl.textContent = formattedValue;
+        }
+    }
 }
 
 /**
@@ -812,9 +822,42 @@ function applyBalanceColors(balance, type) {
 }
 
 /**
+ * Carregar dados de faturas
+ */
+async function loadInvoicesData() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api-invoices.php', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.invoices) {
+                // Armazenar faturas globalmente para uso nos gráficos
+                window.invoicesData = result.invoices;
+            } else {
+                window.invoicesData = [];
+            }
+        } else {
+            window.invoicesData = [];
+        }
+    } catch (error) {
+        window.invoicesData = [];
+    }
+}
+
+/**
  * Inicializar gráficos de analytics (Clientes Novos e Pagamentos)
  */
 async function initializeAnalyticsCharts() {
+    // Carregar faturas primeiro
+    await loadInvoicesData();
+    
     // Buscar dados reais
     const clientsData = await generateClientsData();
     const paymentsData = generatePaymentsData();
@@ -928,9 +971,26 @@ function generatePaymentsData() {
         labels.push(i.toString().padStart(2, '0'));
     }
 
-    // TODO: Buscar dados reais de pagamentos da API quando disponível
-    // Por enquanto retorna zeros, mas quando houver pagamentos no mês atual
-    // eles serão contabilizados aqui
+    // Buscar dados reais de pagamentos das faturas pagas
+    if (window.invoicesData && Array.isArray(window.invoicesData)) {
+        window.invoicesData.forEach(invoice => {
+            // Verificar se a fatura foi paga no mês atual
+            if (invoice.status === 'paid' && invoice.payment_date) {
+                const paymentDate = new Date(invoice.payment_date);
+                const paymentMonth = paymentDate.getMonth();
+                const paymentYear = paymentDate.getFullYear();
+                
+                // Se o pagamento foi no mês atual
+                if (paymentMonth === currentMonth && paymentYear === currentYear) {
+                    const day = paymentDate.getDate();
+                    if (day >= 1 && day <= days) {
+                        // Adicionar o valor da fatura ao dia correspondente
+                        data[day - 1] += parseFloat(invoice.final_value || invoice.value || 0);
+                    }
+                }
+            }
+        });
+    }
 
     return { data, labels };
 }
@@ -1867,3 +1927,43 @@ window.addEventListener('resize', function () {
     }
 });
 // toggleSubmenu agora está em common.js
+
+/**
+ * Toggle de visibilidade dos valores de saldo
+ */
+function initBalanceToggle() {
+    const toggleButtons = document.querySelectorAll('.balance-toggle-btn');
+    
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const valueElement = document.getElementById(targetId);
+            const eyeIcon = this.querySelector('.eye-icon');
+            const eyeOffIcon = this.querySelector('.eye-off-icon');
+            
+            if (valueElement) {
+                const isVisible = valueElement.getAttribute('data-visible') === 'true';
+                const realValue = valueElement.getAttribute('data-real-value') || 'R$ 0,00';
+                
+                if (isVisible) {
+                    // Ocultar valor - mostrar asteriscos
+                    valueElement.textContent = '••••••';
+                    valueElement.setAttribute('data-visible', 'false');
+                    eyeIcon.style.display = 'none';
+                    eyeOffIcon.style.display = 'block';
+                } else {
+                    // Mostrar valor real
+                    valueElement.textContent = realValue;
+                    valueElement.setAttribute('data-visible', 'true');
+                    eyeIcon.style.display = 'block';
+                    eyeOffIcon.style.display = 'none';
+                }
+            }
+        });
+    });
+}
+
+// Adicionar inicialização do toggle ao carregar a página
+document.addEventListener('DOMContentLoaded', function() {
+    initBalanceToggle();
+});

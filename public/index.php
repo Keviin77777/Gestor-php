@@ -152,6 +152,22 @@ switch ($path) {
         }
         break;
         
+    case '/clients/add':
+        // Página de adicionar cliente
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $addFile = __DIR__ . '/../app/views/clients/add.php';
+        if (file_exists($addFile)) {
+            include $addFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
     case '/clients/import':
         // Página de importação de clientes
         if (!hasPermission($path)) {
@@ -179,6 +195,22 @@ switch ($path) {
         $serversFile = __DIR__ . '/../app/views/servers/index.php';
         if (file_exists($serversFile)) {
             include $serversFile;
+        } else {
+            http_response_code(404);
+            echo "Página não encontrada.";
+        }
+        break;
+        
+    case '/plans/add':
+        // Página de adicionar plano
+        if (!hasPermission($path)) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $addPlanFile = __DIR__ . '/../app/views/plans/add.php';
+        if (file_exists($addPlanFile)) {
+            include $addPlanFile;
         } else {
             http_response_code(404);
             echo "Página não encontrada.";

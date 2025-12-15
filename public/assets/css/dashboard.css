@@ -5331,46 +5331,21 @@ reções para evitar linhas indesejadas no scroll */
     transform: scale(1.05);
 }
 
-/* Dark theme para submenu */
-[data-theme="dark"] .submenu {
-    background: linear-gradient(135deg, #334155 0%, #475569 100%);
-    border-left-color: var(--primary);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+/* Submenu sempre com fundo escuro (sem depender de data-theme) */
+.submenu {
+    background: transparent !important;
 }
 
-[data-theme="dark"] .submenu-item {
-    color: #cbd5e1;
+.submenu-item {
+    color: var(--text-secondary);
 }
 
-[data-theme="dark"] .submenu-item:hover {
-    background: linear-gradient(135deg, #475569 0%, rgba(99, 102, 241, 0.2) 100%);
-    color: #f1f5f9;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+.submenu-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
 }
 
-[data-theme="dark"] .submenu-item.active {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    color: white;
-}
-
-/* Classes para tema escuro */
-.dark-theme .submenu {
-    background: linear-gradient(135deg, #334155 0%, #475569 100%);
-    border-left-color: var(--primary);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.dark-theme .submenu-item {
-    color: #cbd5e1;
-}
-
-.dark-theme .submenu-item:hover {
-    background: linear-gradient(135deg, #475569 0%, rgba(99, 102, 241, 0.2) 100%);
-    color: #f1f5f9;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.dark-theme .submenu-item.active {
+.submenu-item.active {
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
     color: white;
 }
@@ -7032,67 +7007,57 @@ o de Saldo Líquido Moderna */
     margin-bottom: 2rem;
 }
 
-/* Card de Saldo Moderno */
+/* Card de Saldo Moderno - Design da Imagem */
 .modern-balance-card {
     background: var(--bg-primary);
-    border-radius: 16px;
-    padding: 1rem;
+    border-radius: 20px;
+    padding: 2rem 1.75rem !important;
     display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
+    align-items: center;
+    gap: 1rem;
     border: 1px solid var(--border);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
-    min-height: 90px;
+    min-height: 115px !important;
+    height: auto !important;
 }
 
-.modern-balance-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-}
-
-.monthly-balance::before {
-    background: linear-gradient(90deg, #10b981, #34d399);
-}
-
-.annual-balance::before {
-    background: linear-gradient(90deg, #3b82f6, #60a5fa);
-}
+/* Faixas coloridas removidas */
 
 .modern-balance-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-/* Ícone do Saldo */
-.balance-icon-modern {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+/* Ícones laterais - Cifrão */
+.balance-icon-left,
+.balance-icon-right {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 }
 
-.monthly-balance .balance-icon-modern {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+.monthly-balance .balance-icon-left,
+.monthly-balance .balance-icon-right {
+    background: rgba(16, 185, 129, 0.1);
     color: #10b981;
 }
 
-.annual-balance .balance-icon-modern {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+.annual-balance .balance-icon-left,
+.annual-balance .balance-icon-right {
+    background: rgba(59, 130, 246, 0.1);
     color: #3b82f6;
 }
 
-.balance-icon-modern svg {
-    width: 24px;
-    height: 24px;
+.balance-icon-left svg,
+.balance-icon-right svg {
+    width: 22px;
+    height: 22px;
 }
 
 /* Conteúdo do Card de Saldo */
@@ -7101,70 +7066,97 @@ o de Saldo Líquido Moderna */
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    justify-content: center;
 }
 
-.balance-header-modern {
+/* Header com Badge */
+.balance-header-with-badge {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 0.75rem;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.balance-header-modern h3 {
-    font-size: 0.875rem;
+.balance-title-modern {
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
     line-height: 1.2;
 }
 
-.balance-value-modern {
-    font-size: 1.25rem;
-    font-weight: 700;
-    line-height: 1;
-    text-align: right;
-}
-
-.monthly-balance .balance-value-modern {
-    color: #10b981;
-}
-
-.annual-balance .balance-value-modern {
-    color: #3b82f6;
-}
-
-/* Detalhes do Saldo */
-.balance-details-modern {
-    display: flex;
-    gap: 0.75rem;
-}
-
-.balance-item-modern {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-}
-
-.balance-label-modern {
-    font-size: 0.6875rem;
-    color: var(--text-secondary);
-    font-weight: 500;
+.balance-badge {
+    font-size: 0.625rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
-.balance-amount-modern {
-    font-size: 0.8125rem;
-    font-weight: 600;
-}
-
-.balance-amount-modern.positive {
+.monthly-badge {
+    background: rgba(16, 185, 129, 0.15);
     color: #10b981;
 }
 
-.balance-amount-modern.negative {
-    color: #ef4444;
+.annual-badge {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+
+/* Wrapper do valor com botão de toggle */
+.balance-value-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.balance-value-modern {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: all 0.3s ease;
+    letter-spacing: 0.05em;
+}
+
+.balance-value-modern[data-visible="false"] {
+    letter-spacing: 0.3em;
+}
+
+.monthly-balance .balance-value-modern {
+    color: var(--text-primary);
+}
+
+.annual-balance .balance-value-modern {
+    color: var(--text-primary);
+}
+
+/* Botão de toggle de visibilidade */
+.balance-toggle-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    padding: 0.375rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+}
+
+.balance-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+}
+
+.balance-toggle-btn:active {
+    transform: scale(0.95);
+}
+
+.balance-toggle-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
 /* Animações para os cards de saldo */
@@ -7180,9 +7172,11 @@ o de Saldo Líquido Moderna */
     animation-delay: 0.6s;
 }
 
-/* Efeito hover no ícone */
-.modern-balance-card:hover .balance-icon-modern {
-    animation: pulse-icon 0.6s ease-in-out;
+/* Efeito hover nos ícones */
+.modern-balance-card:hover .balance-icon-left,
+.modern-balance-card:hover .balance-icon-right {
+    transform: scale(1.05);
+    transition: transform 0.3s ease;
 }
 
 /* Responsividade para cards de saldo */
@@ -7193,34 +7187,48 @@ o de Saldo Líquido Moderna */
     }
 
     .modern-balance-card {
-        padding: 0.75rem;
-        min-height: 80px;
+        padding: 1.25rem 1.25rem !important;
+        min-height: 90px !important;
+        height: auto !important;
+        border-radius: 18px;
+        border: 1px solid var(--border) !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+    }
+    
+    /* Remover efeitos de brilho no mobile */
+    .modern-balance-card::after {
+        display: none !important;
     }
 
-    .balance-header-modern {
-        flex-direction: column;
-        gap: 0.5rem;
+    .balance-icon-left,
+    .balance-icon-right {
+        width: 40px;
+        height: 40px;
+    }
+
+    .balance-icon-left svg,
+    .balance-icon-right svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .balance-title-modern {
+        font-size: 0.75rem;
+    }
+
+    .balance-badge {
+        font-size: 0.5625rem;
+        padding: 0.2rem 0.4rem;
     }
 
     .balance-value-modern {
-        font-size: 1.25rem;
-        text-align: left;
+        font-size: 1.375rem;
     }
 
-    .balance-details-modern {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .balance-item-modern {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .balance-icon-modern {
-        width: 40px;
-        height: 40px;
+    .balance-toggle-btn svg {
+        width: 16px;
+        height: 20px;
     }
 
     .balance-icon-modern svg {
@@ -7246,11 +7254,7 @@ o de Saldo Líquido Moderna */
     left: 100%;
 }
 
-/* Melhorar contraste */
-.modern-balance-card {
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
+/* Efeito de contraste removido */
 
 .monthly-balance:hover {
     border-color: rgba(16, 185, 129, 0.3);
@@ -9151,13 +9155,7 @@ os específicos para Servidores */
     gap: 1.5rem;
 }
 
-.modern-balance-card {
-    background: var(--bg-primary);
-    border-radius: var(--radius);
-    padding: 1.5rem;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-}
+/* Definição antiga removida - usar a definição principal na linha 7011 */
 
 .balance-icon-modern {
     width: 48px;
@@ -9666,15 +9664,7 @@ os específicos para Servidores */
         overflow: hidden;
     }
 
-    .modern-balance-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
-    }
+    /* Faixa colorida removida no mobile */
 
     .balance-icon-modern {
         position: absolute;
