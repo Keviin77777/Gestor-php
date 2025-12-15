@@ -91,36 +91,20 @@ try {
     
     error_log("Usuário encontrado: {$userData['email']}");
     
-    // Verificar qual método de pagamento está ativo (prioridade: Asaas > EFI Bank > Mercado Pago)
-    $paymentProvider = null;
-    $providerName = '';
+    // IMPORTANTE: Para renovação de revendedores, SEMPRE usar método de pagamento do ADMIN
+    // Buscar métodos de pagamento ativos do ADMIN (prioridade: Asaas > EFI Bank > Mercado Pago)
+    $adminId = 'admin-001';
     
-    // Tentar Asaas primeiro
-    $asaas = new AsaasHelper();
-    if ($asaas->isEnabled()) {
-        $paymentProvider = $asaas;
-        $providerName = 'asaas';
-        error_log("Asaas habilitado, usando como provedor");
-    } else {
-        // Tentar EFI Bank
-        $efi = new EfiBankHelper();
-        if ($efi->isEnabled()) {
-            $paymentProvider = $efi;
-            $providerName = 'efibank';
-            error_log("EFI Bank habilitado, usando como provedor");
-        } else {
-            // Fallback para Mercado Pago
-            $mp = new MercadoPagoHelper();
-            if ($mp->isEnabled()) {
-                $paymentProvider = $mp;
-                $providerName = 'mercadopago';
-                error_log("Mercado Pago habilitado, usando como provedor");
-            }
-        }
-    }
+    $paymentMethods = Database::fetchAll(
+        "SELECT method_name, config_value, enabled 
+         FROM payment_methods 
+         WHERE reseller_id = ? AND enabled = 1
+         ORDER BY FIELD(method_name, 'asaas', 'efibank', 'mercadopago')",
+        [$adminId]
+    );
     
-    if (!$paymentProvider) {
-        error_log("Nenhum método de pagamento está habilitado");
+    if (empty($paymentMethods)) {
+        error_log("Nenhum método de pagamento configurado para o admin");
         Response::json([
             'success' => false,
             'error' => 'Sistema de pagamento não está configurado. Entre em contato com o suporte.'
@@ -128,7 +112,76 @@ try {
         exit;
     }
     
-    error_log("Provedor $providerName habilitado, criando pagamento...");
+    // Usar o primeiro método ativo (já ordenado por prioridade)
+    $activeMethodRow = $paymentMethods[0];
+    $providerName = $activeMethodRow['method_name'];
+    $config = json_decode($activeMethodRow['config_value'], true);
+    
+    error_log("Usando método de pagamento do ADMIN: $providerName");
+    
+    // Inicializar helper com as credenciais do ADMIN
+    $paymentProvider = null;
+    
+    if ($providerName === 'asaas') {
+        $apiKey = $config['api_key'] ?? '';
+        $sandbox = $config['sandbox'] ?? false;
+        
+        if (empty($apiKey)) {
+            error_log("API Key do Asaas não configurada");
+            Response::json([
+                'success' => false,
+                'error' => 'Asaas não está configurado corretamente. Entre em contato com o suporte.'
+            ], 400);
+            exit;
+        }
+        
+        $paymentProvider = new AsaasHelper($apiKey, $sandbox);
+        error_log("Asaas habilitado com credenciais do ADMIN");
+        
+    } elseif ($providerName === 'efibank') {
+        $clientId = $config['client_id'] ?? '';
+        $clientSecret = $config['client_secret'] ?? '';
+        $certificate = $config['certificate'] ?? '';
+        $sandbox = $config['sandbox'] ?? false;
+        
+        if (empty($clientId) || empty($clientSecret)) {
+            error_log("Credenciais do EFI Bank não configuradas");
+            Response::json([
+                'success' => false,
+                'error' => 'EFI Bank não está configurado corretamente. Entre em contato com o suporte.'
+            ], 400);
+            exit;
+        }
+        
+        $paymentProvider = new EfiBankHelper($clientId, $clientSecret, $certificate, $sandbox);
+        error_log("EFI Bank habilitado com credenciais do ADMIN");
+        
+    } elseif ($providerName === 'mercadopago') {
+        $publicKey = $config['public_key'] ?? '';
+        $accessToken = $config['access_token'] ?? '';
+        
+        if (empty($publicKey) || empty($accessToken)) {
+            error_log("Credenciais do Mercado Pago não configuradas");
+            Response::json([
+                'success' => false,
+                'error' => 'Mercado Pago não está configurado corretamente. Entre em contato com o suporte.'
+            ], 400);
+            exit;
+        }
+        
+        $paymentProvider = new MercadoPagoHelper($publicKey, $accessToken);
+        error_log("Mercado Pago habilitado com credenciais do ADMIN");
+        
+    } else {
+        error_log("Provedor não suportado: $providerName");
+        Response::json([
+            'success' => false,
+            'error' => 'Provedor de pagamento não suportado. Entre em contato com o suporte.'
+        ], 400);
+        exit;
+    }
+    
+    error_log("Provedor $providerName habilitado com credenciais do ADMIN, criando pagamento...");
     
     // Preparar dados do pagamento baseado no provedor
     if ($providerName === 'asaas') {
