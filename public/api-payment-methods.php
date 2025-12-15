@@ -24,6 +24,7 @@ require_once __DIR__ . '/../app/core/Auth.php';
 require_once __DIR__ . '/../app/core/Response.php';
 require_once __DIR__ . '/../app/helpers/EfiBankHelper.php';
 require_once __DIR__ . '/../app/helpers/AsaasHelper.php';
+require_once __DIR__ . '/../app/helpers/CiabraHelper.php';
 
 // Verificar autenticação
 $user = Auth::user();
@@ -207,6 +208,14 @@ function handlePost($db) {
         $configJson = json_encode([
             'api_key' => $config['api_key'],
             'sandbox' => false // Sempre produção
+        ]);
+    } elseif ($paymentMethod === 'ciabra') {
+        if (empty($config['api_key'])) {
+            Response::json(['success' => false, 'error' => 'API Key é obrigatória'], 400);
+            return;
+        }
+        $configJson = json_encode([
+            'api_key' => $config['api_key']
         ]);
     } else {
         Response::json(['success' => false, 'error' => 'Método de pagamento não suportado'], 400);
@@ -588,6 +597,41 @@ function testEfiBankConnection($clientId, $clientSecret, $certificate = '', $san
                 'success' => false,
                 'error' => "Erro ao validar: $errorMsg (HTTP $httpCode)",
                 'details' => $data
+            ];
+        }
+        
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'error' => 'Erro ao testar conexão: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Testar conexão real com API do Ciabra
+ */
+function testCiabraConnection($apiKey) {
+    try {
+        // Log para debug
+        error_log("Testando Ciabra - API Key: " . substr($apiKey, 0, 20) . "...");
+        
+        $ciabra = new CiabraHelper($apiKey);
+        $result = $ciabra->testConnection();
+        
+        if ($result['success']) {
+            return [
+                'success' => true,
+                'account_info' => [
+                    'status' => '✅ Credenciais válidas',
+                    'environment' => $result['environment'],
+                    'message' => 'Ciabra configurado e pronto para uso'
+                ]
+            ];
+        } else {
+            return [
+                'success' => false,
+                'error' => $result['error']
             ];
         }
         

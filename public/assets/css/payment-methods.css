@@ -10,6 +10,7 @@
 .provider-logo svg { width: 36px; height: 36px; stroke: white; }
 .mercadopago-logo { background: linear-gradient(135deg, #009ee3 0%, #0070ba 100%); }
 .asaas-logo { background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%); }
+.ciabra-logo { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); }
 .efibank-logo { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); }
 .provider-info h3 { font-size: 1.5rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.5rem 0; }
 .provider-info p { font-size: 0.875rem; color: var(--text-secondary); margin: 0; }
@@ -20,7 +21,14 @@
 .status-active::before { background: #10b981; animation: pulse 2s infinite; }
 .status-inactive { background: #fee2e2; color: #991b1b; }
 .status-inactive::before { background: #ef4444; }
+.status-coming-soon { background: #fef3c7; color: #92400e; }
+.status-coming-soon::before { background: #f59e0b; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.provider-card-disabled { opacity: 0.7; pointer-events: none; }
+.provider-card-disabled:hover { transform: none; box-shadow: var(--shadow-md); border-color: var(--border); }
+.coming-soon-badge { display: inline-block; padding: 0.25rem 0.5rem; background: #fef3c7; color: #92400e; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem; }
+.btn-disabled { background: var(--bg-tertiary) !important; color: var(--text-secondary) !important; cursor: not-allowed !important; opacity: 0.6; }
+.btn-disabled:hover { transform: none !important; box-shadow: none !important; }
 .provider-card-body { padding: 0 2rem 2rem 2rem; }
 .btn-configure { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 1rem; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; }
 .btn-configure svg { width: 20px; height: 20px; }

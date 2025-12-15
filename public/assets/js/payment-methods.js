@@ -24,6 +24,7 @@ function initPaymentMethods() {
 async function loadAllProviders() {
     await loadMercadoPagoConfig();
     await loadAsaasConfig();
+    await loadCiabraConfig();
     
     // Carregar EFI Bank apenas se o card existir (apenas para admin)
     const efiCard = document.querySelector('[data-provider="efibank"]');
@@ -71,6 +72,27 @@ async function loadAsaasConfig() {
         }
     } catch (error) {
         console.error('Erro ao carregar Asaas:', error);
+    }
+}
+
+/**
+ * Carregar configuração do Ciabra
+ */
+async function loadCiabraConfig() {
+    try {
+        const response = await fetch('/api-payment-methods.php?method=ciabra', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success && result.config) {
+            updateProviderStatus('ciabra', result.config.enabled);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar Ciabra:', error);
     }
 }
 
@@ -127,6 +149,7 @@ async function openProviderModal(provider) {
     const titles = {
         'mercadopago': 'Configurar Mercado Pago',
         'asaas': 'Configurar Asaas',
+        'ciabra': 'Configurar Ciabra',
         'efibank': 'Configurar EFI Bank'
     };
     modalTitle.textContent = titles[provider] || 'Configurar Provedor';
@@ -151,6 +174,8 @@ async function openProviderModal(provider) {
             modalBody.innerHTML = getMercadoPagoForm(config);
         } else if (provider === 'asaas') {
             modalBody.innerHTML = getAsaasForm(config);
+        } else if (provider === 'ciabra') {
+            modalBody.innerHTML = getCiabraForm(config);
         } else if (provider === 'efibank') {
             modalBody.innerHTML = getEfiBankForm(config);
         }
@@ -285,6 +310,63 @@ function getAsaasForm(config) {
                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
                 <p><strong>Importante:</strong> Use a API Key de produção do Asaas. Certifique-se de que sua conta está aprovada para usar PIX.</p>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="testProviderConnection()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    Testar Conexão
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Salvar
+                </button>
+            </div>
+        </form>
+    `;
+}
+
+/**
+ * Formulário Ciabra
+ */
+function getCiabraForm(config) {
+    return `
+        <form id="providerForm" class="payment-form">
+            <div class="form-group">
+                <label for="apiKey">API Key *</label>
+                <input 
+                    type="password" 
+                    id="apiKey" 
+                    name="api_key" 
+                    placeholder="sua_api_key_ciabra"
+                    value="${config.api_key || ''}"
+                    required
+                >
+                <small class="form-help">
+                    Obtenha sua API Key no painel do Ciabra
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="enabled" ${config.enabled ? 'checked' : ''}>
+                    <span>Ativar Ciabra</span>
+                </label>
+            </div>
+            
+            <div class="info-alert">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <p><strong>Como obter:</strong> Acesse o painel do Ciabra → Configurações → API → Gerar nova chave de API</p>
             </div>
             
             <div class="form-actions">

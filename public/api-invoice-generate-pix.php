@@ -22,6 +22,7 @@ require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/helpers/MercadoPagoHelper.php';
 require_once __DIR__ . '/../app/helpers/AsaasHelper.php';
 require_once __DIR__ . '/../app/helpers/EfiBankHelper.php';
+require_once __DIR__ . '/../app/helpers/CiabraHelper.php';
 
 try {
     // Validar método
@@ -56,12 +57,12 @@ try {
         throw new Exception('Esta fatura já foi paga');
     }
 
-    // Buscar métodos de pagamento ativos DESTE RESELLER (prioridade: Asaas > Mercado Pago > EFI Bank)
+    // Buscar métodos de pagamento ativos DESTE RESELLER (prioridade: Ciabra > Asaas > Mercado Pago > EFI Bank)
     $paymentMethods = Database::fetchAll(
         "SELECT method_name, config_value, enabled 
          FROM payment_methods 
          WHERE reseller_id = ? AND enabled = 1
-         ORDER BY FIELD(method_name, 'asaas', 'mercadopago', 'efibank')",
+         ORDER BY FIELD(method_name, 'ciabra', 'asaas', 'mercadopago', 'efibank')",
         [$invoice['reseller_id']]
     );
 
@@ -79,7 +80,29 @@ try {
     $clientName = $invoice['client_name'];
     
     // Inicializar helper e preparar dados conforme provedor
-    if ($provider === 'asaas') {
+    if ($provider === 'ciabra') {
+        // Ciabra - não exige CPF/CNPJ
+        $apiKey = $config['api_key'] ?? '';
+        
+        if (empty($apiKey)) {
+            throw new Exception('API Key do Ciabra não configurada');
+        }
+        
+        $ciabraHelper = new CiabraHelper($apiKey);
+        
+        $paymentData = [
+            'amount' => $amount,
+            'description' => "Fatura #{$invoice['id']} - {$clientName}",
+            'customer_name' => $clientName,
+            'customer_email' => $invoice['client_email'] ?: null,
+            'customer_phone' => $invoice['client_phone'] ?: null,
+            'external_reference' => "INVOICE_{$invoice['id']}"
+        ];
+        
+        $pixResult = $ciabraHelper->createPixPayment($paymentData);
+        $paymentMethod = 'pix_ciabra';
+        
+    } elseif ($provider === 'asaas') {
         // Asaas
         $apiKey = $config['api_key'] ?? '';
         $sandbox = $config['sandbox'] ?? false;

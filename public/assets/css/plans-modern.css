@@ -360,26 +360,85 @@
 }
 
 @media (max-width: 768px) {
-    .plans-table-header {
-        display: none;
+    /* Container com scroll horizontal */
+    .plans-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -1rem;
+        padding: 0 1rem;
     }
 
+    /* Manter largura mínima para scroll horizontal */
+    .plans-table-header,
     .plan-table-row {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-        padding: 1.25rem;
-        border-radius: 12px !important;
-        border: 1px solid var(--border) !important;
-        margin-bottom: 0.75rem;
+        min-width: 900px;
+        grid-template-columns: 1.3fr 1.8fr 1.2fr 1fr 1fr 0.8fr 0.8fr !important;
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+
+    /* Ajustar tamanhos de fonte */
+    .table-col {
+        font-size: 0.6875rem;
     }
 
     .plan-table-row .table-col {
-        justify-content: space-between;
+        font-size: 0.875rem;
     }
 
-    .col-actions {
-        justify-content: flex-start;
-        padding-top: 0.5rem;
-        border-top: 1px solid var(--border);
+    .col-server .server-badge {
+        font-size: 0.75rem;
+        padding: 0.3125rem 0.625rem;
+    }
+
+    .plan-price .amount {
+        font-size: 1rem;
+    }
+
+    .plan-action-btn {
+        width: 30px;
+        height: 30px;
+    }
+
+    .plan-action-btn svg {
+        width: 13px;
+        height: 13px;
+    }
+
+    /* Indicador visual de scroll */
+    .plans-table::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 40px;
+        background: linear-gradient(to left, var(--bg-primary), transparent);
+        pointer-events: none;
+        opacity: 0.8;
+    }
+
+    /* Ajustar container de planos */
+    .plans-container,
+    #plansContainer {
+        padding: 1rem 0;
+        gap: 2rem;
+    }
+
+    .server-group {
+        position: relative;
+    }
+
+    /* Ajustar header do grupo */
+    .server-group-header {
+        padding: 0 1rem 0.75rem 1rem;
+    }
+
+    .server-name {
+        font-size: 1rem;
+    }
+
+    .server-plan-count {
+        font-size: 0.8125rem;
     }
 }
