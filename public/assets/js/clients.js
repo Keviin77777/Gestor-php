@@ -632,39 +632,20 @@ async function populateApplicationsDropdown() {
 
 /**
  * Abrir modal de adicionar cliente
+ * REMOVIDO - Agora usa página separada /clients/add
  */
 async function openAddClientModal() {
-    document.getElementById('modalTitle').textContent = 'Novo Cliente';
-    document.getElementById('clientForm').reset();
-
-    // Definir data de vencimento padrão (30 dias)
-    const nextMonth = new Date();
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    document.getElementById('clientRenewalDate').value = nextMonth.toISOString().split('T')[0];
-
-    // Definir número de telas padrão
-    document.getElementById('clientScreens').value = '1';
-
-    // Preencher dropdowns com dados reais
-    populatePlansDropdown();
-    await populateServersDropdown();
-    await populateApplicationsDropdown();
-
-    // Inicializar validação de senha após preencher dropdowns
-    setTimeout(() => {
-        if (typeof setupPasswordValidation === 'function') {
-            setupPasswordValidation();
-        }
-    }, 100);
-
-    document.getElementById('clientModal').classList.add('active');
+    // Redirecionar para página de adicionar cliente
+    window.location.href = '/clients/add';
 }
 
 /**
  * Fechar modal
+ * REMOVIDO - Modal não existe mais, usa página separada
  */
 function closeClientModal() {
-    document.getElementById('clientModal').classList.remove('active');
+    // Função mantida para compatibilidade, mas não faz nada
+    // O modal foi removido e agora usa página separada /clients/add
 }
 
 /**
@@ -1071,7 +1052,7 @@ async function processClientDeletion(clientId, client) {
 
 /**
  * Abrir modal de novo cliente
- * DESABILITADO - Agora usa página separada /clients/add
+ * REMOVIDO - Agora usa página separada /clients/add
  */
 async function openClientModal() {
     // Redirecionar para página de adicionar cliente
@@ -1080,21 +1061,11 @@ async function openClientModal() {
 
 /**
  * Fechar modal
+ * REMOVIDO - Modal não existe mais, usa página separada
  */
 function closeClientModal() {
-    const modal = document.getElementById('clientModal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            modal.style.display = 'none';
-            // Limpar formulário DEPOIS de fechar completamente
-            const form = document.getElementById('clientForm');
-            if (form) {
-                form.reset();
-                delete form.dataset.editing;
-            }
-        }, 300);
-    }
+    // Função mantida para compatibilidade, mas não faz nada
+    // O modal foi removido e agora usa página separada /clients/add
 }
 
 /**
@@ -1170,11 +1141,13 @@ async function saveClient(event) {
             const result = await response.json();
 
             if (result.success) {
-                // Recarregar lista de clientes do banco de dados ANTES de fechar
+                // Recarregar lista de clientes do banco de dados
                 await loadClients();
 
-                // Fechar modal DEPOIS de salvar
-                closeClientModal();
+                // Redirecionar de volta para lista de clientes (se estiver na página de add)
+                if (window.location.pathname.includes('/clients/add')) {
+                    window.location.href = '/clients';
+                }
 
                 // Mostrar mensagem de sucesso
                 let message = 'Cliente atualizado com sucesso!';
@@ -1199,11 +1172,13 @@ async function saveClient(event) {
             const result = await response.json();
 
             if (result.success) {
-                // Recarregar lista de clientes ANTES de fechar
+                // Recarregar lista de clientes
                 await loadClients();
 
-                // Fechar modal DEPOIS de salvar
-                closeClientModal();
+                // Redirecionar de volta para lista de clientes (se estiver na página de add)
+                if (window.location.pathname.includes('/clients/add')) {
+                    window.location.href = '/clients';
+                }
 
                 // Mostrar mensagem de sucesso
                 let message = 'Cliente criado com sucesso!';
@@ -1222,28 +1197,24 @@ async function saveClient(event) {
     }
 }
 
-// Configurar event listeners para o modal
+// Configurar event listeners
 document.addEventListener('DOMContentLoaded', function () {
-    // Event listener para o formulário
+    // Event listener para o formulário (apenas se existir na página atual)
+    // Nota: O formulário agora está na página /clients/add, não mais no modal
     const clientForm = document.getElementById('clientForm');
-    if (clientForm) {
+    if (clientForm && !window.location.pathname.includes('/clients/add')) {
+        // Se o formulário existir na página de lista (não deveria), manter compatibilidade
         clientForm.addEventListener('submit', saveClient);
     }
 
-    // Event listener para fechar modal clicando fora
-    const modal = document.getElementById('clientModal');
-    if (modal) {
-        modal.addEventListener('click', function (event) {
-            if (event.target === modal) {
-                closeClientModal();
-            }
-        });
-    }
-
-    // Event listener para botão de novo cliente
+    // Event listener para botão de novo cliente - já redireciona via onclick no HTML
+    // Mantido apenas para compatibilidade caso algum código ainda chame
     const newClientBtn = document.getElementById('newClientBtn');
-    if (newClientBtn) {
-        newClientBtn.addEventListener('click', openClientModal);
+    if (newClientBtn && !newClientBtn.onclick) {
+        newClientBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = '/clients/add';
+        });
     }
 });
 

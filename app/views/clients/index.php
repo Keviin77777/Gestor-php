@@ -48,23 +48,6 @@
             border-radius: 4px;
             margin-top: 0.5rem;
         }
-        
-        /* Correção específica para garantir que todos os campos sejam visíveis */
-        @media (max-width: 768px) {
-            #clientModal .modern-modal-body {
-                padding-top: 1rem !important;
-                overflow-y: auto !important;
-                -webkit-overflow-scrolling: touch !important;
-            }
-            
-            #clientModal .modern-form-group:first-child {
-                margin-top: 0.5rem !important;
-            }
-            
-            #clientModal .modern-form-grid {
-                margin-top: 0 !important;
-            }
-        }
     </style>
 </head>
 <body>
@@ -400,7 +383,7 @@
         </div>
     </div>
 
-    <!-- Modal de adicionar cliente removido - agora usa página separada -->
+    <!-- Modal de adicionar cliente removido - agora usa página separada /clients/add -->
 
     <script src="/assets/js/common.js"></script>
     <!-- Modal WhatsApp -->

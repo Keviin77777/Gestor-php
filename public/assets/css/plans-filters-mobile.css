@@ -1,0 +1,402 @@
+/**
+ * Plans Filters Mobile - Estilos Responsivos para Filtros e Pesquisa
+ */
+
+/* ===== ESTRUTURA GERAL ===== */
+.server-filter-section {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.server-filter-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.filter-title-section {
+    flex-shrink: 0;
+}
+
+.filter-title-section h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.filter-title-section p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.server-filter-section .filter-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+/* ===== SEARCH BOX ===== */
+.server-filter-section .search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 200px;
+}
+
+/* Remover qualquer outline padrão do navegador */
+.server-filter-section .search-box * {
+    outline: none;
+}
+
+.server-filter-section .search-icon {
+    position: absolute;
+    left: 1rem;
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.server-filter-section .search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    outline: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.server-filter-section .search-input:focus {
+    outline: none !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+}
+
+.server-filter-section .search-input:focus-visible {
+    outline: none !important;
+}
+
+.server-filter-section .search-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* ===== SERVER SELECT ===== */
+.server-filter-section .server-select {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    outline: none !important;
+}
+
+.server-filter-section .server-select:focus {
+    outline: none !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+}
+
+.server-filter-section .server-select:focus-visible {
+    outline: none !important;
+}
+
+/* ===== BOTÃO LIMPAR FILTROS ===== */
+.server-filter-section .btn-outline {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    outline: none;
+}
+
+.server-filter-section .btn-outline:focus {
+    outline: none !important;
+}
+
+.server-filter-section .btn-outline:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.server-filter-section .btn-outline:active {
+    transform: scale(0.98);
+}
+
+/* ===== RESPONSIVIDADE TABLET (768px) ===== */
+@media (max-width: 768px) {
+    .server-filter-section {
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .server-filter-header {
+        gap: 1.25rem;
+    }
+
+    .filter-title-section h3 {
+        font-size: 1rem;
+    }
+
+    .filter-title-section p {
+        font-size: 0.8125rem;
+    }
+
+    .server-filter-section .filter-actions {
+        flex-direction: column !important;
+        gap: 0.875rem !important;
+        width: 100% !important;
+    }
+
+    .server-filter-section .search-box {
+        min-width: 100% !important;
+        width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+
+    .server-filter-section .search-input {
+        width: 100% !important;
+        padding: 0.875rem 1rem 0.875rem 3rem !important;
+        font-size: 16px !important; /* Prevenir zoom no iOS */
+        box-sizing: border-box !important;
+    }
+
+    .server-filter-section .server-select {
+        min-width: 100% !important;
+        width: 100% !important;
+        padding: 0.875rem 1rem !important;
+        font-size: 16px !important; /* Prevenir zoom no iOS */
+        box-sizing: border-box !important;
+        flex: 1 1 100% !important;
+    }
+
+    .server-filter-section .btn-outline {
+        width: 100% !important;
+        padding: 0.875rem 1rem !important;
+        font-size: 0.875rem !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        flex: 1 1 100% !important;
+    }
+}
+
+/* ===== RESPONSIVIDADE MOBILE PEQUENO (480px) ===== */
+@media (max-width: 480px) {
+    .server-filter-section {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .server-filter-header {
+        gap: 1rem;
+    }
+
+    .filter-title-section {
+        margin-bottom: 0.5rem;
+    }
+
+    .filter-title-section h3 {
+        font-size: 0.9375rem;
+        margin-bottom: 0.375rem;
+    }
+
+    .filter-title-section p {
+        font-size: 0.75rem;
+        line-height: 1.4;
+    }
+
+    .server-filter-section .filter-actions {
+        gap: 0.75rem !important;
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
+    .server-filter-section .search-box {
+        min-width: 100% !important;
+        width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+
+    .server-filter-section .search-icon {
+        left: 0.875rem;
+        width: 16px;
+        height: 16px;
+    }
+
+    .server-filter-section .search-input {
+        padding: 0.75rem 0.875rem 0.75rem 2.75rem !important;
+        font-size: 16px !important; /* Prevenir zoom no iOS */
+        border-radius: 10px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .server-filter-section .server-select {
+        min-width: 100% !important;
+        width: 100% !important;
+        padding: 0.75rem 0.875rem !important;
+        font-size: 16px !important; /* Prevenir zoom no iOS */
+        border-radius: 10px !important;
+        box-sizing: border-box !important;
+        flex: 1 1 100% !important;
+    }
+
+    .server-filter-section .btn-outline {
+        width: 100% !important;
+        padding: 0.75rem 1rem !important;
+        font-size: 0.8125rem !important;
+        border-radius: 10px !important;
+        min-height: 44px !important; /* Área de toque adequada */
+        box-sizing: border-box !important;
+        flex: 1 1 100% !important;
+    }
+
+    .server-filter-section .btn-outline svg {
+        width: 14px;
+        height: 14px;
+        margin-right: 0.375rem;
+    }
+}
+
+/* ===== RESPONSIVIDADE MOBILE EXTRA PEQUENO (360px) ===== */
+@media (max-width: 360px) {
+    .server-filter-section {
+        padding: 0.875rem;
+    }
+
+    .filter-title-section h3 {
+        font-size: 0.875rem;
+    }
+
+    .filter-title-section p {
+        font-size: 0.6875rem;
+    }
+
+    .server-filter-section .search-input,
+    .server-filter-section .server-select,
+    .server-filter-section .btn-outline {
+        font-size: 16px; /* Manter 16px para prevenir zoom */
+        padding: 0.6875rem 0.75rem;
+    }
+
+    .server-filter-section .search-input {
+        padding-left: 2.5rem;
+    }
+
+    .server-filter-section .search-icon {
+        left: 0.75rem;
+        width: 14px;
+        height: 14px;
+    }
+}
+
+/* ===== MELHORIAS DE ACESSIBILIDADE ===== */
+@media (max-width: 768px) {
+    /* Garantir área de toque adequada */
+    .server-filter-section .search-box,
+    .server-filter-section .server-select,
+    .server-filter-section .btn-outline {
+        min-height: 44px;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Melhorar feedback visual no toque */
+    .server-filter-section .btn-outline:active {
+        transform: scale(0.97);
+        background: var(--bg-tertiary);
+    }
+
+    .server-filter-section .server-select:active {
+        background: var(--bg-tertiary);
+    }
+
+    /* Focus states - apenas box-shadow, sem outline duplicado */
+    .server-filter-section .search-input:focus,
+    .server-filter-section .server-select:focus {
+        outline: none !important;
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+    }
+    
+    .server-filter-section .btn-outline:focus {
+        outline: none !important;
+    }
+}
+
+/* ===== PREVENIR ZOOM NO iOS ===== */
+@media (max-width: 768px) {
+    .server-filter-section .search-input,
+    .server-filter-section .server-select {
+        font-size: 16px !important;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+}
+
+/* ===== DARK MODE SUPPORT ===== */
+[data-theme="dark"] .server-filter-section .search-input,
+[data-theme="dark"] .server-filter-section .server-select,
+[data-theme="dark"] .server-filter-section .btn-outline {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .server-filter-section .search-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* ===== ANIMAÇÕES SUAVES ===== */
+.server-filter-section * {
+    transition: all 0.2s ease;
+}
+
+/* ===== GARANTIR QUE NÃO HÁ OVERFLOW ===== */
+@media (max-width: 768px) {
+    .server-filter-section {
+        overflow: visible;
+    }
+
+    .filter-actions {
+        overflow: visible;
+    }
+
+    .server-filter-section .search-box,
+    .server-filter-section .server-select,
+    .server-filter-section .btn-outline {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}
+

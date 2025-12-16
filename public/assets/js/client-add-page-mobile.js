@@ -1,17 +1,14 @@
 /**
  * Cliente Add Page Mobile - JavaScript
- * Gerencia a transição entre modal (desktop) e página completa (mobile)
+ * REMOVIDO - Agora sempre usa página separada /clients/add
+ * Este arquivo é mantido apenas para compatibilidade, mas não é mais usado
  */
 
 // Função para abrir modal/página de adicionar cliente
+// REMOVIDO - Agora sempre redireciona para página separada
 function openClientModal() {
-    const isMobile = window.innerWidth <= 768;
-    
-    if (isMobile) {
-        openClientPageMobile();
-    } else {
-        openClientModalDesktop();
-    }
+    // Sempre redirecionar para página separada
+    window.location.href = '/clients/add';
 }
 
 // Abrir página mobile
@@ -71,8 +68,10 @@ function openClientPageMobile() {
 }
 
 // Abrir modal desktop (função original)
+// REMOVIDO - Agora sempre usa página separada
 function openClientModalDesktop() {
-    openAddClientModal();
+    // Sempre redirecionar para página separada
+    window.location.href = '/clients/add';
 }
 
 // Fechar página mobile

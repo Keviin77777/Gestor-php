@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="/assets/css/dashboard.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="/assets/css/header-menu.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="/assets/css/plans-modern.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="/assets/css/plans-filters-mobile.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="/assets/css/modal-responsive.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="/assets/css/plan-add-page-mobile.css?v=<?php echo $v; ?>">
 
