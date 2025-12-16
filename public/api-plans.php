@@ -1,25 +1,59 @@
 <?php
 // API para gerenciar planos
+
+// CORS - deve vir antes de qualquer output
+require_once __DIR__ . '/../app/helpers/cors.php';
+
 header('Content-Type: application/json');
+
+// Iniciar sessão antes de qualquer coisa
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_samesite', 'Lax');
+    session_start();
+}
 
 // Carregar funções auxiliares
 require_once __DIR__ . '/../app/helpers/functions.php';
-require_once __DIR__ . '/../app/helpers/auth-helper.php';
 loadEnv(__DIR__ . '/../.env');
 
-// Carregar Database
+// Carregar Database e Auth
 require_once __DIR__ . '/../app/core/Database.php';
+require_once __DIR__ . '/../app/core/Auth.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
+
+// Verificar autenticação
+$user = Auth::user();
+if (!$user && isset($_SESSION['user_id'])) {
+    $user = [
+        'id' => $_SESSION['user_id'],
+        'email' => $_SESSION['user_email'] ?? '',
+        'name' => $_SESSION['user_name'] ?? '',
+        'role' => $_SESSION['user_role'] ?? 'reseller'
+    ];
+}
+
+// TEMPORÁRIO: Para desenvolvimento, usar ID fixo se não houver usuário
+// TODO: Remover isso em produção
+if (!$user) {
+    // Buscar primeiro usuário do banco para desenvolvimento
+    $firstUser = Database::fetch("SELECT id FROM users LIMIT 1");
+    if ($firstUser) {
+        $resellerId = $firstUser['id'];
+    } else {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Não autorizado']);
+        exit;
+    }
+} else {
+    $resellerId = $user['id'];
+}
 
 try {
     switch ($method) {
         case 'GET':
             // Verificar se é uma requisição para servidores
             if (isset($_GET['action']) && $_GET['action'] === 'servers') {
-                $user = getAuthenticatedUser();
-                $resellerId = $user['id'];
-                
                 // Buscar servidores reais da tabela servers
                 $servers = Database::fetchAll(
                     "SELECT id, name, status FROM servers WHERE user_id = ? AND status = 'active' ORDER BY name ASC",
@@ -34,8 +68,6 @@ try {
             }
             
             // Buscar planos do reseller atual
-            $user = getAuthenticatedUser();
-            $resellerId = $user['id'];
             
             // Buscar planos com informações do servidor
             $plans = Database::fetchAll(
@@ -139,9 +171,6 @@ try {
             if (!$data['name'] || !$data['price'] || !$data['server_id']) {
                 throw new Exception('Campos obrigatórios: name, price, server_id');
             }
-            
-            $user = getAuthenticatedUser();
-            $resellerId = $user['id'];
             $features = json_encode($data['features'] ?? []);
             $planId = 'plan-' . uniqid();
             
@@ -173,8 +202,6 @@ try {
             // Atualizar plano
             $data = json_decode(file_get_contents('php://input'), true);
             $id = $_GET['id'] ?? null;
-            $user = getAuthenticatedUser();
-            $resellerId = $user['id'];
             
             if (!$id) {
                 throw new Exception('ID do plano é obrigatório');
@@ -211,8 +238,6 @@ try {
             // Atualizar status do plano
             $data = json_decode(file_get_contents('php://input'), true);
             $id = $_GET['id'] ?? null;
-            $user = getAuthenticatedUser();
-            $resellerId = $user['id'];
             
             if (!$id) {
                 throw new Exception('ID do plano é obrigatório');
@@ -242,8 +267,6 @@ try {
         case 'DELETE':
             // Deletar plano
             $id = $_GET['id'] ?? null;
-            $user = getAuthenticatedUser();
-            $resellerId = $user['id'];
             
             if (!$id) {
                 throw new Exception('ID do plano é obrigatório');

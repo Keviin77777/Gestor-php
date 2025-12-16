@@ -1,5 +1,9 @@
 <?php
 // API para gerenciar clientes
+
+// CORS - deve vir antes de qualquer output
+require_once __DIR__ . '/../app/helpers/cors.php';
+
 header('Content-Type: application/json');
 
 // Iniciar sessão antes de qualquer coisa

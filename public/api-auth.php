@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/../app/helpers/functions.php';
 require_once __DIR__ . '/../app/helpers/auth-helper.php';
 require_once __DIR__ . '/../app/core/Database.php';
+require_once __DIR__ . '/../app/core/Auth.php';
 loadEnv(__DIR__ . '/../.env');
 
 // Limpar qualquer output que possa ter sido gerado antes
@@ -111,14 +112,15 @@ try {
                 'account_status' => $user['account_status'] ?? 'active'
             ];
             
-            // Gerar token
-            $token = base64_encode(json_encode([
+            // Gerar token JWT
+            $token = Auth::generateToken([
                 'id' => $user['id'],
                 'email' => $user['email'],
                 'name' => $user['name'],
                 'role' => $user['role'],
-                'exp' => time() + (7 * 24 * 60 * 60)
-            ]));
+                'is_admin' => ($user['role'] === 'admin'),
+                'account_status' => $user['account_status'] ?? 'active'
+            ]);
             
             // Registrar log (não crítico)
             try {
@@ -242,14 +244,14 @@ try {
                 'account_status' => 'trial'
             ];
             
-            // Gerar token
-            $token = base64_encode(json_encode([
+            // Gerar token JWT
+            $token = Auth::generateToken([
                 'id' => $userId,
                 'email' => $data['email'],
                 'name' => $data['name'],
                 'role' => 'reseller',
-                'exp' => time() + (7 * 24 * 60 * 60)
-            ]));
+                'account_status' => 'trial'
+            ]);
             
             // Registrar log (não crítico)
             try {

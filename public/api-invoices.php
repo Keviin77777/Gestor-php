@@ -210,6 +210,96 @@ try {
         exit;
     }
     
+    if ($method === 'PUT' && $action === 'unmark-paid') {
+        // Buscar informações da fatura antes da atualização
+        $invoice = Database::fetch(
+            "SELECT client_id, status, payment_date FROM invoices WHERE id = ? AND reseller_id = ?",
+            [$invoiceId, $user['id']]
+        );
+        
+        if (!$invoice) {
+            throw new Exception('Fatura não encontrada');
+        }
+        
+        $oldStatus = $invoice['status'];
+        $clientId = $invoice['client_id'];
+        
+        // Desmarcar como paga
+        $stmt = $pdo->prepare("
+            UPDATE invoices 
+            SET status = 'pending', payment_date = NULL, updated_at = NOW() 
+            WHERE id = ? AND reseller_id = ?
+        ");
+        
+        if ($stmt->execute([$invoiceId, $user['id']])) {
+            $clientReverted = false;
+            
+            // Se o status era "paid", reverter a renovação do cliente
+            if ($oldStatus === 'paid') {
+                // Buscar duração do plano
+                $client = Database::fetch(
+                    "SELECT c.renewal_date, c.plan_id, p.duration_days 
+                     FROM clients c
+                     LEFT JOIN plans p ON c.plan_id = p.id
+                     WHERE c.id = ? AND c.reseller_id = ?",
+                    [$clientId, $user['id']]
+                );
+                
+                if ($client) {
+                    // Buscar duração do plano (padrão 30 dias se não encontrar)
+                    $durationDays = $client['duration_days'] ?? 30;
+                    
+                    error_log("📅 Revertendo renovação - Duração do plano: {$durationDays} dias");
+                    
+                    // Subtrair dias conforme duração do plano
+                    $currentRenewalDate = $client['renewal_date'];
+                    $oldRenewalDate = date('Y-m-d', strtotime($currentRenewalDate . " -{$durationDays} days"));
+                    
+                    // Atualizar data de renovação do cliente (reverter)
+                    Database::query(
+                        "UPDATE clients SET renewal_date = ? WHERE id = ? AND reseller_id = ?",
+                        [$oldRenewalDate, $clientId, $user['id']]
+                    );
+                    
+                    // Registrar log de reversão
+                    $logId = 'log-' . uniqid();
+                    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+                    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
+                    
+                    Database::query(
+                        "INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, new_values, ip_address, user_agent) 
+                         VALUES (?, ?, 'client_renewal_reverted', 'client', ?, ?, ?, ?)",
+                        [
+                            $logId,
+                            $user['id'],
+                            $clientId,
+                            json_encode([
+                                'old_renewal_date' => $currentRenewalDate,
+                                'reverted_renewal_date' => $oldRenewalDate,
+                                'invoice_id' => $invoiceId,
+                                'reason' => 'payment_unmarked'
+                            ]),
+                            $ipAddress,
+                            $userAgent
+                        ]
+                    );
+                    
+                    $clientReverted = true;
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Fatura desmarcada com sucesso',
+                'client_reverted' => $clientReverted,
+                'reverted_days' => $clientReverted ? ($durationDays ?? 30) : null
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        } else {
+            throw new Exception('Erro ao atualizar fatura');
+        }
+        exit;
+    }
+    
     if ($method === 'DELETE' && $invoiceId) {
         // Excluir fatura
         $stmt = $pdo->prepare("

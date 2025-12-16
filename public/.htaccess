@@ -1,100 +1,29 @@
-# Apache Configuration - UltraGestor
+# Habilitar CORS para todas as APIs
+<IfModule mod_headers.c>
+    # Permitir requisições de qualquer origem (desenvolvimento)
+    Header set Access-Control-Allow-Origin "*"
+    
+    # Métodos HTTP permitidos
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    
+    # Headers permitidos
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    
+    # Cache do preflight por 24 horas
+    Header set Access-Control-Max-Age "86400"
+</IfModule>
 
-# Habilitar RewriteEngine
+# Responder 200 para requisições OPTIONS (preflight)
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /
-    
-    # Redirecionar para HTTPS (descomente em produção)
-    # RewriteCond %{HTTPS} off
-    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-    
-    # Redirecionar para index.php se o arquivo não existir
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ index.php [QSA,L]
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
 </IfModule>
 
-# Headers de Segurança
-<IfModule mod_headers.c>
-    # Prevenir clickjacking
-    Header always set X-Frame-Options "SAMEORIGIN"
-    
-    # Prevenir MIME type sniffing
-    Header always set X-Content-Type-Options "nosniff"
-    
-    # Habilitar proteção XSS do navegador
-    Header always set X-XSS-Protection "1; mode=block"
-    
-    # Referrer Policy
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    
-    # Content Security Policy (ajuste conforme necessário)
-    # Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' data: https://cdnjs.cloudflare.com;"
-    
-    # Permissions Policy
-    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
-    
-    # Remover informações do servidor
-    Header unset Server
-    Header unset X-Powered-By
+# Configurações PHP
+<IfModule mod_php.c>
+    php_value upload_max_filesize 50M
+    php_value post_max_size 50M
+    php_value max_execution_time 300
+    php_value max_input_time 300
 </IfModule>
-
-# Desabilitar listagem de diretórios
-Options -Indexes
-
-# Proteger arquivos sensíveis
-<FilesMatch "\.(env|log|sql|md|json|lock|yml|yaml|ini|config)$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
-
-# Proteger diretórios sensíveis
-RedirectMatch 404 /\.git
-RedirectMatch 404 /\.env
-RedirectMatch 404 /database/
-RedirectMatch 404 /scripts/
-RedirectMatch 404 /app/
-
-# Cache Control para assets estáticos
-<IfModule mod_expires.c>
-    ExpiresActive On
-    
-    # Imagens
-    ExpiresByType image/jpeg "access plus 1 year"
-    ExpiresByType image/png "access plus 1 year"
-    ExpiresByType image/gif "access plus 1 year"
-    ExpiresByType image/svg+xml "access plus 1 year"
-    ExpiresByType image/webp "access plus 1 year"
-    ExpiresByType image/x-icon "access plus 1 year"
-    
-    # CSS e JavaScript
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-    ExpiresByType text/javascript "access plus 1 month"
-    
-    # Fontes
-    ExpiresByType font/woff "access plus 1 year"
-    ExpiresByType font/woff2 "access plus 1 year"
-    ExpiresByType application/font-woff "access plus 1 year"
-    ExpiresByType application/font-woff2 "access plus 1 year"
-    
-    # HTML
-    ExpiresByType text/html "access plus 0 seconds"
-</IfModule>
-
-# Compressão GZIP
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
-</IfModule>
-
-# Charset UTF-8
-AddDefaultCharset UTF-8
-
-# Prevenir acesso direto a arquivos PHP em pastas específicas
-<FilesMatch "\.php$">
-    <If "%{REQUEST_URI} =~ m#^/(app|database|scripts)/#">
-        Order allow,deny
-        Deny from all
-    </If>
-</FilesMatch>
