@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CreditCard, Check, X, AlertCircle, Loader2 } from 'lucide-react'
 import api from '@/services/api'
+import LoadingSpinner from '@/components/LoadingSpinner'
 import '../styles/payment-methods.css'
 
 interface PaymentMethod {
@@ -269,11 +270,7 @@ export default function PaymentMethods() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   const availableMethods = ['mercadopago', 'asaas', ...(isAdmin ? ['efibank'] : []), 'ciabra']

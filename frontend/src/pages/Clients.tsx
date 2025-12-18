@@ -11,11 +11,16 @@ export default function Clients() {
   const { clients, loading, fetchClients, deleteClient, addClient, updateClient } = useClientStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [serverFilter, setServerFilter] = useState<string>('all')
+  const [planFilter, setPlanFilter] = useState<string>('all')
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [currentPage, setCurrentPage] = useState(1)
   const [showForm, setShowForm] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [servers, setServers] = useState<any[]>([])
   const [plans, setPlans] = useState<any[]>([])
   const [filteredPlans, setFilteredPlans] = useState<any[]>([])
+  const [applications, setApplications] = useState<any[]>([])
   const [viewMode, setViewMode] = useState<'list' | 'payment-history'>('list')
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [paymentHistory, setPaymentHistory] = useState<any[]>([])
@@ -50,11 +55,13 @@ export default function Clients() {
     notes: '',
   })
   const [saving, setSaving] = useState(false)
+  const [macFormat, setMacFormat] = useState<':' | '-'>(':') // Formato do MAC
 
   useEffect(() => {
     fetchClients()
     loadServers()
     loadPlans()
+    loadApplications()
   }, [fetchClients])
 
   const loadServers = async () => {
@@ -86,6 +93,22 @@ export default function Clients() {
       }
     } catch (error) {
       // Erro ao carregar planos
+    }
+  }
+
+  const loadApplications = async () => {
+    try {
+      const response = await fetch('/api-applications.php', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      const data = await response.json()
+      if (data.success) {
+        setApplications(data.applications || [])
+      }
+    } catch (error) {
+      // Erro ao carregar aplicativos
     }
   }
 
@@ -153,12 +176,45 @@ export default function Clients() {
   const filteredClients = clients.filter((client) => {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.phone?.includes(searchTerm)
+      client.phone?.includes(searchTerm) ||
+      client.username?.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesStatus = statusFilter === 'all' || client.status === statusFilter
+    const matchesServer = serverFilter === 'all' || client.server === serverFilter
+    const matchesPlan = planFilter === 'all' || client.plan === planFilter
+    
+    // Detectar se o cliente está vencido
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const renewalDate = new Date(client.renewal_date)
+    renewalDate.setHours(0, 0, 0, 0)
+    const isExpired = renewalDate < today && client.status !== 'inactive'
+    
+    // Filtro de status considerando vencidos
+    let matchesStatus = false
+    if (statusFilter === 'all') {
+      matchesStatus = true
+    } else if (statusFilter === 'expired') {
+      matchesStatus = isExpired
+    } else {
+      matchesStatus = client.status === statusFilter && !isExpired
+    }
 
-    return matchesSearch && matchesStatus
+    return matchesSearch && matchesServer && matchesPlan && matchesStatus
   })
+
+  // Paginação
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedClients = filteredClients.slice(startIndex, endIndex)
+
+  // Reset para página 1 quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, serverFilter, planFilter, statusFilter, itemsPerPage])
+
+  const uniqueServers = Array.from(new Set(clients.map(c => c.server).filter(Boolean)))
+  const uniquePlans = Array.from(new Set(clients.map(c => c.plan).filter(Boolean)))
 
   const handleDelete = async (id: string) => {
     setConfirmModal({
@@ -170,6 +226,7 @@ export default function Clients() {
         try {
           await deleteClient(id)
           toast.success('Cliente excluído com sucesso!')
+          fetchClients()
         } catch (error) {
           toast.error('Erro ao excluir cliente')
         }
@@ -185,39 +242,101 @@ export default function Clients() {
       return
     }
 
-    setConfirmModal({
-      isOpen: true,
-      title: 'Gerar Fatura',
-      message: `Deseja gerar uma fatura para ${client.name}?`,
-      type: 'info',
-      onConfirm: async () => {
-        setConfirmModal({ ...confirmModal, isOpen: false })
-        try {
-          const response = await fetch('/api-invoices.php', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              client_id: clientId,
-              description: `Mensalidade ${client.plan}`,
-              value: client.value,
-              due_date: client.renewal_date
-            })
-          })
-
-          const data = await response.json()
-          if (data.success) {
-            toast.success('Fatura gerada com sucesso!')
-          } else {
-            toast.error(data.error || 'Erro ao gerar fatura')
-          }
-        } catch (error) {
-          toast.error('Erro ao gerar fatura')
+    // Buscar faturas existentes do cliente
+    try {
+      const response = await fetch('/api-invoices.php', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
+      })
+      const data = await response.json()
+      
+      if (!data.success) {
+        toast.error('Erro ao verificar faturas')
+        return
       }
-    })
+
+      // Filtrar faturas do cliente
+      const clientInvoices = data.invoices?.filter((inv: any) => inv.client_id === clientId) || []
+      
+      // Contar faturas pendentes/vencidas (não pagas)
+      const unpaidInvoices = clientInvoices.filter((inv: any) => inv.status !== 'paid')
+      const unpaidCount = unpaidInvoices.length
+
+      // Usar a data de vencimento do cliente como base
+      const clientRenewalDate = new Date(client.renewal_date + 'T00:00:00')
+      
+      // Lógica:
+      // - 0 faturas pendentes = gera fatura do mês do vencimento (mês atual do cliente)
+      // - 1 fatura pendente = gera fatura do próximo mês (+1 mês)
+      // - 2 faturas pendentes = gera fatura de 2 meses à frente (+2 meses)
+      const nextDueDate = new Date(clientRenewalDate)
+      
+      // Se há faturas pendentes, adicionar meses
+      if (unpaidCount > 0) {
+        nextDueDate.setMonth(nextDueDate.getMonth() + unpaidCount)
+      }
+      
+      const nextMonth = nextDueDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+
+      let message = `Deseja gerar uma fatura para ${client.name}?\n\n`
+      
+      if (unpaidCount === 0) {
+        message += `📅 Mês de referência: ${nextMonth}\n`
+        message += `💰 Valor: R$ ${client.value.toFixed(2)}\n`
+        message += `📆 Vencimento: ${nextDueDate.toLocaleDateString('pt-BR')}\n\n`
+        message += `ℹ️ Fatura do mês atual (vencimento do cliente)`
+      } else if (unpaidCount === 1) {
+        message += `⚠️ Existe 1 fatura pendente\n\n`
+        message += `📅 Mês de referência: ${nextMonth}\n`
+        message += `💰 Valor: R$ ${client.value.toFixed(2)}\n`
+        message += `📆 Vencimento: ${nextDueDate.toLocaleDateString('pt-BR')}\n\n`
+        message += `ℹ️ Fatura do próximo mês (após a pendente)`
+      } else {
+        message += `⚠️ Existem ${unpaidCount} faturas pendentes\n\n`
+        message += `📅 Mês de referência: ${nextMonth}\n`
+        message += `💰 Valor: R$ ${client.value.toFixed(2)}\n`
+        message += `📆 Vencimento: ${nextDueDate.toLocaleDateString('pt-BR')}\n\n`
+        message += `ℹ️ Fatura de ${unpaidCount} meses à frente (após as pendentes)`
+      }
+
+      setConfirmModal({
+        isOpen: true,
+        title: 'Gerar Fatura',
+        message: message,
+        type: 'info',
+        onConfirm: async () => {
+          setConfirmModal({ ...confirmModal, isOpen: false })
+          try {
+            const response = await fetch('/api-generate-invoice.php', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                client_id: clientId
+              })
+            })
+
+            const data = await response.json()
+            if (data.success) {
+              toast.success('Fatura gerada com sucesso!')
+              // Recarregar histórico se estiver visualizando
+              if (selectedClient?.id === clientId) {
+                handlePaymentHistory(clientId)
+              }
+            } else {
+              toast.error(data.error || 'Erro ao gerar fatura')
+            }
+          } catch (error) {
+            toast.error('Erro ao gerar fatura')
+          }
+        }
+      })
+    } catch (error) {
+      toast.error('Erro ao verificar faturas')
+    }
   }
 
   const handlePaymentHistory = async (clientId: string) => {
@@ -310,6 +429,50 @@ export default function Clients() {
     })
   }
 
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    if (!selectedClient) return
+
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Fatura',
+      message: 'Tem certeza que deseja excluir esta fatura? Esta ação não pode ser desfeita.',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false })
+        const loadingToast = toast.loading('Excluindo fatura...')
+        
+        try {
+          // Atualizar estado local imediatamente para feedback visual
+          setPaymentHistory(prev => prev.filter(p => p.id !== invoiceId))
+
+          const response = await fetch(`/api-invoices.php?id=${invoiceId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          })
+
+          const data = await response.json()
+          toast.dismiss(loadingToast)
+          
+          if (data.success) {
+            toast.success('Fatura excluída com sucesso!')
+            // Recarregar dados do servidor em background
+            handlePaymentHistory(selectedClient.id)
+            fetchClients()
+          } else {
+            toast.error(data.error || 'Erro ao excluir fatura')
+            await handlePaymentHistory(selectedClient.id)
+          }
+        } catch (error) {
+          toast.dismiss(loadingToast)
+          toast.error('Erro ao excluir fatura')
+          await handlePaymentHistory(selectedClient.id)
+        }
+      }
+    })
+  }
+
   const handleUnmarkAsPaid = async (invoiceId: string) => {
     if (!selectedClient) return
 
@@ -389,7 +552,7 @@ export default function Clients() {
                 Clientes
               </h1>
               <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
-                Gerencie seus clientes
+                {filteredClients.length} {filteredClients.length === 1 ? 'cliente' : 'clientes'}
               </p>
             </div>
             <button 
@@ -484,9 +647,40 @@ export default function Clients() {
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" 
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">MAC</label>
-                <input type="text" value={formData.mac} onChange={(e) => setFormData({ ...formData, mac: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">MAC Address</label>
+                <div className="flex gap-2">
+                  <select
+                    value={macFormat}
+                    onChange={(e) => {
+                      const newFormat = e.target.value as ':' | '-'
+                      setMacFormat(newFormat)
+                      // Reformatar MAC existente com novo separador
+                      if (formData.mac) {
+                        const cleanMac = formData.mac.replace(/[^0-9A-F]/g, '')
+                        const formatted = cleanMac.match(/.{1,2}/g)?.join(newFormat) || cleanMac
+                        setFormData({ ...formData, mac: formatted })
+                      }
+                    }}
+                    className="w-32 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  >
+                    <option value=":">: (dois-pontos)</option>
+                    <option value="-">- (traço)</option>
+                  </select>
+                  <input 
+                    type="text" 
+                    value={formData.mac} 
+                    onChange={(e) => {
+                      let value = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '')
+                      if (value.length > 12) value = value.slice(0, 12)
+                      const formatted = value.match(/.{1,2}/g)?.join(macFormat) || value
+                      setFormData({ ...formData, mac: formatted })
+                    }}
+                    placeholder={macFormat === ':' ? '00:1A:2B:3C:4D:5E' : '00-1A-2B-3C-4D-5E'}
+                    maxLength={17}
+                    className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all font-mono" 
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Telas</label>
@@ -497,6 +691,19 @@ export default function Clients() {
                 <select value={formData.notifications} onChange={(e) => setFormData({ ...formData, notifications: e.target.value as 'sim' | 'nao' })} className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
                   <option value="sim">Sim</option>
                   <option value="nao">Não</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Aplicativo</label>
+                <select 
+                  value={formData.application_id || ''} 
+                  onChange={(e) => setFormData({ ...formData, application_id: e.target.value ? Number(e.target.value) : undefined })} 
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                >
+                  <option value="">Não informado</option>
+                  {applications.map(app => (
+                    <option key={app.id} value={app.id}>{app.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -517,27 +724,86 @@ export default function Clients() {
       )}
 
       <div className="bg-white/60 dark:bg-gray-800/30 backdrop-blur-md rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Buscar clientes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-            />
+        <div className="flex flex-col gap-4">
+          {/* Linha 1: Busca e Filtros */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Buscar clientes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+              />
+            </div>
+            <select
+              value={serverFilter}
+              onChange={(e) => setServerFilter(e.target.value)}
+              className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            >
+              <option value="all" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">Todos os servidores</option>
+              {uniqueServers.map(server => (
+                <option key={server} value={server} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                  {server}
+                </option>
+              ))}
+            </select>
+            <select
+              value={planFilter}
+              onChange={(e) => setPlanFilter(e.target.value)}
+              className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            >
+              <option value="all" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">Todos os planos</option>
+              {uniquePlans.map(plan => (
+                <option key={plan} value={plan} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                  {plan}
+                </option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            >
+              <option value="all" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">Todos os status</option>
+              <option value="active" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">Ativos</option>
+              <option value="expired" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">Vencidos</option>
+              <option value="suspended" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">Suspensos</option>
+            </select>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-          >
-            <option value="all" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">Todos os status</option>
-            <option value="active" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">Ativos</option>
-            <option value="inactive" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">Inativos</option>
-            <option value="suspended" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">Suspensos</option>
-          </select>
+
+          {/* Linha 2: Items por página e Limpar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Mostrar:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+              >
+                <option value={10} className="bg-white dark:bg-gray-800">10</option>
+                <option value={30} className="bg-white dark:bg-gray-800">30</option>
+                <option value={50} className="bg-white dark:bg-gray-800">50</option>
+                <option value={100} className="bg-white dark:bg-gray-800">100</option>
+              </select>
+              <span className="text-sm text-gray-600 dark:text-gray-400">por página</span>
+            </div>
+
+            {(searchTerm || serverFilter !== 'all' || planFilter !== 'all' || statusFilter !== 'all') && (
+              <button 
+                onClick={() => { 
+                  setSearchTerm(''); 
+                  setServerFilter('all'); 
+                  setPlanFilter('all');
+                  setStatusFilter('all');
+                }} 
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                Limpar Filtros
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -565,7 +831,10 @@ export default function Clients() {
                     Vencimento
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Aplicativos
+                    Aplicativo
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    MAC
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Notificações
@@ -581,18 +850,18 @@ export default function Clients() {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700/30">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-4">
+                  <td colSpan={11} className="px-6 py-4">
                     <LoadingSpinner />
                   </td>
                 </tr>
-              ) : filteredClients.length === 0 ? (
+              ) : paginatedClients.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={11} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     Nenhum cliente encontrado
                   </td>
                 </tr>
               ) : (
-                filteredClients.map((client) => (
+                paginatedClients.map((client) => (
                   <tr key={client.id} className="hover:bg-white/40 dark:hover:bg-gray-700/20 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -627,22 +896,26 @@ export default function Clients() {
                       {formatDate(client.renewal_date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-wrap gap-1">
-                        {client.applications && client.applications.length > 0 ? (
-                          client.applications.map((app: string, index: number) => (
-                            <span
-                              key={index}
-                              className="px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
-                            >
-                              {app}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-gray-400 dark:text-gray-500 italic">
-                            Nenhum
-                          </span>
-                        )}
-                      </div>
+                      {client.application_name ? (
+                        <span className="px-2 py-1 text-xs font-medium rounded bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                          {client.application_name}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">
+                          Não informado
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {client.mac ? (
+                        <span className="px-2 py-1 text-xs font-medium rounded bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-400 font-mono">
+                          {client.mac}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">
+                          Não informado
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -658,14 +931,44 @@ export default function Clients() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded ${
-                          client.status === 'active'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                            : client.status === 'suspended'
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                            : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                          (() => {
+                            // Verificar se está vencido
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            const renewalDate = new Date(client.renewal_date)
+                            renewalDate.setHours(0, 0, 0, 0)
+                            const isExpired = renewalDate < today && client.status !== 'inactive'
+                            
+                            if (isExpired) {
+                              return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
+                            } else if (client.status === 'active') {
+                              return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                            } else if (client.status === 'suspended') {
+                              return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                            } else {
+                              return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                            }
+                          })()
                         }`}
                       >
-                        {client.status === 'active' ? 'Ativo' : client.status === 'suspended' ? 'Suspenso' : 'Inativo'}
+                        {(() => {
+                          // Verificar se está vencido
+                          const today = new Date()
+                          today.setHours(0, 0, 0, 0)
+                          const renewalDate = new Date(client.renewal_date)
+                          renewalDate.setHours(0, 0, 0, 0)
+                          const isExpired = renewalDate < today && client.status !== 'inactive'
+                          
+                          if (isExpired) {
+                            return 'Vencido'
+                          } else if (client.status === 'active') {
+                            return 'Ativo'
+                          } else if (client.status === 'suspended') {
+                            return 'Suspenso'
+                          } else {
+                            return 'Inativo'
+                          }
+                        })()}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -718,6 +1021,63 @@ export default function Clients() {
             </tbody>
           </table>
         </div>
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 bg-gray-50/50 dark:bg-gray-900/20 border-t border-gray-200/50 dark:border-gray-700/30">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando {startIndex + 1} a {Math.min(endIndex, filteredClients.length)} de {filteredClients.length} clientes
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Anterior
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum
+                    if (totalPages <= 5) {
+                      pageNum = i + 1
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i
+                    } else {
+                      pageNum = currentPage - 2 + i
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                          currentPage === pageNum
+                            ? 'bg-primary-600 text-white'
+                            : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
         </>
       ) : (
@@ -847,23 +1207,32 @@ export default function Clients() {
                           {payment.payment_date ? formatDate(payment.payment_date) : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                          {payment.status === 'paid' ? (
+                          <div className="flex items-center justify-end gap-2">
+                            {payment.status === 'paid' ? (
+                              <button
+                                onClick={() => handleUnmarkAsPaid(payment.id)}
+                                className="px-3 py-1.5 text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/30 rounded transition-all"
+                                title="Desmarcar como paga"
+                              >
+                                Desmarcar
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleMarkAsPaid(payment.id)}
+                                className="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30 rounded transition-all"
+                                title="Marcar como paga"
+                              >
+                                Marcar Paga
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleUnmarkAsPaid(payment.id)}
+                              onClick={() => handleDeleteInvoice(payment.id)}
                               className="px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/30 rounded transition-all"
-                              title="Desmarcar como paga"
+                              title="Excluir fatura"
                             >
-                              Desmarcar
+                              Excluir
                             </button>
-                          ) : (
-                            <button
-                              onClick={() => handleMarkAsPaid(payment.id)}
-                              className="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30 rounded transition-all"
-                              title="Marcar como paga"
-                            >
-                              Marcar Paga
-                            </button>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     ))

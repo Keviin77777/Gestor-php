@@ -3,7 +3,7 @@ import { Users, DollarSign, AlertCircle, TrendingUp, Activity } from 'lucide-rea
 import { useClientStore } from '@/stores/useClientStore'
 import { invoiceService } from '@/services/invoiceService'
 import { Invoice } from '@/types'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 export default function Dashboard() {
   const { clients, fetchClients } = useClientStore()
@@ -39,35 +39,45 @@ export default function Dashboard() {
   const loadInvoices = async () => {
     try {
       const data = await invoiceService.getAll()
-      setInvoices(data)
+      setInvoices(data.invoices || [])
     } catch (error) {
       // Erro ao carregar faturas
+      setInvoices([])
     }
   }
 
   useEffect(() => {
     if (clients.length > 0) {
       const active = clients.filter(c => c.status === 'active').length
-      const inactiveClients = clients.filter(c => c.status !== 'active')
-      const inactive = inactiveClients.length
-      const suspended = clients.filter(c => c.status === 'suspended').length
+      
+      // Calcular inadimplentes: clientes com data de vencimento passada (independente do status)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      const expiredClients = clients.filter(c => {
+        const renewalDate = new Date(c.renewal_date)
+        renewalDate.setHours(0, 0, 0, 0)
+        return renewalDate < today && c.status !== 'inactive'
+      })
+      
+      const inactive = expiredClients.length
       const revenue = clients.filter(c => c.status === 'active').reduce((sum, c) => sum + c.value, 0)
       const monthlyAvg = revenue / (active || 1)
 
-      // Calcular valor total dos clientes inativos (receita perdida)
-      const inactiveRevenue = inactiveClients.reduce((sum, c) => sum + c.value, 0)
+      // Calcular valor total dos clientes vencidos (receita perdida)
+      const inactiveRevenue = expiredClients.reduce((sum, c) => sum + c.value, 0)
 
       // Calcular clientes que vencem hoje
-      const today = new Date().toISOString().split('T')[0]
-      const expiringToday = clients.filter(c => c.renewal_date === today).length
+      const todayStr = today.toISOString().split('T')[0]
+      const expiringToday = clients.filter(c => c.renewal_date === todayStr).length
 
       setStats({
         totalClients: clients.length,
         activeClients: active,
-        inactiveClients: inactive + suspended,
+        inactiveClients: inactive,
         totalRevenue: revenue,
         monthlyAverage: monthlyAvg,
-        todayRevenue: inactiveRevenue, // Reutilizar este campo para receita perdida
+        todayRevenue: inactiveRevenue, // Receita perdida dos vencidos
         expiringToday: expiringToday,
       })
     }
@@ -368,19 +378,24 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Gráficos */}
+      {/* Gráficos de Saldo Líquido - Estilo Profissional */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Saldo Líquido do Mês */}
-        <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700/50">
+        {/* Saldo Líquido do Mês - Gráfico de Barras Verticais */}
+        <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-gray-700/50 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-500" />
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="p-2 bg-green-100 dark:bg-green-500/20 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
                 Saldo Líquido do Mês
               </h3>
-              <p className="text-xl md:text-2xl font-bold text-green-500 mt-1">
-                R$ {totalMonthRevenue.toFixed(2)}
-              </p>
+              <div className="flex items-baseline gap-2 mt-2">
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  R$ {totalMonthRevenue.toFixed(2)}
+                </p>
+                <span className="text-sm text-gray-500 dark:text-gray-400">total</span>
+              </div>
             </div>
             <select
               value={`${monthYearFilter.year}-${monthYearFilter.month}`}
@@ -388,15 +403,13 @@ export default function Dashboard() {
                 const [year, month] = e.target.value.split('-').map(Number)
                 setMonthYearFilter({ year, month })
               }}
-              className="w-full sm:w-auto px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm border-0 focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+              className="px-4 py-2 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white font-medium"
             >
-              {/* Meses do ano atual */}
               {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map((month, index) => (
                 <option key={`${new Date().getFullYear()}-${index}`} value={`${new Date().getFullYear()}-${index}`}>
                   {month} {new Date().getFullYear()}
                 </option>
               ))}
-              {/* Meses do próximo ano */}
               {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map((month, index) => (
                 <option key={`${new Date().getFullYear() + 1}-${index}`} value={`${new Date().getFullYear() + 1}-${index}`}>
                   {month} {new Date().getFullYear() + 1}
@@ -404,79 +417,108 @@ export default function Dashboard() {
               ))}
             </select>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={liquidBalanceMonthData}>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={liquidBalanceMonthData}>
               <defs>
-                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.5} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.05} />
+                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#059669" stopOpacity={1} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-              <XAxis dataKey="day" stroke="#6b7280" style={{ fontSize: '12px' }} tick={{ fill: '#6b7280' }} />
-              <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} tick={{ fill: '#6b7280' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" opacity={0.5} />
+              <XAxis 
+                dataKey="day" 
+                stroke="#9ca3af" 
+                style={{ fontSize: '12px', fontWeight: 500 }} 
+                tick={{ fill: '#6b7280' }}
+              />
+              <YAxis 
+                stroke="#9ca3af" 
+                style={{ fontSize: '12px', fontWeight: 500 }} 
+                tick={{ fill: '#6b7280' }}
+                tickFormatter={(value) => `R$ ${value}`}
+              />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  color: '#111827',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  backgroundColor: '#ffffff',
+                  border: '2px solid #10b981',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                  padding: '12px'
                 }}
-                labelStyle={{ color: '#6b7280', fontWeight: 600 }}
+                labelStyle={{ color: '#111827', fontWeight: 700, marginBottom: '4px' }}
                 itemStyle={{ color: '#10b981', fontWeight: 600 }}
+                formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Receita']}
+                cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
               />
-              <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
-            </AreaChart>
+              <Bar dataKey="value" fill="url(#barGradient)" radius={[8, 8, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Saldo Líquido do Ano */}
-        <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700/50">
+        {/* Saldo Líquido do Ano - Gráfico de Barras Verticais */}
+        <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-gray-700/50 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Activity className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="p-2 bg-green-100 dark:bg-green-500/20 rounded-lg">
+                  <Activity className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
                 Saldo Líquido do Ano
               </h3>
-              <p className="text-xl md:text-2xl font-bold text-blue-500 mt-1">
-                R$ {totalYearRevenue.toFixed(2)}
-              </p>
+              <div className="flex items-baseline gap-2 mt-2">
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  R$ {totalYearRevenue.toFixed(2)}
+                </p>
+                <span className="text-sm text-gray-500 dark:text-gray-400">total</span>
+              </div>
             </div>
             <select
               value={yearFilter}
               onChange={(e) => setYearFilter(parseInt(e.target.value))}
-              className="w-full sm:w-auto px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm border-0 focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+              className="px-4 py-2 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white font-medium"
             >
               <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
               <option value={new Date().getFullYear() - 1}>{new Date().getFullYear() - 1}</option>
               <option value={new Date().getFullYear() - 2}>{new Date().getFullYear() - 2}</option>
             </select>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={liquidBalanceYearData}>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={liquidBalanceYearData}>
               <defs>
-                <linearGradient id="colorValueBlue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                <linearGradient id="barGradientBlue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#2563eb" stopOpacity={1} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-              <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '12px' }} tick={{ fill: '#6b7280' }} />
-              <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} tick={{ fill: '#6b7280' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" opacity={0.5} />
+              <XAxis 
+                dataKey="month" 
+                stroke="#9ca3af" 
+                style={{ fontSize: '12px', fontWeight: 500 }} 
+                tick={{ fill: '#6b7280' }}
+              />
+              <YAxis 
+                stroke="#9ca3af" 
+                style={{ fontSize: '12px', fontWeight: 500 }} 
+                tick={{ fill: '#6b7280' }}
+                tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+              />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  color: '#111827',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  backgroundColor: '#ffffff',
+                  border: '2px solid #3b82f6',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                  padding: '12px'
                 }}
-                labelStyle={{ color: '#6b7280', fontWeight: 600 }}
+                labelStyle={{ color: '#111827', fontWeight: 700, marginBottom: '4px' }}
                 itemStyle={{ color: '#3b82f6', fontWeight: 600 }}
+                formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Receita']}
+                cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
               />
-              <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorValueBlue)" />
-            </AreaChart>
+              <Bar dataKey="value" fill="url(#barGradientBlue)" radius={[8, 8, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -678,9 +720,190 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Seções Informativas Profissionais */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Clientes com Plano Vencido */}
+        <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl border-l-4 border-red-500 p-6 shadow-sm">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                Clientes com Plano Vencido
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Informe aos seus clientes sobre o vencimento
+              </p>
+            </div>
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {clients
+              .filter(c => {
+                const renewalDate = new Date(c.renewal_date)
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                renewalDate.setHours(0, 0, 0, 0)
+                return renewalDate < today && c.status !== 'inactive'
+              })
+              .slice(0, 5)
+              .map(client => (
+                <div key={client.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {client.name}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Venceu: {new Date(client.renewal_date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <span className="ml-2 px-2 py-1 text-xs font-bold text-red-700 dark:text-red-300 bg-red-200 dark:bg-red-900/40 rounded">
+                    {Math.abs(Math.ceil((new Date(client.renewal_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))}d
+                  </span>
+                </div>
+              ))}
+            
+            {clients.filter(c => {
+              const renewalDate = new Date(c.renewal_date)
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
+              renewalDate.setHours(0, 0, 0, 0)
+              return renewalDate < today && c.status !== 'inactive'
+            }).length === 0 && (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p className="text-sm">Nenhum cliente com plano vencido</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Clientes Vencendo Hoje */}
+        <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl border-l-4 border-green-500 p-6 shadow-sm">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                Clientes Vencendo Hoje
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Informe aos seus clientes sobre o vencimento
+              </p>
+            </div>
+            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <Activity className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {clients
+              .filter(c => {
+                const renewalDate = new Date(c.renewal_date)
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                renewalDate.setHours(0, 0, 0, 0)
+                return renewalDate.getTime() === today.getTime()
+              })
+              .slice(0, 5)
+              .map(client => (
+                <div key={client.id} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {client.name}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Plano: {client.plan} - R$ {client.value.toFixed(2)}
+                    </p>
+                  </div>
+                  <span className="ml-2 px-2 py-1 text-xs font-bold text-green-700 dark:text-green-300 bg-green-200 dark:bg-green-900/40 rounded">
+                    HOJE
+                  </span>
+                </div>
+              ))}
+            
+            {clients.filter(c => {
+              const renewalDate = new Date(c.renewal_date)
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
+              renewalDate.setHours(0, 0, 0, 0)
+              return renewalDate.getTime() === today.getTime()
+            }).length === 0 && (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p className="text-sm">Nenhum cliente vencendo hoje</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Clientes Próximo do Vencimento */}
+        <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl border-l-4 border-yellow-500 p-6 shadow-sm">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                Próximo do Vencimento
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Envie lembretes aos clientes com dias configurados
+              </p>
+            </div>
+            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <TrendingUp className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {clients
+              .filter(c => {
+                const renewalDate = new Date(c.renewal_date)
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                renewalDate.setHours(0, 0, 0, 0)
+                const diffDays = Math.ceil((renewalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                return diffDays > 0 && diffDays <= 7
+              })
+              .slice(0, 5)
+              .map(client => {
+                const renewalDate = new Date(client.renewal_date)
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                renewalDate.setHours(0, 0, 0, 0)
+                const diffDays = Math.ceil((renewalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                
+                return (
+                  <div key={client.id} className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-100 dark:border-yellow-800">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                        {client.name}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Vence: {renewalDate.toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <span className="ml-2 px-2 py-1 text-xs font-bold text-yellow-700 dark:text-yellow-300 bg-yellow-200 dark:bg-yellow-900/40 rounded">
+                      {diffDays}d
+                    </span>
+                  </div>
+                )
+              })}
+            
+            {clients.filter(c => {
+              const renewalDate = new Date(c.renewal_date)
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
+              renewalDate.setHours(0, 0, 0, 0)
+              const diffDays = Math.ceil((renewalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+              return diffDays > 0 && diffDays <= 7
+            }).length === 0 && (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p className="text-sm">Nenhum cliente próximo do vencimento</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Distribuição de Status */}
-      <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 shadow-lg border border-gray-200 dark:border-gray-700/50">
-        <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-6">
+      <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-gray-700/50 shadow-sm">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">
           Distribuição de Clientes por Status
         </h3>
         <div className="flex items-center justify-center">

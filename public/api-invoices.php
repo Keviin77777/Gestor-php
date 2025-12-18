@@ -54,6 +54,116 @@ try {
         }
     }
     
+    // Criar fatura (POST)
+    if ($method === 'POST') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        if (!$data || !isset($data['client_id']) || !isset($data['value']) || !isset($data['due_date'])) {
+            throw new Exception('Dados incompletos para criar fatura');
+        }
+        
+        $clientId = $data['client_id'];
+        $description = $data['description'] ?? '';
+        $value = floatval($data['value']);
+        $discount = floatval($data['discount'] ?? 0);
+        $finalValue = $value - $discount;
+        $dueDate = $data['due_date'];
+        
+        // Verificar se o cliente pertence ao reseller
+        $client = Database::fetch(
+            "SELECT id FROM clients WHERE id = ? AND reseller_id = ?",
+            [$clientId, $user['id']]
+        );
+        
+        if (!$client) {
+            throw new Exception('Cliente não encontrado');
+        }
+        
+        // Gerar ID único para a fatura
+        $invoiceId = 'inv-' . uniqid();
+        
+        // Inserir fatura
+        Database::query(
+            "INSERT INTO invoices (id, reseller_id, client_id, description, value, discount, final_value, due_date, status, created_at, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())",
+            [$invoiceId, $user['id'], $clientId, $description, $value, $discount, $finalValue, $dueDate]
+        );
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Fatura criada com sucesso',
+            'invoice_id' => $invoiceId
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    
+    // Atualizar fatura (PUT sem action)
+    if ($method === 'PUT' && !$action && $invoiceId) {
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        if (!$data) {
+            throw new Exception('Dados incompletos para atualizar fatura');
+        }
+        
+        // Verificar se a fatura pertence ao reseller
+        $invoice = Database::fetch(
+            "SELECT id FROM invoices WHERE id = ? AND reseller_id = ?",
+            [$invoiceId, $user['id']]
+        );
+        
+        if (!$invoice) {
+            throw new Exception('Fatura não encontrada');
+        }
+        
+        $clientId = $data['client_id'] ?? null;
+        $description = $data['description'] ?? null;
+        $value = isset($data['value']) ? floatval($data['value']) : null;
+        $discount = isset($data['discount']) ? floatval($data['discount']) : 0;
+        $dueDate = $data['due_date'] ?? null;
+        
+        // Construir query de atualização dinamicamente
+        $updates = [];
+        $params = [];
+        
+        if ($clientId !== null) {
+            $updates[] = "client_id = ?";
+            $params[] = $clientId;
+        }
+        if ($description !== null) {
+            $updates[] = "description = ?";
+            $params[] = $description;
+        }
+        if ($value !== null) {
+            $updates[] = "value = ?";
+            $params[] = $value;
+            $updates[] = "discount = ?";
+            $params[] = $discount;
+            $updates[] = "final_value = ?";
+            $params[] = $value - $discount;
+        }
+        if ($dueDate !== null) {
+            $updates[] = "due_date = ?";
+            $params[] = $dueDate;
+        }
+        
+        if (empty($updates)) {
+            throw new Exception('Nenhum campo para atualizar');
+        }
+        
+        $updates[] = "updated_at = NOW()";
+        $params[] = $invoiceId;
+        $params[] = $user['id'];
+        
+        $sql = "UPDATE invoices SET " . implode(", ", $updates) . " WHERE id = ? AND reseller_id = ?";
+        Database::query($sql, $params);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Fatura atualizada com sucesso'
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    
     if ($method === 'PUT' && $action === 'mark-paid') {
         // Buscar informações da fatura antes da atualização
         $invoice = Database::fetch(

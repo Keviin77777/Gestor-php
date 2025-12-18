@@ -21,6 +21,8 @@ import Plans from './pages/Plans'
 import Applications from './pages/Applications'
 import Profile from './pages/Profile'
 import Reports from './pages/Reports'
+import FinancialReport from './pages/FinancialReport'
+import MonthlyReport from './pages/MonthlyReport'
 import RenewAccess from './pages/RenewAccess'
 import Login from './pages/Login'
 
@@ -65,6 +67,8 @@ function App() {
             <Route path="whatsapp/queue" element={<WhatsAppQueue />} />
             <Route path="profile" element={<Profile />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="reports/financial" element={<FinancialReport />} />
+            <Route path="reports/monthly" element={<MonthlyReport />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

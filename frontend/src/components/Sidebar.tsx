@@ -47,7 +47,14 @@ const navigation: Category[] = [
     name: 'Principal',
     items: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { name: 'Relatórios', href: '/reports', icon: BarChart3 },
+    ]
+  },
+  {
+    name: 'Relatórios',
+    items: [
+      { name: 'Geral', href: '/reports', icon: BarChart3 },
+      { name: 'Gráfico Financeiro', href: '/reports/financial', icon: BarChart3 },
+      { name: 'Detalhamento Mensal', href: '/reports/monthly', icon: Calendar },
     ]
   },
   {

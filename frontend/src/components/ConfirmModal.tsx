@@ -58,9 +58,9 @@ export default function ConfirmModal({
                     </h3>
 
                     {/* Message */}
-                    <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
+                    <div className="text-gray-600 dark:text-gray-400 text-left mb-6 whitespace-pre-line">
                         {message}
-                    </p>
+                    </div>
 
                     {/* Actions */}
                     <div className="flex gap-3">

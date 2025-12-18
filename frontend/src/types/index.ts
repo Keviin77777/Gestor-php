@@ -22,7 +22,7 @@ export interface Client {
   plan: string
   value: number
   renewal_date: string
-  status: 'active' | 'inactive' | 'suspended'
+  status: 'active' | 'inactive' | 'suspended' | 'expired'
   notes?: string
   server?: string
   mac?: string
@@ -38,24 +38,30 @@ export interface Invoice {
   id: string
   client_id: string
   client_name: string
-  description: string
-  value: number
-  discount: number
+  description?: string
+  value?: number
+  discount?: number
   final_value: number
   due_date: string
   status: 'pending' | 'paid' | 'overdue'
   payment_date?: string
+  payment_link?: string
   created_at: string
+  updated_at?: string
 }
 
 export interface Server {
   id: number
   name: string
-  url: string
-  username: string
-  password: string
-  status: 'active' | 'inactive'
-  type: 'sigma' | 'other'
+  billing_type: 'fixed' | 'per_active'
+  cost: string | number
+  panel_type?: string | null
+  panel_url?: string | null
+  reseller_user?: string | null
+  sigma_token?: string
+  connected_clients?: number
+  total_cost?: number
+  status?: string
   created_at: string
 }
 

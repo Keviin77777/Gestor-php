@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Zap, Check, Clock, AlertCircle, QrCode, Copy, RefreshCw, X } from 'lucide-react'
 import api from '@/services/api'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 interface Plan {
   id: string
@@ -189,14 +190,7 @@ export default function RenewAccess() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Carregando planos...</p>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   const daysInfo = user ? getDaysRemainingInfo(user.days_remaining) : null
