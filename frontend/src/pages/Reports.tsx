@@ -26,7 +26,7 @@ export default function Reports() {
       const response = await api.get(`/api-reports.php?period=${period}`)
       setStats(response.data)
     } catch (error) {
-      console.error('Erro ao carregar relatórios')
+      // Erro ao carregar relatórios
     } finally {
       setLoading(false)
     }

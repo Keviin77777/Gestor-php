@@ -8,12 +8,24 @@ export const clientService = {
   },
 
   async create(client: Partial<Client>) {
-    const { data } = await api.post<{ success: boolean; id: string; message: string }>('/api-clients.php', client)
+    // Garantir que a data seja enviada no formato correto (YYYY-MM-DD)
+    const clientData = { ...client }
+    if (clientData.renewal_date) {
+      // Se a data já está no formato correto, manter
+      clientData.renewal_date = clientData.renewal_date
+    }
+    const { data } = await api.post<{ success: boolean; id: string; message: string }>('/api-clients.php', clientData)
     return data
   },
 
   async update(id: string, client: Partial<Client>) {
-    const { data } = await api.put<{ success: boolean; message: string }>(`/api-clients.php?id=${id}`, client)
+    // Garantir que a data seja enviada no formato correto (YYYY-MM-DD)
+    const clientData = { ...client }
+    if (clientData.renewal_date) {
+      // Se a data já está no formato correto, manter
+      clientData.renewal_date = clientData.renewal_date
+    }
+    const { data } = await api.put<{ success: boolean; message: string }>(`/api-clients.php?id=${id}`, clientData)
     return data
   },
 

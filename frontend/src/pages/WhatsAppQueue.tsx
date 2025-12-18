@@ -49,7 +49,7 @@ export default function WhatsAppQueue() {
         setStats(response.data.stats)
       }
     } catch (error) {
-      console.error('Erro ao carregar estatísticas')
+      // Erro ao carregar estatísticas
     }
   }
 
@@ -63,7 +63,6 @@ export default function WhatsAppQueue() {
         setMessages([])
       }
     } catch (error) {
-      console.error('Erro ao carregar fila')
       setMessages([])
     } finally {
       setLoading(false)

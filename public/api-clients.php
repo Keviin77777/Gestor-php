@@ -57,6 +57,23 @@ try {
             
             // Formatar dados para o frontend
             $formattedClients = array_map(function($client) {
+                // Calcular status baseado na data de vencimento
+                $renewalDate = new DateTime($client['renewal_date']);
+                $today = new DateTime('today');
+                $currentStatus = $client['status'];
+                
+                // Se a data de vencimento já passou e o status é 'active', mudar para 'inactive'
+                if ($renewalDate < $today && $currentStatus === 'active') {
+                    $currentStatus = 'inactive';
+                    
+                    // Atualizar no banco de dados
+                    Database::update('clients', 
+                        ['status' => 'inactive'], 
+                        'id = :id', 
+                        ['id' => $client['id']]
+                    );
+                }
+                
                 return [
                     'id' => $client['id'], // Manter como string se for VARCHAR
                     'name' => $client['name'],
@@ -68,7 +85,7 @@ try {
                     'plan' => $client['plan'] ?? 'Personalizado',
                     'value' => (float)$client['value'],
                     'renewal_date' => $client['renewal_date'],
-                    'status' => $client['status'],
+                    'status' => $currentStatus,
                     'notes' => $client['notes'] ?? '',
                     'server' => $client['server'] ?? 'Principal',
                     'mac' => $client['mac'] ?? '',
@@ -101,6 +118,13 @@ try {
                 throw new Exception('Campos obrigatórios: name, value, renewal_date');
             }
             
+            // Log para debug da data recebida
+            error_log("Data recebida do frontend: " . $data['renewal_date']);
+            
+            // Garantir que a data seja salva no formato correto (YYYY-MM-DD)
+            // Não fazer conversão de timezone, usar a data exata que veio do frontend
+            $renewalDate = $data['renewal_date'];
+            
             // Gerar ID único para o cliente
             $clientId = 'client-' . uniqid();
             
@@ -115,7 +139,7 @@ try {
                     $data['phone'] ?? '',
                     $data['username'] ?? '',
                     $data['iptv_password'] ?? '',
-                    $data['renewal_date'],
+                    $renewalDate,
                     'active',
                     $data['value'],
                     $data['notes'] ?? '',
@@ -208,6 +232,12 @@ try {
             }
             
             try {
+                // Log para debug da data recebida
+                error_log("Data recebida do frontend (UPDATE): " . $data['renewal_date']);
+                
+                // Garantir que a data seja salva no formato correto (YYYY-MM-DD)
+                $renewalDate = $data['renewal_date'];
+                
                 // Preparar dados para atualização
                 $updateData = [
                     'name' => $data['name'],
@@ -215,7 +245,7 @@ try {
                     'phone' => $data['phone'] ?? '',
                     'username' => $data['username'] ?? '',
                     'iptv_password' => $data['iptv_password'] ?? '',
-                    'renewal_date' => $data['renewal_date'],
+                    'renewal_date' => $renewalDate,
                     'value' => $data['value'],
                     'notes' => $data['notes'] ?? '',
                     'server' => $data['server'] ?? '',

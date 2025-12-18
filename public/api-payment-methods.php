@@ -88,15 +88,68 @@ try {
 }
 
 /**
- * GET - Obter configurações de um método de pagamento
+ * GET ALL - Listar todos os métodos de pagamento disponíveis
+ */
+function handleGetAll($db) {
+    global $isAdmin, $user;
+    
+    // Buscar todos os métodos configurados para este usuário
+    $stmt = $db->prepare("
+        SELECT method_name, config_value, enabled, updated_at 
+        FROM payment_methods 
+        WHERE reseller_id = ?
+    ");
+    $stmt->execute([$user['id']]);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $methods = [];
+    $availableMethods = ['mercadopago', 'asaas', 'ciabra'];
+    
+    // Adicionar EFI Bank apenas para admin
+    if ($isAdmin) {
+        $availableMethods[] = 'efibank';
+    }
+    
+    // Processar métodos configurados
+    foreach ($results as $result) {
+        $config = json_decode($result['config_value'], true);
+        $methods[$result['method_name']] = [
+            'enabled' => (bool)$result['enabled'],
+            'configured' => true,
+            'updated_at' => $result['updated_at'],
+            'config' => $config
+        ];
+    }
+    
+    // Adicionar métodos não configurados
+    foreach ($availableMethods as $method) {
+        if (!isset($methods[$method])) {
+            $methods[$method] = [
+                'enabled' => false,
+                'configured' => false,
+                'config' => null
+            ];
+        }
+    }
+    
+    Response::json([
+        'success' => true,
+        'methods' => $methods,
+        'is_admin' => $isAdmin
+    ]);
+}
+
+/**
+ * GET - Obter configurações de um método de pagamento ou listar todos
  */
 function handleGet($db) {
     global $isAdmin, $user;
     
     $paymentMethod = $_GET['method'] ?? null;
     
+    // Se não especificou método, retornar todos
     if (!$paymentMethod) {
-        Response::json(['success' => false, 'error' => 'Método de pagamento não especificado'], 400);
+        handleGetAll($db);
         return;
     }
     
@@ -181,8 +234,12 @@ function handlePost($db) {
             Response::json(['success' => false, 'error' => 'API Key é obrigatória'], 400);
             return;
         }
-        // Sempre usar produção (não sandbox)
-        $config['sandbox'] = false;
+        // Detectar automaticamente se é sandbox baseado na chave
+        $apiKey = $config['api_key'];
+        $isSandbox = (strpos($apiKey, '_hmlg_') !== false || strpos($apiKey, '_test_') !== false);
+        $config['sandbox'] = $isSandbox;
+        
+        error_log("Asaas - API Key detectada como: " . ($isSandbox ? 'SANDBOX' : 'PRODUÇÃO'));
     }
     
     // Verificar se já existe para este reseller
@@ -205,9 +262,13 @@ function handlePost($db) {
             'sandbox' => $config['sandbox'] ?? false
         ]);
     } elseif ($paymentMethod === 'asaas') {
+        // Detectar automaticamente se é sandbox baseado na chave
+        $apiKey = $config['api_key'];
+        $isSandbox = (strpos($apiKey, '_hmlg_') !== false || strpos($apiKey, '_test_') !== false);
+        
         $configJson = json_encode([
             'api_key' => $config['api_key'],
-            'sandbox' => false // Sempre produção
+            'sandbox' => $isSandbox
         ]);
     } elseif ($paymentMethod === 'ciabra') {
         if (empty($config['api_key'])) {

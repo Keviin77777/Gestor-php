@@ -99,7 +99,6 @@ export default function WhatsAppTemplates() {
         setTemplates([])
       }
     } catch (error) {
-      console.error('Erro ao carregar templates')
       setTemplates([])
     } finally {
       setLoading(false)
@@ -562,7 +561,7 @@ export default function WhatsAppTemplates() {
               <div className="bg-gray-100 dark:bg-gray-900 p-6 rounded-b-3xl">
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg">
                   <div
-                    className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap"
+                    className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap leading-snug"
                     dangerouslySetInnerHTML={{ __html: formatPreview(currentTemplate.message) }}
                   />
                   <div className="flex justify-end mt-2">

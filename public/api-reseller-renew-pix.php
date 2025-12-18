@@ -92,16 +92,30 @@ try {
     error_log("Usuário encontrado: {$userData['email']}");
     
     // IMPORTANTE: Para renovação de revendedores, SEMPRE usar método de pagamento do ADMIN
-    // Buscar métodos de pagamento ativos do ADMIN (prioridade: Asaas > EFI Bank > Mercado Pago)
-    $adminId = 'admin-001';
+    // Buscar o primeiro admin do sistema
+    $admin = Database::fetch("SELECT id FROM users WHERE is_admin = 1 OR role = 'admin' LIMIT 1");
     
+    if (!$admin) {
+        error_log("Nenhum admin encontrado no sistema");
+        Response::json([
+            'success' => false,
+            'error' => 'Sistema não configurado corretamente. Entre em contato com o suporte.'
+        ], 400);
+        exit;
+    }
+    
+    error_log("Admin encontrado: {$admin['id']}");
+    
+    // Buscar métodos de pagamento ativos do ADMIN (prioridade: EFI Bank > Asaas > Mercado Pago)
     $paymentMethods = Database::fetchAll(
         "SELECT method_name, config_value, enabled 
          FROM payment_methods 
          WHERE reseller_id = ? AND enabled = 1
-         ORDER BY FIELD(method_name, 'asaas', 'efibank', 'mercadopago')",
-        [$adminId]
+         ORDER BY FIELD(method_name, 'efibank', 'asaas', 'mercadopago')",
+        [$admin['id']]
     );
+    
+    error_log("Métodos de pagamento encontrados para admin: " . count($paymentMethods));
     
     if (empty($paymentMethods)) {
         error_log("Nenhum método de pagamento configurado para o admin");
@@ -135,6 +149,9 @@ try {
             exit;
         }
         
+        error_log("Asaas - Sandbox: " . ($sandbox ? 'SIM' : 'NÃO'));
+        error_log("Asaas - API Key: " . substr($apiKey, 0, 20) . '...');
+        
         $paymentProvider = new AsaasHelper($apiKey, $sandbox);
         error_log("Asaas habilitado com credenciais do ADMIN");
         
@@ -153,6 +170,11 @@ try {
             exit;
         }
         
+        error_log("EFI Bank - Sandbox: " . ($sandbox ? 'SIM (Homologação)' : 'NÃO (Produção)'));
+        error_log("EFI Bank - Client ID: " . substr($clientId, 0, 20) . '...');
+        error_log("EFI Bank - Client Secret: " . substr($clientSecret, 0, 20) . '...');
+        error_log("EFI Bank - Certificado: " . ($certificate ?: 'não configurado'));
+        
         $paymentProvider = new EfiBankHelper($clientId, $clientSecret, $certificate, $sandbox);
         error_log("EFI Bank habilitado com credenciais do ADMIN");
         
@@ -168,6 +190,9 @@ try {
             ], 400);
             exit;
         }
+        
+        error_log("Mercado Pago - Public Key: " . substr($publicKey, 0, 20) . '...');
+        error_log("Mercado Pago - Access Token: " . substr($accessToken, 0, 20) . '...');
         
         $paymentProvider = new MercadoPagoHelper($publicKey, $accessToken);
         error_log("Mercado Pago habilitado com credenciais do ADMIN");
@@ -240,13 +265,28 @@ try {
     }
     
     // Criar pagamento PIX
+    error_log("Tentando criar PIX com provedor: $providerName");
+    error_log("Sandbox mode: " . ($config['sandbox'] ?? 'não definido'));
+    
     $result = $paymentProvider->createPixPayment($paymentData);
     
     if (!$result['success']) {
-        error_log("Erro ao criar PIX: {$result['error']}");
+        $errorMsg = $result['error'] ?? 'Erro desconhecido';
+        error_log("Erro ao criar PIX: $errorMsg");
+        error_log("Detalhes do erro: " . json_encode($result));
+        
+        // Mensagem mais amigável para o usuário
+        $userMessage = $errorMsg;
+        
+        // Se for erro de API key, dar uma mensagem mais clara
+        if (strpos($errorMsg, 'API') !== false || strpos($errorMsg, 'chave') !== false || strpos($errorMsg, 'ambiente') !== false) {
+            $userMessage = 'Erro de configuração do sistema de pagamento. Entre em contato com o suporte.';
+        }
+        
         Response::json([
             'success' => false,
-            'error' => $result['error']
+            'error' => $userMessage,
+            'technical_error' => $errorMsg
         ], 400);
         exit;
     }

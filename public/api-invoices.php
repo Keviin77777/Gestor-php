@@ -100,11 +100,13 @@ try {
                     $currentRenewalDate = $client['renewal_date'];
                     $newRenewalDate = date('Y-m-d', strtotime($currentRenewalDate . " +{$durationDays} days"));
                     
-                    // Atualizar data de renovação do cliente
+                    // Atualizar data de renovação E status do cliente para "active"
                     Database::query(
-                        "UPDATE clients SET renewal_date = ? WHERE id = ? AND reseller_id = ?",
+                        "UPDATE clients SET renewal_date = ?, status = 'active' WHERE id = ? AND reseller_id = ?",
                         [$newRenewalDate, $clientId, $user['id']]
                     );
+                    
+                    error_log("✅ Cliente {$clientId} renovado: {$currentRenewalDate} → {$newRenewalDate} | Status: active");
                     
                     // Registrar log de renovação
                     $logId = 'log-' . uniqid();
@@ -255,11 +257,17 @@ try {
                     $currentRenewalDate = $client['renewal_date'];
                     $oldRenewalDate = date('Y-m-d', strtotime($currentRenewalDate . " -{$durationDays} days"));
                     
-                    // Atualizar data de renovação do cliente (reverter)
+                    // Verificar se a data revertida está vencida
+                    $today = date('Y-m-d');
+                    $newStatus = ($oldRenewalDate < $today) ? 'inactive' : 'active';
+                    
+                    // Atualizar data de renovação E status do cliente
                     Database::query(
-                        "UPDATE clients SET renewal_date = ? WHERE id = ? AND reseller_id = ?",
-                        [$oldRenewalDate, $clientId, $user['id']]
+                        "UPDATE clients SET renewal_date = ?, status = ? WHERE id = ? AND reseller_id = ?",
+                        [$oldRenewalDate, $newStatus, $clientId, $user['id']]
                     );
+                    
+                    error_log("⏪ Cliente {$clientId} revertido: {$currentRenewalDate} → {$oldRenewalDate} | Status: {$newStatus}");
                     
                     // Registrar log de reversão
                     $logId = 'log-' . uniqid();

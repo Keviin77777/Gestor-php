@@ -49,60 +49,8 @@ try {
         exit();
     }
     
-    // Buscar configurações
-    $settings = Database::fetch(
-        "SELECT * FROM whatsapp_settings WHERE reseller_id = ?",
-        [$resellerId]
-    );
-    
-    if (!$settings) {
-        throw new Exception('Configurações não encontradas');
-    }
-    
-    // Verificar status na Evolution API
-    $evolutionStatus = checkEvolutionInstanceStatus(
-        $settings['evolution_api_url'], 
-        $settings['evolution_api_key'], 
-        $session['instance_name']
-    );
-    
-    if ($evolutionStatus['success']) {
-        // Se está conectado na Evolution mas não no banco, atualizar
-        if ($evolutionStatus['status'] === 'open' && $session['status'] !== 'connected') {
-            try {
-                Database::query(
-                    "UPDATE whatsapp_sessions SET 
-                     status = 'connected',
-                     updated_at = CURRENT_TIMESTAMP,
-                     profile_name = ?,
-                     phone_number = ?
-                     WHERE id = ?",
-                    [
-                        $evolutionStatus['profile_name'] ?? null,
-                        $evolutionStatus['phone_number'] ?? null,
-                        $session['id']
-                    ]
-                );
-                $session['status'] = 'connected';
-                $session['profile_name'] = $evolutionStatus['profile_name'] ?? null;
-                $session['phone_number'] = $evolutionStatus['phone_number'] ?? null;
-            } catch (Exception $e) {
-                error_log("Erro ao atualizar status conectado: " . $e->getMessage());
-            }
-        }
-        // Se está desconectado na Evolution mas conectado no banco, atualizar
-        elseif ($evolutionStatus['status'] !== 'open' && $session['status'] === 'connected') {
-            try {
-                Database::query(
-                    "UPDATE whatsapp_sessions SET status = 'disconnected' WHERE id = ?",
-                    [$session['id']]
-                );
-                $session['status'] = 'disconnected';
-            } catch (Exception $e) {
-                error_log("Erro ao atualizar status desconectado: " . $e->getMessage());
-            }
-        }
-    }
+    // OTIMIZAÇÃO: Retornar status do banco IMEDIATAMENTE sem verificar Evolution API
+    // A verificação com Evolution API será feita apenas quando necessário (conectar/desconectar)
     
     // Só retornar QR Code se estiver em processo de conexão
     $qrCode = null;

@@ -21,6 +21,7 @@ import Plans from './pages/Plans'
 import Applications from './pages/Applications'
 import Profile from './pages/Profile'
 import Reports from './pages/Reports'
+import RenewAccess from './pages/RenewAccess'
 import Login from './pages/Login'
 
 function App() {
@@ -50,6 +51,7 @@ function App() {
         <Routes>
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
+            <Route path="renew-access" element={<RenewAccess />} />
             <Route path="clients" element={<Clients />} />
             <Route path="clients/import" element={<ClientsImport />} />
             <Route path="plans" element={<Plans />} />

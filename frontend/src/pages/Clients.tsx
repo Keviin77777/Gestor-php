@@ -3,6 +3,8 @@ import { Plus, Search, Edit, Trash2, FileText, CreditCard, MessageSquare } from 
 import { useClientStore } from '@/stores/useClientStore'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '../components/LoadingSpinner'
+import WhatsAppModal from '../components/WhatsAppModal'
+import ConfirmModal from '../components/ConfirmModal'
 import type { Client } from '@/types'
 
 export default function Clients() {
@@ -18,6 +20,20 @@ export default function Clients() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [paymentHistory, setPaymentHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [whatsappClient, setWhatsappClient] = useState<Client | null>(null)
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    onConfirm: () => void
+    type?: 'danger' | 'warning' | 'info'
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'warning'
+  })
   const [formData, setFormData] = useState<Partial<Client>>({
     name: '',
     email: '',
@@ -53,7 +69,7 @@ export default function Clients() {
         setServers(data.servers || [])
       }
     } catch (error) {
-      console.error('Erro ao carregar servidores')
+      // Erro ao carregar servidores
     }
   }
 
@@ -69,7 +85,7 @@ export default function Clients() {
         setPlans(data.plans || [])
       }
     } catch (error) {
-      console.error('Erro ao carregar planos')
+      // Erro ao carregar planos
     }
   }
 
@@ -145,14 +161,21 @@ export default function Clients() {
   })
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
-      try {
-        await deleteClient(id)
-        toast.success('Cliente excluído com sucesso!')
-      } catch (error) {
-        toast.error('Erro ao excluir cliente')
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Cliente',
+      message: 'Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteClient(id)
+          toast.success('Cliente excluído com sucesso!')
+        } catch (error) {
+          toast.error('Erro ao excluir cliente')
+        }
+        setConfirmModal({ ...confirmModal, isOpen: false })
       }
-    }
+    })
   }
 
   const handleGenerateInvoice = async (clientId: string) => {
@@ -162,32 +185,39 @@ export default function Clients() {
       return
     }
 
-    if (window.confirm(`Gerar fatura para ${client.name}?`)) {
-      try {
-        const response = await fetch('/api-invoices.php', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            client_id: clientId,
-            description: `Mensalidade ${client.plan}`,
-            value: client.value,
-            due_date: client.renewal_date
+    setConfirmModal({
+      isOpen: true,
+      title: 'Gerar Fatura',
+      message: `Deseja gerar uma fatura para ${client.name}?`,
+      type: 'info',
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false })
+        try {
+          const response = await fetch('/api-invoices.php', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              client_id: clientId,
+              description: `Mensalidade ${client.plan}`,
+              value: client.value,
+              due_date: client.renewal_date
+            })
           })
-        })
 
-        const data = await response.json()
-        if (data.success) {
-          toast.success('Fatura gerada com sucesso!')
-        } else {
-          toast.error(data.error || 'Erro ao gerar fatura')
+          const data = await response.json()
+          if (data.success) {
+            toast.success('Fatura gerada com sucesso!')
+          } else {
+            toast.error(data.error || 'Erro ao gerar fatura')
+          }
+        } catch (error) {
+          toast.error('Erro ao gerar fatura')
         }
-      } catch (error) {
-        toast.error('Erro ao gerar fatura')
       }
-    }
+    })
   }
 
   const handlePaymentHistory = async (clientId: string) => {
@@ -214,7 +244,6 @@ export default function Clients() {
         setPaymentHistory([])
       }
     } catch (error) {
-      console.error('Erro ao carregar histórico:', error)
       toast.error('Erro ao carregar histórico')
       setPaymentHistory([])
     } finally {
@@ -231,100 +260,111 @@ export default function Clients() {
   const handleMarkAsPaid = async (invoiceId: string) => {
     if (!selectedClient) return
 
-    if (window.confirm('Marcar esta fatura como paga? Isso irá renovar o cliente automaticamente.')) {
-      // Mostrar loading imediatamente
-      const loadingToast = toast.loading('Processando pagamento...')
-      
-      try {
-        // Atualizar estado local imediatamente para feedback visual
-        setPaymentHistory(prev => prev.map(p => 
-          p.id === invoiceId 
-            ? { ...p, status: 'paid', payment_date: new Date().toISOString().split('T')[0] }
-            : p
-        ))
-
-        const response = await fetch(`/api-invoices.php?id=${invoiceId}&action=mark-paid`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            client_id: selectedClient.id
-          })
-        })
-
-        const data = await response.json()
-        toast.dismiss(loadingToast)
+    setConfirmModal({
+      isOpen: true,
+      title: 'Marcar como Paga',
+      message: 'Marcar esta fatura como paga? Isso irá renovar o cliente automaticamente.',
+      type: 'info',
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false })
+        // Mostrar loading imediatamente
+        const loadingToast = toast.loading('Processando pagamento...')
         
-        if (data.success) {
-          toast.success('Fatura marcada como paga e cliente renovado!')
-          // Recarregar dados do servidor em background
-          handlePaymentHistory(selectedClient.id)
-          fetchClients()
-        } else {
-          toast.error(data.error || 'Erro ao marcar como paga')
+        try {
+          // Atualizar estado local imediatamente para feedback visual
+          setPaymentHistory(prev => prev.map(p => 
+            p.id === invoiceId 
+              ? { ...p, status: 'paid', payment_date: new Date().toISOString().split('T')[0] }
+              : p
+          ))
+
+          const response = await fetch(`/api-invoices.php?id=${invoiceId}&action=mark-paid`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              client_id: selectedClient.id
+            })
+          })
+
+          const data = await response.json()
+          toast.dismiss(loadingToast)
+          
+          if (data.success) {
+            toast.success('Fatura marcada como paga e cliente renovado!')
+            // Recarregar dados do servidor em background
+            handlePaymentHistory(selectedClient.id)
+            fetchClients()
+          } else {
+            toast.error(data.error || 'Erro ao marcar como paga')
+            await handlePaymentHistory(selectedClient.id)
+          }
+        } catch (error) {
+          toast.dismiss(loadingToast)
+          toast.error('Erro ao marcar como paga')
           await handlePaymentHistory(selectedClient.id)
         }
-      } catch (error) {
-        toast.dismiss(loadingToast)
-        toast.error('Erro ao marcar como paga')
-        await handlePaymentHistory(selectedClient.id)
       }
-    }
+    })
   }
 
   const handleUnmarkAsPaid = async (invoiceId: string) => {
     if (!selectedClient) return
 
-    if (window.confirm('Desmarcar esta fatura como paga? Isso irá reverter a renovação do cliente.')) {
-      // Mostrar loading imediatamente
-      const loadingToast = toast.loading('Revertendo pagamento...')
-      
-      try {
-        // Atualizar estado local imediatamente para feedback visual
-        setPaymentHistory(prev => prev.map(p => 
-          p.id === invoiceId 
-            ? { ...p, status: 'pending', payment_date: null }
-            : p
-        ))
-
-        const response = await fetch(`/api-invoices.php?id=${invoiceId}&action=unmark-paid`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            client_id: selectedClient.id
-          })
-        })
-
-        const data = await response.json()
-        toast.dismiss(loadingToast)
+    setConfirmModal({
+      isOpen: true,
+      title: 'Desmarcar como Paga',
+      message: 'Desmarcar esta fatura como paga? Isso irá reverter a renovação do cliente.',
+      type: 'warning',
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false })
+        // Mostrar loading imediatamente
+        const loadingToast = toast.loading('Revertendo pagamento...')
         
-        if (data.success) {
-          toast.success('Fatura desmarcada e renovação revertida!')
-          // Recarregar dados do servidor em background
-          handlePaymentHistory(selectedClient.id)
-          fetchClients()
-        } else {
-          toast.error(data.error || 'Erro ao desmarcar')
+        try {
+          // Atualizar estado local imediatamente para feedback visual
+          setPaymentHistory(prev => prev.map(p => 
+            p.id === invoiceId 
+              ? { ...p, status: 'pending', payment_date: null }
+              : p
+          ))
+
+          const response = await fetch(`/api-invoices.php?id=${invoiceId}&action=unmark-paid`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              client_id: selectedClient.id
+            })
+          })
+
+          const data = await response.json()
+          toast.dismiss(loadingToast)
+          
+          if (data.success) {
+            toast.success('Fatura desmarcada e renovação revertida!')
+            // Recarregar dados do servidor em background
+            handlePaymentHistory(selectedClient.id)
+            fetchClients()
+          } else {
+            toast.error(data.error || 'Erro ao desmarcar')
+            await handlePaymentHistory(selectedClient.id)
+          }
+        } catch (error) {
+          toast.dismiss(loadingToast)
+          toast.error('Erro ao desmarcar')
           await handlePaymentHistory(selectedClient.id)
         }
-      } catch (error) {
-        toast.dismiss(loadingToast)
-        toast.error('Erro ao desmarcar')
-        await handlePaymentHistory(selectedClient.id)
       }
-    }
+    })
   }
 
-  const handleWhatsApp = (name: string, phone: string) => {
-    toast.success(`Enviar WhatsApp para ${name} (${phone}) - Em desenvolvimento`, {
-      duration: 3000,
-    })
-    // TODO: Implementar modal de WhatsApp
+  const handleWhatsApp = (client: Client) => {
+    setWhatsappClient(client)
   }
 
   const formatDate = (dateString: string) => {
@@ -432,7 +472,17 @@ export default function Clients() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Vencimento *</label>
-                <input type="date" required value={formData.renewal_date} onChange={(e) => setFormData({ ...formData, renewal_date: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" />
+                <input 
+                  type="date" 
+                  required 
+                  value={formData.renewal_date} 
+                  onChange={(e) => {
+                    // Corrigir timezone - garantir que a data seja salva corretamente
+                    const selectedDate = e.target.value
+                    setFormData({ ...formData, renewal_date: selectedDate })
+                  }} 
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/30 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" 
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">MAC</label>
@@ -642,7 +692,7 @@ export default function Clients() {
                           <CreditCard className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => client.phone && handleWhatsApp(client.name, client.phone)}
+                          onClick={() => client.phone && handleWhatsApp(client)}
                           disabled={!client.phone}
                           className={`p-2 rounded-lg transition-all hover:scale-110 ${
                             client.phone 
@@ -824,6 +874,24 @@ export default function Clients() {
           </div>
         </div>
       )}
+
+      {/* WhatsApp Modal */}
+      {whatsappClient && (
+        <WhatsAppModal
+          client={whatsappClient}
+          onClose={() => setWhatsappClient(null)}
+        />
+      )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
     </div>
   )
 }

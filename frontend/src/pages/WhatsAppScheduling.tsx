@@ -83,7 +83,6 @@ export default function WhatsAppScheduling() {
         setTemplates([])
       }
     } catch (error) {
-      console.error('Erro ao carregar templates')
       setTemplates([])
     } finally {
       setLoading(false)
