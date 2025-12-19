@@ -51,6 +51,11 @@ export const authService = {
   async getMe(): Promise<any> {
     const response = await api.get('/api-auth-me.php')
     return response.data
+  },
+
+  async getProfile(): Promise<any> {
+    const response = await api.get('/api-profile.php')
+    return response.data
   }
 }
 

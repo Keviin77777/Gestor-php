@@ -25,6 +25,7 @@ import FinancialReport from './pages/FinancialReport'
 import MonthlyReport from './pages/MonthlyReport'
 import RenewAccess from './pages/RenewAccess'
 import Login from './pages/Login'
+import Landing from './pages/Landing'
 
 function App() {
   const { isAuthenticated, loadFromStorage } = useAuthStore()
@@ -38,8 +39,9 @@ function App() {
       <>
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
         <Toaster position="top-right" />
@@ -51,26 +53,29 @@ function App() {
     <>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<DashboardLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="renew-access" element={<RenewAccess />} />
-            <Route path="clients" element={<Clients />} />
-            <Route path="clients/import" element={<ClientsImport />} />
-            <Route path="plans" element={<Plans />} />
-            <Route path="applications" element={<Applications />} />
-            <Route path="invoices" element={<Invoices />} />
-            <Route path="servers" element={<Servers />} />
-            <Route path="payment-methods" element={<PaymentMethods />} />
-            <Route path="whatsapp" element={<WhatsAppConnect />} />
-            <Route path="whatsapp/templates" element={<WhatsAppTemplates />} />
-            <Route path="whatsapp/scheduling" element={<WhatsAppScheduling />} />
-            <Route path="whatsapp/queue" element={<WhatsAppQueue />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="reports/financial" element={<FinancialReport />} />
-            <Route path="reports/monthly" element={<MonthlyReport />} />
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/renew-access" element={<RenewAccess />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/clients/import" element={<ClientsImport />} />
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/applications" element={<Applications />} />
+            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/servers" element={<Servers />} />
+            <Route path="/payment-methods" element={<PaymentMethods />} />
+            <Route path="/whatsapp" element={<WhatsAppConnect />} />
+            <Route path="/whatsapp/templates" element={<WhatsAppTemplates />} />
+            <Route path="/whatsapp/scheduling" element={<WhatsAppScheduling />} />
+            <Route path="/whatsapp/queue" element={<WhatsAppQueue />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/reports/financial" element={<FinancialReport />} />
+            <Route path="/reports/monthly" element={<MonthlyReport />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Redirecionar rotas públicas para dashboard quando autenticado */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" />

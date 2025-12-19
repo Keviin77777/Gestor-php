@@ -79,7 +79,9 @@ function handleGetProfile($currentUser) {
                 COALESCE(is_admin, CASE WHEN role = 'admin' THEN 1 ELSE 0 END) as is_admin,
                 current_plan_id, 
                 plan_expires_at, 
-                created_at
+                created_at,
+                COALESCE(telegram_link, 'https://t.me/+jim14-gGOBFhNWMx') as telegram_link,
+                COALESCE(whatsapp_number, '14997349352') as whatsapp_number
             FROM users 
             WHERE id = ?
         ", [$currentUser['id']]);
@@ -202,6 +204,10 @@ function handleUpdateProfile($currentUser) {
     try {
         $input = json_decode(file_get_contents('php://input'), true);
         
+        // Log para debug
+        error_log("Update Profile Input: " . json_encode($input));
+        error_log("Current User: " . json_encode($currentUser));
+        
         if (!$input) {
             throw new Exception('Dados inválidos');
         }
@@ -271,6 +277,49 @@ function handleUpdateProfile($currentUser) {
         if ($checkCompany && (int)($checkCompany['col_count'] ?? 0) > 0) {
             $updateFields[] = 'company = ?';
             $updateValues[] = $input['company'] ?? null;
+        }
+        
+        // Verificar se é admin para permitir atualizar links sociais
+        // Buscar dados do usuário do banco para verificar se é admin
+        $userData = Database::fetch("
+            SELECT role, COALESCE(is_admin, 0) as is_admin 
+            FROM users 
+            WHERE id = ?
+        ", [$currentUser['id']]);
+        
+        $isAdmin = ($userData && (($userData['is_admin'] == 1) || ($userData['role'] === 'admin')));
+        
+        error_log("Is Admin: " . ($isAdmin ? 'true' : 'false'));
+        error_log("User Data: " . json_encode($userData));
+        
+        if ($isAdmin) {
+            // Verificar se coluna telegram_link existe
+            $checkTelegram = Database::fetch("
+                SELECT COUNT(*) as col_count 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = ? 
+                AND TABLE_NAME = 'users' 
+                AND COLUMN_NAME = 'telegram_link'
+            ", [$dbName]);
+            
+            if ($checkTelegram && (int)($checkTelegram['col_count'] ?? 0) > 0 && isset($input['telegram_link'])) {
+                $updateFields[] = 'telegram_link = ?';
+                $updateValues[] = $input['telegram_link'];
+            }
+            
+            // Verificar se coluna whatsapp_number existe
+            $checkWhatsAppNum = Database::fetch("
+                SELECT COUNT(*) as col_count 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = ? 
+                AND TABLE_NAME = 'users' 
+                AND COLUMN_NAME = 'whatsapp_number'
+            ", [$dbName]);
+            
+            if ($checkWhatsAppNum && (int)($checkWhatsAppNum['col_count'] ?? 0) > 0 && isset($input['whatsapp_number'])) {
+                $updateFields[] = 'whatsapp_number = ?';
+                $updateValues[] = $input['whatsapp_number'];
+            }
         }
         
         $updateValues[] = $currentUser['id'];

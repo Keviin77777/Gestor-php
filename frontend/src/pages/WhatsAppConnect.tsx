@@ -169,7 +169,7 @@ export default function WhatsAppConnect() {
     <div className="space-y-6">
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
-        <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 bg-clip-text text-transparent">
+        <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Parear WhatsApp
         </h1>
         <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">

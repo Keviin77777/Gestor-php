@@ -606,7 +606,7 @@ export default function Clients() {
         <>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Clientes
               </h1>
               <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
@@ -1174,7 +1174,7 @@ export default function Clients() {
               </svg>
             </button>
             <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Histórico de Pagamentos
               </h1>
               <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">

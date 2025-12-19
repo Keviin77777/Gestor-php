@@ -100,7 +100,7 @@ export default function FinancialReport() {
             <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
               <BarChart3 className="w-6 h-6 text-primary-600 dark:text-primary-400" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Gráfico Financeiro
             </h1>
           </div>

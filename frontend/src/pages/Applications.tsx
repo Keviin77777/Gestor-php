@@ -130,7 +130,7 @@ export default function Applications() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Aplicativos</h1>
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Aplicativos</h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
             {filteredApplications.length} {filteredApplications.length === 1 ? 'aplicativo' : 'aplicativos'}
           </p>

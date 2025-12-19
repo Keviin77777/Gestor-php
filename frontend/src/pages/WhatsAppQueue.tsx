@@ -156,7 +156,7 @@ export default function WhatsAppQueue() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Fila de Mensagens</h1>
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Fila de Mensagens</h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">Gerencie e monitore o envio de mensagens em massa</p>
         </div>
         <div className="flex flex-wrap gap-2">
