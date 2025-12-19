@@ -389,6 +389,13 @@ function validateData(data) {
         
         if (isSigmaFormat) {
             // Formato Sigma
+            // Log para debug - ver todos os campos disponíveis
+            if (index === 0) {
+                console.log('Campos disponíveis na planilha Sigma:', Object.keys(row));
+                console.log('Valor do campo package:', row.package);
+                console.log('Valor do campo plan:', row.plan);
+            }
+            
             client = {
                 index: index + 1,
                 name: row.name || row.note || `Cliente ${index + 1}`,
@@ -399,7 +406,7 @@ function validateData(data) {
                 server: row.server || '',
                 application: 'NextApp', // Padrão para Sigma
                 mac: '', // Sigma não exporta MAC
-                plan: row.package || '',
+                plan: row.package || row.plan || row.plano || '',
                 email: row.email || '',
                 value: parseFloat(row.plan_price) || 0,
                 screens: parseInt(row.connections) || 1,
@@ -614,9 +621,21 @@ async function createPlansFromSpreadsheet() {
 function applyBulkServer(value) {
     if (!value) return;
     
-    parsedData.forEach((client, idx) => {
+    parsedData.forEach((client) => {
         client.server = value;
-        updateClient(idx, 'server', value);
+        // Revalidar apenas este campo
+        const errors = [];
+        if (!client.name) errors.push('Nome é obrigatório');
+        if (!client.username) errors.push('Usuário IPTV é obrigatório');
+        if (!client.iptv_password) errors.push('Senha IPTV é obrigatória');
+        if (!client.phone) errors.push('WhatsApp é obrigatório');
+        if (!client.renewal_date) errors.push('Vencimento é obrigatório');
+        if (!client.server) errors.push('Servidor é obrigatório');
+        if (!client.plan) errors.push('Plano é obrigatório');
+        if (!client.application) errors.push('Aplicativo é obrigatório');
+        
+        client.errors = errors;
+        client.valid = errors.length === 0;
     });
     
     // Re-renderizar tabela
@@ -652,9 +671,21 @@ function applyBulkPlan(value) {
 function applyBulkApp(value) {
     if (!value) return;
     
-    parsedData.forEach((client, idx) => {
+    parsedData.forEach((client) => {
         client.application = value;
-        updateClient(idx, 'application', value);
+        // Revalidar
+        const errors = [];
+        if (!client.name) errors.push('Nome é obrigatório');
+        if (!client.username) errors.push('Usuário IPTV é obrigatório');
+        if (!client.iptv_password) errors.push('Senha IPTV é obrigatória');
+        if (!client.phone) errors.push('WhatsApp é obrigatório');
+        if (!client.renewal_date) errors.push('Vencimento é obrigatório');
+        if (!client.server) errors.push('Servidor é obrigatório');
+        if (!client.plan) errors.push('Plano é obrigatório');
+        if (!client.application) errors.push('Aplicativo é obrigatório');
+        
+        client.errors = errors;
+        client.valid = errors.length === 0;
     });
     
     // Re-renderizar tabela

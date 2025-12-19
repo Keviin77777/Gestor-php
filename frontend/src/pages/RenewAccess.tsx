@@ -59,7 +59,7 @@ export default function RenewAccess() {
         setPlans(plansRes.data.plans)
       }
     } catch (error) {
-      console.error('Erro ao carregar dados:', error)
+      // Erro ao carregar dados
     } finally {
       setLoading(false)
     }
@@ -164,7 +164,7 @@ export default function RenewAccess() {
         }
       }
     } catch (error) {
-      console.error('Erro ao verificar pagamento:', error)
+      // Erro ao verificar pagamento
     } finally {
       setCheckingPayment(false)
     }
@@ -199,8 +199,8 @@ export default function RenewAccess() {
     <div className="space-y-6 p-4 md:p-6">
       {/* Header */}
       <div className="text-center border-b border-gray-200 dark:border-gray-700 pb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center justify-center gap-3 mb-2">
-          <Zap className="w-8 h-8 text-primary-600" />
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 bg-clip-text text-transparent flex items-center justify-center gap-3 mb-2">
+          <Zap className="w-8 h-8 text-purple-600" />
           Renovar Acesso
         </h1>
         <p className="text-gray-600 dark:text-gray-400">

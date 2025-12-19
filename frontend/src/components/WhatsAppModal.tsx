@@ -74,7 +74,7 @@ export default function WhatsAppModal({ client, onClose }: WhatsAppModalProps) {
         setTemplates(response.data.templates.filter((t: Template) => t.is_active))
       }
     } catch (error) {
-      console.error('Erro ao carregar templates:', error)
+      // Erro ao carregar templates
     }
   }
 

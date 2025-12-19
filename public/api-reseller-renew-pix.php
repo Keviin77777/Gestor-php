@@ -3,15 +3,24 @@
  * API para gerar PIX de renovação para revendedores
  */
 
+// Configurar headers CORS antes de qualquer output
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Credentials: true');
 
+// Responder a requisições OPTIONS (preflight)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
+
+// Log da requisição para debug
+error_log("=== Renovação PIX - Nova requisição ===");
+error_log("Método: " . $_SERVER['REQUEST_METHOD']);
+error_log("URI: " . $_SERVER['REQUEST_URI']);
+error_log("Headers: " . json_encode(getallheaders()));
 
 require_once __DIR__ . '/../app/helpers/functions.php';
 loadEnv(__DIR__ . '/../.env');
@@ -23,17 +32,31 @@ require_once __DIR__ . '/../app/helpers/MercadoPagoHelper.php';
 require_once __DIR__ . '/../app/helpers/EfiBankHelper.php';
 require_once __DIR__ . '/../app/helpers/AsaasHelper.php';
 
+// Iniciar sessão se não estiver iniciada
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+    error_log("Sessão iniciada - ID: " . session_id());
+}
+
+// Log da sessão para debug
+error_log("Dados da sessão: " . json_encode($_SESSION ?? []));
+
 // Verificar autenticação
 $user = Auth::user();
 
 if (!$user) {
+    error_log("Renovação PIX - Usuário não autenticado");
     Response::json(['success' => false, 'error' => 'Não autorizado'], 401);
     exit;
 }
 
-// Apenas revendedores podem renovar
-if ($user['role'] !== 'reseller') {
-    Response::json(['success' => false, 'error' => 'Acesso negado'], 403);
+// Log para debug
+error_log("Renovação PIX - Usuário autenticado: ID={$user['id']}, Role={$user['role']}");
+
+// Apenas revendedores e admins podem renovar
+if ($user['role'] !== 'reseller' && $user['role'] !== 'admin') {
+    error_log("Renovação PIX - Acesso negado para role: {$user['role']}");
+    Response::json(['success' => false, 'error' => 'Acesso negado. Apenas revendedores podem renovar planos.'], 403);
     exit;
 }
 

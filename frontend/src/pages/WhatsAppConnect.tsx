@@ -1,22 +1,35 @@
 import { useState, useEffect, useRef } from 'react'
-import { MessageSquare, Zap, DollarSign, CheckCircle, XCircle, Loader, AlertTriangle } from 'lucide-react'
+import { MessageSquare, Zap, DollarSign, CheckCircle, XCircle, Loader, AlertTriangle, Clock, Save, Users, TrendingUp } from 'lucide-react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
 type Provider = 'native' | 'evolution'
 
+interface RateLimits {
+  messages_per_minute: number
+  messages_per_hour: number
+  delay_between_messages: number
+}
+
 export default function WhatsAppConnect() {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
   const [provider, setProvider] = useState<Provider>('native')
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [accountInfo, setAccountInfo] = useState<any>(null)
+  const [rateLimits, setRateLimits] = useState<RateLimits>({
+    messages_per_minute: 20,
+    messages_per_hour: 100,
+    delay_between_messages: 3
+  })
+  const [savingLimits, setSavingLimits] = useState(false)
   const qrCheckInterval = useRef<NodeJS.Timeout | null>(null)
   const statusCheckInterval = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    // Carregar status imediatamente (sem await para não bloquear)
+    // Carregar status e configurações
     checkStatus()
+    loadRateLimits()
     
     // Configurar intervalo
     statusCheckInterval.current = setInterval(checkStatus, 5000)
@@ -26,6 +39,43 @@ export default function WhatsAppConnect() {
       if (qrCheckInterval.current) clearInterval(qrCheckInterval.current)
     }
   }, [])
+
+  const loadRateLimits = async () => {
+    try {
+      const response = await api.get('/api-whatsapp-settings.php')
+      if (response.data.success && response.data.settings) {
+        const settings = response.data.settings
+        setRateLimits({
+          messages_per_minute: settings.messages_per_minute || 20,
+          messages_per_hour: settings.messages_per_hour || 100,
+          delay_between_messages: settings.delay_between_messages || 3
+        })
+      }
+    } catch (error) {
+      // Usar valores padrão
+    }
+  }
+
+  const saveRateLimits = async () => {
+    try {
+      setSavingLimits(true)
+      const response = await api.post('/api-whatsapp-settings.php', {
+        messages_per_minute: rateLimits.messages_per_minute,
+        messages_per_hour: rateLimits.messages_per_hour,
+        delay_between_messages: rateLimits.delay_between_messages
+      })
+
+      if (response.data.success) {
+        toast.success('Limites salvos com sucesso!')
+      } else {
+        throw new Error(response.data.error || 'Erro ao salvar')
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao salvar limites')
+    } finally {
+      setSavingLimits(false)
+    }
+  }
 
   const checkStatus = async () => {
     try {
@@ -118,8 +168,8 @@ export default function WhatsAppConnect() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+      <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+        <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 bg-clip-text text-transparent">
           Parear WhatsApp
         </h1>
         <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
@@ -298,6 +348,186 @@ export default function WhatsAppConnect() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Rate Limits Configuration */}
+      <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <Clock className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Configuração de Limites de Envio
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Configure os limites para evitar bloqueios do WhatsApp
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* Messages Per Minute */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              Mensagens por Minuto
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="60"
+              value={rateLimits.messages_per_minute}
+              onChange={(e) => setRateLimits({ ...rateLimits, messages_per_minute: parseInt(e.target.value) || 1 })}
+              className="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Recomendado: 15-20 para evitar bloqueios
+            </p>
+          </div>
+
+          {/* Messages Per Hour */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
+              Mensagens por Hora
+            </label>
+            <input
+              type="number"
+              min="10"
+              max="500"
+              value={rateLimits.messages_per_hour}
+              onChange={(e) => setRateLimits({ ...rateLimits, messages_per_hour: parseInt(e.target.value) || 10 })}
+              className="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Recomendado: 80-100 para uso seguro
+            </p>
+          </div>
+
+          {/* Delay Between Messages */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              Delay entre Mensagens (seg)
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="60"
+              value={rateLimits.delay_between_messages}
+              onChange={(e) => setRateLimits({ ...rateLimits, delay_between_messages: parseInt(e.target.value) || 1 })}
+              className="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Recomendado: 3-5 segundos
+            </p>
+          </div>
+        </div>
+
+        {/* Warning Alert */}
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-semibold text-yellow-900 dark:text-yellow-300 mb-1">
+                ⚠️ Atenção
+              </h4>
+              <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                Configurações muito agressivas podem resultar em bloqueio da conta WhatsApp. 
+                Use os valores recomendados para garantir a segurança da sua conta.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <button
+          onClick={saveRateLimits}
+          disabled={savingLimits}
+          className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {savingLimits ? (
+            <>
+              <Loader className="w-5 h-5 animate-spin" />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <Save className="w-5 h-5" />
+              Salvar Configuração
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Features Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Envio Automático */}
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Envio Automático
+            </h3>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Envie cobranças automaticamente para clientes
+          </p>
+          <ul className="space-y-2">
+            <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+              Cobrança de renovação
+            </li>
+            <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+              Lembretes de vencimento
+            </li>
+            <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+              Confirmação de pagamento
+            </li>
+            <li className="flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-400">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              Avisos de suspensão
+            </li>
+          </ul>
+        </div>
+
+        {/* Gestão de Clientes */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Gestão de Clientes
+            </h3>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Integração com sua base de clientes
+          </p>
+          <ul className="space-y-2">
+            <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              Sincronização automática
+            </li>
+            <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              Números validados
+            </li>
+            <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              Histórico de mensagens
+            </li>
+            <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              Status de entrega
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   )

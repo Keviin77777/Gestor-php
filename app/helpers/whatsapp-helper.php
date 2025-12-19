@@ -324,12 +324,24 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
                 $currentDay = strtolower(date('l')); // monday, tuesday, etc.
                 $scheduledDays = json_decode($template['scheduled_days'], true) ?: [];
                 
-                // Se hoje está nos dias agendados, SEMPRE usar hoje (mesmo se o horário já passou)
+                // Se hoje está nos dias agendados
                 if (in_array($currentDay, $scheduledDays)) {
                     $scheduledTime = $template['scheduled_time'];
-                    $scheduledAt = date('Y-m-d') . ' ' . $scheduledTime;
+                    $scheduledDateTime = date('Y-m-d') . ' ' . $scheduledTime;
                     
-                    error_log("Template '{$templateType}' agendado para HOJE: {$scheduledAt}");
+                    // Verificar se o horário agendado já passou
+                    $scheduledTimestamp = strtotime($scheduledDateTime);
+                    $currentTimestamp = time();
+                    
+                    if ($scheduledTimestamp > $currentTimestamp) {
+                        // Horário ainda não passou, agendar para hoje
+                        $scheduledAt = $scheduledDateTime;
+                        error_log("Template '{$templateType}' agendado para HOJE: {$scheduledAt}");
+                    } else {
+                        // Horário já passou, enviar imediatamente (agendar para daqui 1 minuto)
+                        $scheduledAt = date('Y-m-d H:i:s', strtotime('+1 minute'));
+                        error_log("Template '{$templateType}' - horário passou, enviando IMEDIATAMENTE: {$scheduledAt}");
+                    }
                 } else {
                     // Hoje não está nos dias agendados, encontrar o próximo dia
                     $daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];

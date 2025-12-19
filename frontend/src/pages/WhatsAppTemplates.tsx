@@ -226,7 +226,7 @@ export default function WhatsAppTemplates() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Templates WhatsApp</h1>
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 bg-clip-text text-transparent">Templates WhatsApp</h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
             Gerencie seus modelos de mensagens
           </p>
@@ -275,7 +275,7 @@ export default function WhatsAppTemplates() {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {templates.map((template) => {
                   const color = getTypeColor(template.type)
-                  
+
                   return (
                     <tr
                       key={template.id}
@@ -447,7 +447,7 @@ export default function WhatsAppTemplates() {
                     required
                     placeholder="Digite sua mensagem aqui... Clique para ver as variáveis disponíveis"
                   />
-                  
+
                   {showVariables && (
                     <div className="absolute z-10 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">

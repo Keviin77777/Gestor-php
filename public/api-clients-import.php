@@ -69,6 +69,18 @@ try {
         $serverMap[$server['name']] = $server['id'];
     }
 
+    // Buscar planos existentes do usuário
+    $existingPlans = Database::fetchAll(
+        "SELECT id, name, server_id FROM subscription_plans WHERE reseller_id = ?",
+        [$user['id']]
+    );
+
+    $planMap = [];
+    foreach ($existingPlans as $plan) {
+        // Mapear por nome do plano (para compatibilidade)
+        $planMap[$plan['name']] = $plan['id'];
+    }
+
     // Buscar aplicativos (se existir tabela)
     // Por enquanto, vamos criar um mapeamento padrão
     $applicationMap = [
@@ -80,6 +92,7 @@ try {
 
     $imported = 0;
     $errors = [];
+    $plansCreated = [];
 
     // Iniciar transação
     Database::beginTransaction();
@@ -125,13 +138,53 @@ try {
                 $applicationId = $applicationMap[$client['application']];
             }
 
+            // Verificar/criar plano
+            $planId = null;
+            $planName = $client['plan'] ?? 'Personalizado';
+            
+            if (!empty($planName)) {
+                // Verificar se o plano já existe
+                if (isset($planMap[$planName])) {
+                    $planId = $planMap[$planName];
+                } else {
+                    // Criar novo plano automaticamente
+                    $newPlanId = 'plan-' . uniqid();
+                    $serverId = $serverMap[$client['server']];
+                    $planValue = $client['value'] ?? 25.00;
+                    
+                    Database::insert(
+                        "INSERT INTO subscription_plans (id, reseller_id, server_id, name, description, price, duration_days, max_screens, features, is_active) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        [
+                            $newPlanId,
+                            $user['id'],
+                            $serverId,
+                            $planName,
+                            'Plano importado automaticamente',
+                            $planValue,
+                            30,
+                            $client['screens'] ?? 1,
+                            json_encode([]),
+                            1
+                        ]
+                    );
+                    
+                    $planId = $newPlanId;
+                    $planMap[$planName] = $newPlanId;
+                    
+                    if (!in_array($planName, $plansCreated)) {
+                        $plansCreated[] = $planName;
+                    }
+                }
+            }
+
             // Inserir cliente (email pode ser vazio)
             Database::insert(
                 "INSERT INTO clients (
                     id, reseller_id, name, email, phone, username, iptv_password, 
                     renewal_date, status, value, notes, server, mac, notifications, 
-                    screens, plan, application_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    screens, plan, plan_id, application_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     $clientId,
                     $user['id'],
@@ -148,7 +201,8 @@ try {
                     $client['mac'] ?? '',
                     'sim',
                     $client['screens'] ?? 1,
-                    $client['plan'] ?? 'Personalizado',
+                    $planName,
+                    $planId,
                     $applicationId
                 ]
             );
@@ -194,6 +248,11 @@ try {
         'total' => count($clients),
         'message' => "$imported cliente(s) importado(s) com sucesso"
     ];
+
+    if (count($plansCreated) > 0) {
+        $response['plans_created'] = count($plansCreated);
+        $response['message'] .= ' e ' . count($plansCreated) . ' plano(s) criado(s) automaticamente';
+    }
 
     if (count($errors) > 0) {
         $response['errors'] = $errors;

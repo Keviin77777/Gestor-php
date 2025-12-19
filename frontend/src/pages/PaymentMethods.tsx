@@ -42,7 +42,7 @@ export default function PaymentMethods() {
         setIsAdmin(response.data.is_admin)
       }
     } catch (error) {
-      console.error('Erro ao carregar métodos:', error)
+      // Erro ao carregar métodos
     } finally {
       setLoading(false)
     }
@@ -235,14 +235,14 @@ export default function PaymentMethods() {
               />
             </div>
             <div className="form-group">
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.sandbox || false}
                   onChange={(e) => setFormData({ ...formData, sandbox: e.target.checked })}
                   className="form-checkbox"
                 />
-                <span>Modo Sandbox (Homologação)</span>
+                <span className="text-gray-900 dark:text-gray-100 font-medium">Modo Sandbox (Homologação)</span>
               </label>
             </div>
           </>
@@ -279,7 +279,7 @@ export default function PaymentMethods() {
     <div className="space-y-6 p-4 md:p-6">
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 bg-clip-text text-transparent mb-2">
           Métodos de Pagamento
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
@@ -428,14 +428,14 @@ export default function PaymentMethods() {
                 {renderFormFields()}
 
                 <div className="form-group">
-                  <label className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={formData.enabled ?? true}
                       onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
                       className="form-checkbox"
                     />
-                    <span className="font-semibold text-sm sm:text-base">Ativar este método de pagamento</span>
+                    <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-gray-100">Ativar este método de pagamento</span>
                   </label>
                 </div>
               </div>

@@ -50,7 +50,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, invoice }: Invoi
       const data = await clientService.getAll();
       setClients(data.clients.map(c => ({ id: c.id, name: c.name })));
     } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
+      // Erro ao carregar clientes
     }
   };
 

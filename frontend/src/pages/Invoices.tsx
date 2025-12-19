@@ -75,7 +75,6 @@ export default function Invoices() {
       
       setSummary(newSummary);
     } catch (error) {
-      console.error('Erro ao carregar faturas:', error);
       toast.error('Erro ao carregar faturas');
     } finally {
       setLoading(false);
@@ -121,7 +120,6 @@ export default function Invoices() {
       
       loadInvoices();
     } catch (error) {
-      console.error('Erro ao marcar fatura como paga:', error);
       toast.error('Erro ao marcar fatura como paga', { id: loadingToast });
     }
   };
@@ -135,7 +133,6 @@ export default function Invoices() {
       toast.success('Fatura excluída com sucesso!', { id: loadingToast });
       loadInvoices();
     } catch (error) {
-      console.error('Erro ao excluir fatura:', error);
       toast.error('Erro ao excluir fatura', { id: loadingToast });
     }
   };
@@ -174,7 +171,6 @@ export default function Invoices() {
       handleCloseModal();
       loadInvoices();
     } catch (error) {
-      console.error('Erro ao salvar fatura:', error);
       toast.error('Erro ao salvar fatura', { id: loadingToast });
     }
   };

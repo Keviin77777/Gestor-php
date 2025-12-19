@@ -34,7 +34,7 @@ export default function MonthlyReport() {
         setMonths(filteredMonths)
       }
     } catch (error) {
-      console.error('Erro ao carregar relatório mensal:', error)
+      // Erro ao carregar relatório mensal
     } finally {
       setLoading(false)
     }

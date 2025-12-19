@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Upload, Download, AlertCircle, CheckCircle, FileText, Play, Plus, ArrowLeft, Info, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
+import ConfirmModal from '@/components/ConfirmModal'
 
 interface ClientData {
   index: number
@@ -34,6 +35,9 @@ export default function ClientsImport() {
   const [creatingPlans, setCreatingPlans] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(20)
+  const [showPlanWarningModal, setShowPlanWarningModal] = useState(false)
+  const [missingPlans, setMissingPlans] = useState<string[]>([])
+  const [showConfirmImportModal, setShowConfirmImportModal] = useState(false)
 
   useEffect(() => {
     loadServers()
@@ -49,7 +53,7 @@ export default function ClientsImport() {
       const data = await response.json()
       if (data.success) setServers(data.servers || [])
     } catch (error) {
-      console.error('Erro ao carregar servidores')
+      // Erro ao carregar servidores
     }
   }
 
@@ -94,7 +98,7 @@ export default function ClientsImport() {
         })))
       }
     } catch (error) {
-      console.error('Erro ao carregar planos')
+      // Erro ao carregar planos
     }
   }
 
@@ -136,19 +140,7 @@ export default function ClientsImport() {
   const processFile = async (file: File) => {
     try {
       const data = await readExcelFile(file)
-      
-      // Log para debug - mostrar primeira linha
-      if (data.length > 0) {
-        console.log('Primeira linha da planilha:', data[0])
-        console.log('Colunas detectadas:', Object.keys(data[0]))
-      }
-      
       const validated = validateData(data)
-      
-      // Log dos dados validados
-      if (validated.length > 0) {
-        console.log('Primeiro cliente validado:', validated[0])
-      }
       
       setParsedData(validated)
       setCurrentStep(2)
@@ -162,7 +154,6 @@ export default function ClientsImport() {
       }
     } catch (error: any) {
       toast.error('Erro ao processar arquivo: ' + error.message)
-      console.error('Erro detalhado:', error)
     }
   }
 
@@ -303,16 +294,16 @@ export default function ClientsImport() {
     }
 
     const uniquePlans = [...new Set(parsedData.map(c => c.plan).filter(p => p))]
-    const missingPlans = uniquePlans.filter(planName => !plans.find(p => p.name === planName))
+    const plansToCreate = uniquePlans.filter(planName => !plans.find(p => p.name === planName))
 
-    if (missingPlans.length === 0) {
+    if (plansToCreate.length === 0) {
       toast.error('Todos os planos já existem no sistema')
       return
     }
 
     const selectedServerId = servers[0]?.id
 
-    if (!window.confirm(`Deseja criar ${missingPlans.length} plano(s) automaticamente no servidor "${servers[0]?.name}"?\n\n${missingPlans.slice(0, 10).join('\n')}${missingPlans.length > 10 ? '\n...' : ''}`)) {
+    if (!window.confirm(`Deseja criar ${plansToCreate.length} plano(s) automaticamente no servidor "${servers[0]?.name}"?\n\n${plansToCreate.slice(0, 10).join('\n')}${plansToCreate.length > 10 ? '\n...' : ''}`)) {
       return
     }
 
@@ -320,7 +311,7 @@ export default function ClientsImport() {
     let created = 0
 
     try {
-      for (const planName of missingPlans) {
+      for (const planName of plansToCreate) {
         const clientWithPlan = parsedData.find(c => c.plan === planName)
         const planValue = clientWithPlan?.value || 25.00
 
@@ -364,10 +355,26 @@ export default function ClientsImport() {
       return
     }
 
-    if (!window.confirm(`Deseja importar ${validClients.length} cliente(s)?`)) {
+    // Verificar se há planos que não existem no sistema
+    const plansNotInSystem = validClients
+      .map(c => c.plan)
+      .filter((plan, index, self) => plan && !plans.find(p => p.name === plan) && self.indexOf(plan) === index)
+
+    if (plansNotInSystem.length > 0) {
+      setMissingPlans(plansNotInSystem)
+      setShowPlanWarningModal(true)
       return
     }
 
+    // Se não há planos faltando, mostrar confirmação normal
+    setShowConfirmImportModal(true)
+  }
+
+  const confirmImport = async () => {
+    setShowConfirmImportModal(false)
+    setShowPlanWarningModal(false)
+    
+    const validClients = parsedData.filter(c => c.valid)
     setImporting(true)
     try {
       const response = await fetch('/api-clients-import.php', {
@@ -428,27 +435,69 @@ export default function ClientsImport() {
 
   const applyBulkServer = (value: string) => {
     if (!value) return
-    const updated = parsedData.map(c => ({ ...c, server: value }))
-    setParsedData(validateData(updated))
+    const updated = parsedData.map(c => {
+      const errors = []
+      const updatedClient = { ...c, server: value }
+      
+      if (!updatedClient.name) errors.push('Nome é obrigatório')
+      if (!updatedClient.username) errors.push('Usuário IPTV é obrigatório')
+      if (!updatedClient.iptv_password) errors.push('Senha IPTV é obrigatória')
+      if (!updatedClient.phone) errors.push('WhatsApp é obrigatório')
+      if (!updatedClient.renewal_date) errors.push('Vencimento é obrigatório')
+      if (!updatedClient.server) errors.push('Servidor é obrigatório')
+      if (!updatedClient.plan) errors.push('Plano é obrigatório')
+      if (!updatedClient.application) errors.push('Aplicativo é obrigatório')
+      
+      return { ...updatedClient, errors, valid: errors.length === 0 }
+    })
+    setParsedData(updated)
     toast.success(`Servidor "${value}" aplicado para todos os clientes`)
   }
 
   const applyBulkPlan = (value: string) => {
     if (!value) return
     const selectedPlan = plans.find(p => p.name === value)
-    const updated = parsedData.map(c => ({
-      ...c,
-      plan: value,
-      value: selectedPlan?.price || c.value
-    }))
-    setParsedData(validateData(updated))
+    const updated = parsedData.map(c => {
+      const errors = []
+      const updatedClient = {
+        ...c,
+        plan: value,
+        value: selectedPlan?.price || c.value
+      }
+      
+      if (!updatedClient.name) errors.push('Nome é obrigatório')
+      if (!updatedClient.username) errors.push('Usuário IPTV é obrigatório')
+      if (!updatedClient.iptv_password) errors.push('Senha IPTV é obrigatória')
+      if (!updatedClient.phone) errors.push('WhatsApp é obrigatório')
+      if (!updatedClient.renewal_date) errors.push('Vencimento é obrigatório')
+      if (!updatedClient.server) errors.push('Servidor é obrigatório')
+      if (!updatedClient.plan) errors.push('Plano é obrigatório')
+      if (!updatedClient.application) errors.push('Aplicativo é obrigatório')
+      
+      return { ...updatedClient, errors, valid: errors.length === 0 }
+    })
+    setParsedData(updated)
     toast.success(`Plano "${value}" aplicado para todos os clientes`)
   }
 
   const applyBulkApp = (value: string) => {
     if (!value) return
-    const updated = parsedData.map(c => ({ ...c, application: value }))
-    setParsedData(validateData(updated))
+    const updated = parsedData.map(c => {
+      const errors = []
+      const updatedClient = { ...c, application: value }
+      
+      if (!updatedClient.name) errors.push('Nome é obrigatório')
+      if (!updatedClient.username) errors.push('Usuário IPTV é obrigatório')
+      if (!updatedClient.iptv_password) errors.push('Senha IPTV é obrigatória')
+      if (!updatedClient.phone) errors.push('WhatsApp é obrigatório')
+      if (!updatedClient.renewal_date) errors.push('Vencimento é obrigatório')
+      if (!updatedClient.server) errors.push('Servidor é obrigatório')
+      if (!updatedClient.plan) errors.push('Plano é obrigatório')
+      if (!updatedClient.application) errors.push('Aplicativo é obrigatório')
+      
+      return { ...updatedClient, errors, valid: errors.length === 0 }
+    })
+    setParsedData(updated)
     toast.success(`Aplicativo "${value}" aplicado para todos os clientes`)
   }
 
@@ -549,7 +598,7 @@ export default function ClientsImport() {
         return `${year}-${month}-${day}`
       }
     } catch (e) {
-      console.error('Erro ao formatar data:', dateString, e)
+      // Erro ao formatar data
     }
     
     return ''
@@ -563,7 +612,7 @@ export default function ClientsImport() {
 
   const validClients = parsedData.filter(c => c.valid).length
   const invalidClients = parsedData.length - validClients
-  const missingPlans = [...new Set(parsedData.map(c => c.plan).filter(p => p && !plans.find(pl => pl.name === p)))]
+  const missingPlansInData = [...new Set(parsedData.map(c => c.plan).filter(p => p && !plans.find(pl => pl.name === p)))]
 
   // Paginação
   const totalPages = Math.ceil(parsedData.length / itemsPerPage)
@@ -727,9 +776,9 @@ export default function ClientsImport() {
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
               <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-3">Ações Rápidas</label>
               <div className="flex flex-wrap gap-2">
-                <button onClick={createMissingPlans} disabled={creatingPlans || missingPlans.length === 0} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2 text-sm">
+                <button onClick={createMissingPlans} disabled={creatingPlans || missingPlansInData.length === 0} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2 text-sm">
                   <Plus className="w-4 h-4" />
-                  {creatingPlans ? 'Criando...' : `Criar Planos (${missingPlans.length})`}
+                  {creatingPlans ? 'Criando...' : `Criar Planos (${missingPlansInData.length})`}
                 </button>
                 <button onClick={removeExpiredClients} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 text-sm">
                   <Trash2 className="w-4 h-4" />
@@ -824,6 +873,9 @@ export default function ClientsImport() {
                       <td className="px-3 py-2">
                         <select value={client.plan} onChange={(e) => updateClient(idx, 'plan', e.target.value)} className={`w-full px-2 py-1 rounded border text-sm transition-colors ${!client.plan ? 'border-red-500 bg-red-50 dark:bg-red-900/30 dark:border-red-400 text-gray-900 dark:text-red-100' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'} focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400`}>
                           <option value="">Selecione...</option>
+                          {client.plan && !plans.find(p => p.name === client.plan) && (
+                            <option value={client.plan} className="text-yellow-600 dark:text-yellow-400">⚠️ {client.plan} (Criar)</option>
+                          )}
                           {plans.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                         </select>
                       </td>
@@ -912,6 +964,56 @@ export default function ClientsImport() {
         </div>
       )}
 
+      {/* Modal de Aviso - Planos Inexistentes */}
+      <ConfirmModal
+        isOpen={showPlanWarningModal}
+        onCancel={() => setShowPlanWarningModal(false)}
+        onConfirm={confirmImport}
+        title="⚠️ Planos Não Encontrados"
+        message={
+          <div className="space-y-4">
+            <p className="text-gray-700 dark:text-gray-300">
+              Os seguintes planos não existem no sistema:
+            </p>
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <ul className="space-y-1">
+                {missingPlans.map((plan, index) => (
+                  <li key={index} className="text-yellow-800 dark:text-yellow-300 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                    {plan}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-blue-800 dark:text-blue-300 font-medium mb-2">💡 Opções disponíveis:</p>
+              <ul className="text-blue-700 dark:text-blue-400 text-sm space-y-1">
+                <li>1. Clique em "Criar Planos" acima</li>
+                <li>2. Altere manualmente os planos na tabela</li>
+                <li>3. Use o filtro "Plano para Todos"</li>
+              </ul>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300">
+              Deseja continuar a importação mesmo assim?
+            </p>
+          </div>
+        }
+        confirmText="Continuar Importação"
+        cancelText="Cancelar"
+        type="warning"
+      />
+
+      {/* Modal de Confirmação - Importação Normal */}
+      <ConfirmModal
+        isOpen={showConfirmImportModal}
+        onCancel={() => setShowConfirmImportModal(false)}
+        onConfirm={confirmImport}
+        title="Confirmar Importação"
+        message={`Deseja importar ${parsedData.filter(c => c.valid).length} cliente(s)?`}
+        confirmText="Importar"
+        cancelText="Cancelar"
+        type="info"
+      />
     </div>
   )
 }

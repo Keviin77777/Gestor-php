@@ -142,11 +142,19 @@ class EfiBankHelper {
             // Em produção, usar certificado se fornecido
             if (!empty($this->certificate) && file_exists($this->certificate)) {
                 curl_setopt($ch, CURLOPT_SSLCERT, $this->certificate);
+                curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'PEM');
             }
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
         }
         
+        // Configurações adicionais para evitar problemas de conexão
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+        curl_setopt($ch, CURLOPT_ENCODING, '');
+        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -283,11 +291,19 @@ class EfiBankHelper {
             } else {
                 if (!empty($this->certificate) && file_exists($this->certificate)) {
                     curl_setopt($ch, CURLOPT_SSLCERT, $this->certificate);
+                    curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'PEM');
                 }
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
             }
             
+            // Configurações adicionais para evitar problemas de conexão
             curl_setopt($ch, CURLOPT_TIMEOUT, 30);
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+            curl_setopt($ch, CURLOPT_ENCODING, '');
+            curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
             
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

@@ -41,7 +41,7 @@ export default function FinancialReport() {
         setTotals(response.data.totals || {})
       }
     } catch (error) {
-      console.error('Erro ao carregar relatório financeiro:', error)
+      // Erro ao carregar relatório financeiro
     } finally {
       setLoading(false)
     }
