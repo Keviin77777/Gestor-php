@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { authService } from '@/services/authService'
-import toast from 'react-hot-toast'
 
 interface HeaderProps {
   onMenuClick: () => void
