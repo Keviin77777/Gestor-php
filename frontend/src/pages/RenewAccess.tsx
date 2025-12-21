@@ -30,7 +30,10 @@ interface PixData {
   expiration_date?: string
 }
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function RenewAccess() {
+  usePageTitle('Renovar Acesso')
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
@@ -216,15 +219,36 @@ export default function RenewAccess() {
               Seu Plano Atual
             </p>
             <h2 className="text-3xl font-bold mb-2">{user.plan_name || 'Plano Desconhecido'}</h2>
-            <p className="text-sm opacity-90 mb-3">
+            <p className="text-sm opacity-90 mb-4">
               Vence em: {formatDate(user.plan_expires_at)}
             </p>
-            {daysInfo && (
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl ${daysInfo.class} backdrop-blur-sm`}>
-                {daysInfo.icon}
-                <span className="font-semibold text-sm">{daysInfo.text}</span>
-              </div>
-            )}
+            
+            {/* Container para dias restantes e botão renovar - mesma altura */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              {/* Badge de dias restantes */}
+              {daysInfo && (
+                <div className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl ${daysInfo.class} backdrop-blur-sm min-h-[44px]`}>
+                  {daysInfo.icon}
+                  <span className="font-semibold text-sm">{daysInfo.text}</span>
+                </div>
+              )}
+              
+              {/* Botão Renovar Plano Atual */}
+              {user.current_plan_id && !plans.find(p => p.id === user.current_plan_id)?.is_trial && (
+                <button
+                  onClick={() => {
+                    const currentPlan = plans.find(p => p.id === user.current_plan_id)
+                    if (currentPlan) {
+                      handleSelectPlan(currentPlan)
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-white/95 hover:bg-white text-primary-600 rounded-xl font-bold text-sm uppercase tracking-wide transition-all hover:scale-105 hover:shadow-xl backdrop-blur-sm border-2 border-white/30 min-h-[44px]"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  Renovar Plano
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

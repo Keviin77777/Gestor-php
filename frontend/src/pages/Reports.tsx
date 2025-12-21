@@ -6,7 +6,10 @@ import LoadingSpinner from '../components/LoadingSpinner'
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6']
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function Reports() {
+  usePageTitle('Relatórios')
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
   const [stats, setStats] = useState<any>({

@@ -12,7 +12,10 @@ interface RateLimits {
   delay_between_messages: number
 }
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function WhatsAppConnect() {
+  usePageTitle('Conectar WhatsApp')
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
   const [provider, setProvider] = useState<Provider>('native')
   const [qrCode, setQrCode] = useState<string | null>(null)
@@ -292,16 +295,50 @@ export default function WhatsAppConnect() {
                 Desconectar
               </button>
             ) : (
-              <button
-                onClick={handleConnect}
-                disabled={status === 'connecting'}
-                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                {status === 'connecting' ? 'Conectando...' : 'Conectar WhatsApp'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleConnect}
+                  disabled={status === 'connecting'}
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {status === 'connecting' ? (
+                    <span className="flex items-center gap-2">
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Conectando...
+                    </span>
+                  ) : (
+                    'Conectar WhatsApp'
+                  )}
+                </button>
+                {status === 'connecting' && (
+                  <button
+                    onClick={handleDisconnect}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
+
+        {/* Loading State - Aguardando QR Code */}
+        {status === 'connecting' && !qrCode && (
+          <div className="mt-6 p-8 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+            <div className="flex flex-col items-center gap-4">
+              <Loader className="w-12 h-12 text-blue-600 dark:text-blue-400 animate-spin" />
+              <div className="text-center">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  Conectando ao WhatsApp...
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Aguarde enquanto geramos o QR Code para você
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* QR Code */}
         {qrCode && (

@@ -23,7 +23,19 @@ const typeLabels: Record<string, string> = {
   'expires_today': 'Vencimento',
   'expired_1d': 'Lembrete (Apos)',
   'expired_3d': 'Lembrete (Apos)',
-  'custom': 'Personalizado'
+  'custom': 'Personalizado',
+  'reseller_renewal_7d': 'Revendedor - 7 dias',
+  'reseller_renewal_3d': 'Revendedor - 3 dias',
+  'reseller_renewal_1d': 'Revendedor - 1 dia',
+  'reseller_expires_today': 'Revendedor - Vence Hoje',
+  'reseller_expired_1d': 'Revendedor - Vencido 1d',
+  'reseller_expired_3d': 'Revendedor - Vencido 3d',
+  'reseller_expired_7d': 'Revendedor - Vencido 7d',
+  'reseller_reminder': 'Lembrete Revendedor',
+  'reseller_expired': 'Revendedor Vencido',
+  'reseller_welcome': 'Boas-vindas Revendedor',
+  'trial_ending': 'Trial Acabando',
+  'trial_expired': 'Trial Expirado'
 }
 
 const typeColors: Record<string, string> = {
@@ -35,35 +47,71 @@ const typeColors: Record<string, string> = {
   'expires_today': '#f97316',
   'expired_1d': '#ef4444',
   'expired_3d': '#ef4444',
-  'custom': '#6366f1'
+  'custom': '#6366f1',
+  'reseller_renewal_7d': '#8b5cf6',
+  'reseller_renewal_3d': '#8b5cf6',
+  'reseller_renewal_1d': '#a855f7',
+  'reseller_expires_today': '#f97316',
+  'reseller_expired_1d': '#ef4444',
+  'reseller_expired_3d': '#dc2626',
+  'reseller_expired_7d': '#991b1b',
+  'reseller_reminder': '#8b5cf6',
+  'reseller_expired': '#ef4444',
+  'reseller_welcome': '#10b981',
+  'trial_ending': '#f59e0b',
+  'trial_expired': '#ef4444'
 }
 
-const variables = [
+// Variáveis para revendedores (clientes)
+const resellerVariables = [
   'cliente_nome', 'cliente_usuario', 'cliente_senha', 'cliente_servidor',
-  'cliente_plano', 'cliente_vencimento', 'cliente_valor',
-  'fatura_valor', 'fatura_vencimento', 'fatura_periodo'
+  'cliente_plano', 'cliente_vencimento', 'cliente_valor', 'cliente_dias',
+  'fatura_valor', 'fatura_vencimento', 'fatura_periodo',
+  'payment_link'
+]
+
+// Variáveis para admin (revendedores)
+const adminVariables = [
+  'revendedor_nome', 'revendedor_email', 'revendedor_plano', 'revendedor_vencimento',
+  'revendedor_valor', 'revendedor_dias',
+  'link_renovacao'
 ]
 
 const sampleData: Record<string, string> = {
+  // Variáveis de clientes (para revendedores)
   'cliente_nome': 'João Silva',
   'cliente_usuario': 'joao.silva',
   'cliente_senha': 'senha123',
   'cliente_servidor': 'servidor1.iptv.com',
   'cliente_plano': 'Plano Premium',
   'cliente_vencimento': '15/12/2024',
-  'cliente_valor': '29,90',
-  'fatura_valor': '29,90',
+  'cliente_valor': 'R$ 29,90',
+  'cliente_dias': '3',
+  'fatura_valor': 'R$ 29,90',
   'fatura_vencimento': '15/12/2024',
-  'fatura_periodo': 'Dezembro 2024'
+  'fatura_periodo': 'Dezembro 2024',
+  'payment_link': 'https://sistema.com/checkout.php?invoice=123',
+  // Variáveis de revendedores (para admin)
+  'revendedor_nome': 'Maria Santos',
+  'revendedor_email': 'maria@exemplo.com',
+  'revendedor_plano': 'Plano Anual',
+  'revendedor_vencimento': '20/12/2024',
+  'revendedor_valor': 'R$ 49,90',
+  'revendedor_dias': '3',
+  'link_renovacao': 'https://sistema.com/renew-access'
 }
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function WhatsAppTemplates() {
+  usePageTitle('Templates WhatsApp')
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showVariables, setShowVariables] = useState(false)
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -74,9 +122,26 @@ export default function WhatsAppTemplates() {
     is_default: false
   })
 
+  // Determinar variáveis disponíveis baseado no papel do usuário
+  const availableVariables = isAdmin ? adminVariables : resellerVariables
+
   useEffect(() => {
     loadTemplates()
+    checkUserRole()
   }, [])
+
+  const checkUserRole = () => {
+    // Verificar se o usuário é admin através do localStorage ou API
+    const user = localStorage.getItem('user')
+    if (user) {
+      try {
+        const userData = JSON.parse(user)
+        setIsAdmin(userData.role === 'admin' || userData.is_admin === true)
+      } catch (e) {
+        setIsAdmin(false)
+      }
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -273,7 +338,16 @@ export default function WhatsAppTemplates() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {templates.map((template) => {
+                {templates
+                  .filter(template => {
+                    // Admin vê templates de revendedores
+                    if (isAdmin) {
+                      return template.type.startsWith('reseller_') || template.type === 'trial_ending' || template.type === 'trial_expired'
+                    }
+                    // Revendedores veem templates de clientes
+                    return !template.type.startsWith('reseller_') && template.type !== 'trial_ending' && template.type !== 'trial_expired'
+                  })
+                  .map((template) => {
                   const color = getTypeColor(template.type)
 
                   return (
@@ -463,7 +537,7 @@ export default function WhatsAppTemplates() {
                         </button>
                       </div>
                       <div className="p-2">
-                        {variables.map(variable => (
+                        {availableVariables.map(variable => (
                           <button
                             key={variable}
                             type="button"

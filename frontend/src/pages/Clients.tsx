@@ -6,8 +6,10 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import WhatsAppModal from '../components/WhatsAppModal'
 import ConfirmModal from '../components/ConfirmModal'
 import type { Client } from '@/types'
+import { usePageTitle } from '@/hooks/usePageTitle'
 
 export default function Clients() {
+  usePageTitle('Clientes')
   const formRef = useRef<HTMLDivElement>(null)
   const { clients, loading, fetchClients, deleteClient, addClient, updateClient } = useClientStore()
   const [searchTerm, setSearchTerm] = useState('')

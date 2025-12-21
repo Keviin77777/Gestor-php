@@ -13,7 +13,10 @@ interface MonthDetail {
   saldo: number
 }
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function MonthlyReport() {
+  usePageTitle('Relatório Mensal')
   const [loading, setLoading] = useState(true)
   const [year, setYear] = useState(new Date().getFullYear())
   const [months, setMonths] = useState<MonthDetail[]>([])

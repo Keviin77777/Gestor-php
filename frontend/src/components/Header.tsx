@@ -148,14 +148,17 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 <hr className="my-1 border-gray-200 dark:border-gray-700" />
                 <button
                   onClick={async () => {
+                    setShowMenu(false)
                     try {
+                      // Limpar estado primeiro
+                      logout()
+                      // Chamar API de logout
                       await authService.logout()
-                      logout()
-                      setShowMenu(false)
-                      toast.success('Logout realizado com sucesso')
                     } catch (error) {
-                      logout()
-                      setShowMenu(false)
+                      // Ignorar erros da API
+                    } finally {
+                      // Forçar redirecionamento usando window.location
+                      window.location.href = '/login'
                     }
                   }}
                   className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"

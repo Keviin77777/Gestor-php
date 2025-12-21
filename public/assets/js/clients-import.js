@@ -33,11 +33,11 @@ function restoreProgress() {
     const savedStep = sessionStorage.getItem('importStep');
     const savedData = sessionStorage.getItem('importData');
     const savedFileName = sessionStorage.getItem('importFileName');
-    
+
     if (savedStep && savedData) {
         try {
             parsedData = JSON.parse(savedData);
-            
+
             if (savedStep === 'step2' && savedFileName) {
                 // Restaurar step 2 (upload)
                 showUploadStep();
@@ -85,7 +85,7 @@ function clearProgress() {
  */
 function setupDragAndDrop() {
     const uploadArea = document.getElementById('uploadArea');
-    
+
     if (!uploadArea) return;
 
     uploadArea.addEventListener('dragover', (e) => {
@@ -100,7 +100,7 @@ function setupDragAndDrop() {
     uploadArea.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadArea.classList.remove('drag-over');
-        
+
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             handleFile(files[0]);
@@ -119,7 +119,7 @@ async function loadServers() {
     try {
         const response = await fetch('/api-servers.php');
         const data = await response.json();
-        
+
         if (data.success) {
             servers = data.servers || [];
         }
@@ -135,7 +135,7 @@ async function loadApplications() {
     try {
         const response = await fetch('/api-applications.php');
         const data = await response.json();
-        
+
         if (data.success && data.applications) {
             applications = data.applications;
         } else {
@@ -166,7 +166,7 @@ async function loadPlans() {
     try {
         const response = await fetch('/api-plans.php');
         const data = await response.json();
-        
+
         if (data.success && data.plans) {
             plans = data.plans.map(p => ({
                 id: p.id,
@@ -241,7 +241,7 @@ function handleFile(file) {
     // Validar tipo de arquivo (aceitar .xlsx e .csv)
     const isXlsx = file.name.endsWith('.xlsx');
     const isCsv = file.name.endsWith('.csv');
-    
+
     if (!isXlsx && !isCsv) {
         showNotification('Apenas arquivos .xlsx ou .csv são aceitos', 'error');
         return;
@@ -259,14 +259,14 @@ function handleFile(file) {
     document.getElementById('uploadArea').style.display = 'none';
     document.getElementById('fileInfo').style.display = 'flex';
     document.getElementById('continueBtn').style.display = 'block';
-    
+
     // Se for CSV, mostrar botão de download XLSX
     if (isCsv) {
         document.getElementById('csvConvertBtn').style.display = 'block';
     } else {
         document.getElementById('csvConvertBtn').style.display = 'none';
     }
-    
+
     document.getElementById('fileName').textContent = file.name;
     document.getElementById('fileSize').textContent = formatFileSize(file.size);
 }
@@ -277,7 +277,7 @@ function handleFile(file) {
 function removeFile() {
     selectedFile = null;
     parsedData = [];
-    
+
     document.getElementById('uploadArea').style.display = 'block';
     document.getElementById('fileInfo').style.display = 'none';
     document.getElementById('continueBtn').style.display = 'none';
@@ -300,20 +300,20 @@ async function processFile() {
         try {
             const data = await readExcelFile(selectedFile);
             parsedData = validateData(data);
-            
+
             // Pequeno delay antes de esconder para garantir transição suave
             await new Promise(resolve => setTimeout(resolve, 300));
-            
+
             // Esconder loading
             GlobalLoading.hide();
-            
+
             // Pequeno delay antes de mostrar preview
             await new Promise(resolve => setTimeout(resolve, 100));
-            
+
             // Mostrar preview
             showPreviewStep();
             renderPreview();
-            
+
         } catch (error) {
             GlobalLoading.hide();
             setTimeout(() => {
@@ -330,11 +330,11 @@ function readExcelFile(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         const isCsv = file.name.endsWith('.csv');
-        
+
         reader.onload = (e) => {
             try {
                 let jsonData;
-                
+
                 if (isCsv) {
                     // Ler CSV
                     const text = e.target.result;
@@ -348,7 +348,7 @@ function readExcelFile(file) {
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     jsonData = XLSX.utils.sheet_to_json(firstSheet);
                 }
-                
+
                 if (jsonData.length === 0) {
                     reject(new Error('Planilha vazia'));
                     return;
@@ -358,15 +358,15 @@ function readExcelFile(file) {
                     reject(new Error('Máximo de 1000 clientes por importação'));
                     return;
                 }
-                
+
                 resolve(jsonData);
             } catch (error) {
                 reject(error);
             }
         };
-        
+
         reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
-        
+
         if (isCsv) {
             reader.readAsText(file);
         } else {
@@ -381,21 +381,14 @@ function readExcelFile(file) {
 function validateData(data) {
     return data.map((row, index) => {
         const errors = [];
-        
+
         // Detectar formato Sigma (username, password, expiry_date, connections, name, whatsapp, telegram, email, note, plan_price, server, package)
         const isSigmaFormat = row.hasOwnProperty('username') && row.hasOwnProperty('password') && row.hasOwnProperty('expiry_date') && row.hasOwnProperty('package');
-        
+
         let client;
-        
+
         if (isSigmaFormat) {
             // Formato Sigma
-            // Log para debug - ver todos os campos disponíveis
-            if (index === 0) {
-                console.log('Campos disponíveis na planilha Sigma:', Object.keys(row));
-                console.log('Valor do campo package:', row.package);
-                console.log('Valor do campo plan:', row.plan);
-            }
-            
             client = {
                 index: index + 1,
                 name: row.name || row.note || `Cliente ${index + 1}`,
@@ -484,21 +477,21 @@ async function populateBulkSelects() {
     if (applications.length === 0) {
         await loadApplications();
     }
-    
+
     // Popular servidor
     const bulkServer = document.getElementById('bulkServer');
     if (bulkServer) {
         bulkServer.innerHTML = '<option value="">Selecione...</option>' +
             servers.map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join('');
     }
-    
+
     // Popular plano
     const bulkPlan = document.getElementById('bulkPlan');
     if (bulkPlan) {
         bulkPlan.innerHTML = '<option value="">Selecione...</option>' +
             plans.map(p => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
     }
-    
+
     // Popular app
     const bulkApp = document.getElementById('bulkApp');
     if (bulkApp) {
@@ -516,23 +509,23 @@ async function createPlansFromSpreadsheet() {
         showNotification('Você precisa cadastrar pelo menos um servidor antes de criar planos', 'error');
         return;
     }
-    
+
     // Obter planos únicos da planilha
     const uniquePlans = [...new Set(parsedData.map(c => c.plan).filter(p => p))];
-    
+
     // Verificar quais planos não existem
-    const missingPlans = uniquePlans.filter(planName => 
+    const missingPlans = uniquePlans.filter(planName =>
         !plans.find(p => p.name === planName)
     );
-    
+
     if (missingPlans.length === 0) {
         showNotification('Todos os planos já existem no sistema', 'info');
         return;
     }
-    
+
     // Perguntar qual servidor usar para os planos
     let selectedServerId = null;
-    
+
     if (servers.length === 1) {
         // Se só tem 1 servidor, usar automaticamente
         selectedServerId = servers[0].id;
@@ -540,9 +533,9 @@ async function createPlansFromSpreadsheet() {
         // Se tem múltiplos servidores, perguntar
         const serverOptions = servers.map((s, idx) => `${idx + 1}. ${s.name}`).join('\n');
         const serverChoice = prompt(`Selecione o servidor para os planos:\n\n${serverOptions}\n\nDigite o número:`);
-        
+
         if (!serverChoice) return;
-        
+
         const serverIndex = parseInt(serverChoice) - 1;
         if (serverIndex >= 0 && serverIndex < servers.length) {
             selectedServerId = servers[serverIndex].id;
@@ -551,22 +544,22 @@ async function createPlansFromSpreadsheet() {
             return;
         }
     }
-    
+
     if (!confirm(`Deseja criar ${missingPlans.length} plano(s) automaticamente no servidor "${servers.find(s => s.id === selectedServerId)?.name}"?\n\n${missingPlans.slice(0, 10).join('\n')}${missingPlans.length > 10 ? '\n...' : ''}`)) {
         return;
     }
-    
+
     GlobalLoading.show('Criando Planos...', `Criando ${missingPlans.length} plano(s)`);
-    
+
     let created = 0;
     let errors = [];
-    
+
     for (const planName of missingPlans) {
         try {
             // Buscar valor do plano na planilha (usar o primeiro cliente com esse plano)
             const clientWithPlan = parsedData.find(c => c.plan === planName);
             const planValue = clientWithPlan?.value || 25.00; // Valor padrão se não encontrar
-            
+
             const response = await fetch('/api-plans.php', {
                 method: 'POST',
                 headers: {
@@ -581,9 +574,9 @@ async function createPlansFromSpreadsheet() {
                     description: `Plano importado automaticamente da planilha`
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 created++;
                 // Adicionar à lista de planos
@@ -599,16 +592,16 @@ async function createPlansFromSpreadsheet() {
             errors.push(`${planName}: ${error.message}`);
         }
     }
-    
+
     GlobalLoading.hide();
-    
+
     if (created > 0) {
         showNotification(`${created} plano(s) criado(s) com sucesso!`, 'success');
         // Recarregar planos e atualizar selects
         await loadPlans();
         renderPreview();
     }
-    
+
     if (errors.length > 0) {
         console.error('Erros ao criar planos:', errors);
         showNotification(`Alguns planos não puderam ser criados. Verifique o console para detalhes.`, 'warning');
@@ -620,7 +613,7 @@ async function createPlansFromSpreadsheet() {
  */
 function applyBulkServer(value) {
     if (!value) return;
-    
+
     parsedData.forEach((client) => {
         client.server = value;
         // Revalidar apenas este campo
@@ -633,14 +626,14 @@ function applyBulkServer(value) {
         if (!client.server) errors.push('Servidor é obrigatório');
         if (!client.plan) errors.push('Plano é obrigatório');
         if (!client.application) errors.push('Aplicativo é obrigatório');
-        
+
         client.errors = errors;
         client.valid = errors.length === 0;
     });
-    
+
     // Re-renderizar tabela
     renderPreview();
-    
+
     showNotification(`Servidor "${value}" aplicado para todos os clientes`, 'success');
 }
 
@@ -649,7 +642,7 @@ function applyBulkServer(value) {
  */
 function applyBulkPlan(value) {
     if (!value) return;
-    
+
     parsedData.forEach((client, idx) => {
         client.plan = value;
         // Atualizar valor automaticamente
@@ -658,10 +651,10 @@ function applyBulkPlan(value) {
             client.value = selectedPlan.price;
         }
     });
-    
+
     // Re-renderizar tabela
     renderPreview();
-    
+
     showNotification(`Plano "${value}" aplicado para todos os clientes`, 'success');
 }
 
@@ -670,7 +663,7 @@ function applyBulkPlan(value) {
  */
 function applyBulkApp(value) {
     if (!value) return;
-    
+
     parsedData.forEach((client) => {
         client.application = value;
         // Revalidar
@@ -683,14 +676,14 @@ function applyBulkApp(value) {
         if (!client.server) errors.push('Servidor é obrigatório');
         if (!client.plan) errors.push('Plano é obrigatório');
         if (!client.application) errors.push('Aplicativo é obrigatório');
-        
+
         client.errors = errors;
         client.valid = errors.length === 0;
     });
-    
+
     // Re-renderizar tabela
     renderPreview();
-    
+
     showNotification(`Aplicativo "${value}" aplicado para todos os clientes`, 'success');
 }
 
@@ -709,7 +702,7 @@ function renderPreview() {
     document.getElementById('totalClients').textContent = totalClients;
     document.getElementById('validClients').textContent = validClients;
     document.getElementById('invalidClients').textContent = invalidClients;
-    
+
     // Popular selects de ação em massa
     populateBulkSelects();
 
@@ -729,31 +722,31 @@ function renderPreview() {
 
         // Formatar data corretamente
         const formattedDate = formatDate(client.renewal_date);
-        
+
         // Montar opções de servidor
         let serverOptions = '<option value="">Selecione...</option>';
         if (servers && servers.length > 0) {
             serverOptions += servers.map(s => `<option value="${escapeHtml(s.name)}" ${s.name === client.server ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
         }
-        
+
         // Verificar se o plano existe, se não, adicionar opção de criar
         const planExists = plans.find(p => p.name === client.plan);
         let planOptions = '<option value="">Selecione...</option>';
-        
+
         if (client.plan && !planExists) {
             planOptions += `<option value="${escapeHtml(client.plan)}" selected style="color: #f59e0b;">⚠️ ${escapeHtml(client.plan)} (Criar)</option>`;
         }
-        
+
         if (plans && plans.length > 0) {
             planOptions += plans.map(p => `<option value="${escapeHtml(p.name)}" ${p.name === client.plan ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
         }
-        
+
         // Montar opções de aplicativo
         let appOptions = '<option value="">Selecione...</option>';
         if (applications && applications.length > 0) {
             appOptions += applications.map(a => `<option value="${escapeHtml(a.name)}" ${a.name === client.application ? 'selected' : ''}>${escapeHtml(a.name)}</option>`).join('');
         }
-        
+
         tr.innerHTML = `
             <td>${client.index}</td>
             <td><input type="text" class="${nameClass}" value="${escapeHtml(client.name)}" onchange="updateClient(${idx}, 'name', this.value)" placeholder="Nome completo"></td>
@@ -821,7 +814,7 @@ function renderStatus(client) {
  */
 function updateClient(index, field, value) {
     parsedData[index][field] = value;
-    
+
     // Se o campo for 'plan', atualizar o valor automaticamente
     if (field === 'plan' && value) {
         const selectedPlan = plans.find(p => p.name === value);
@@ -829,11 +822,11 @@ function updateClient(index, field, value) {
             parsedData[index].value = selectedPlan.price;
         }
     }
-    
+
     // Revalidar cliente
     const client = parsedData[index];
     const errors = [];
-    
+
     if (!client.name) errors.push('Nome é obrigatório');
     if (!client.username) errors.push('Usuário IPTV é obrigatório');
     if (!client.iptv_password) errors.push('Senha IPTV é obrigatória');
@@ -842,10 +835,10 @@ function updateClient(index, field, value) {
     if (!client.server) errors.push('Servidor é obrigatório');
     if (!client.plan) errors.push('Plano é obrigatório');
     if (!client.application) errors.push('Aplicativo é obrigatório');
-    
+
     client.errors = errors;
     client.valid = errors.length === 0;
-    
+
     // Atualizar status visual do campo editado
     const row = document.getElementById(`client-row-${index}`);
     if (row) {
@@ -854,21 +847,21 @@ function updateClient(index, field, value) {
             input.classList.remove('error', 'valid');
             input.classList.add(value && value.trim() ? 'valid' : 'error');
         }
-        
+
         // Atualizar badge de status
         const statusCell = document.getElementById(`status-${index}`);
         if (statusCell) {
             statusCell.innerHTML = renderStatus(client);
         }
     }
-    
+
     // Atualizar estatísticas
     const validClients = parsedData.filter(c => c.valid).length;
     const invalidClients = parsedData.length - validClients;
-    
+
     document.getElementById('validClients').textContent = validClients;
     document.getElementById('invalidClients').textContent = invalidClients;
-    
+
     // Atualizar botão de importar
     updateImportButton();
 }
@@ -879,7 +872,7 @@ function updateClient(index, field, value) {
 function updateImportButton() {
     const invalidClients = parsedData.filter(c => !c.valid).length;
     const importBtn = document.getElementById('importBtn');
-    
+
     if (invalidClients > 0) {
         importBtn.disabled = true;
         importBtn.style.opacity = '0.5';
@@ -906,7 +899,7 @@ function escapeHtml(text) {
  */
 async function importClients() {
     const validClients = parsedData.filter(c => c.valid);
-    
+
     if (validClients.length === 0) {
         showNotification('Nenhum cliente válido para importar', 'error');
         return;
@@ -937,13 +930,13 @@ async function importClients() {
 
         if (data.success) {
             clearProgress(); // Limpar progresso após sucesso
-            
+
             // Mostrar sucesso
             GlobalLoading.showSuccess(
                 'Importação Concluída!',
                 `${data.imported} cliente(s) importado(s) com sucesso`
             );
-            
+
             setTimeout(() => {
                 window.location.href = '/clients';
             }, 2000);
@@ -987,39 +980,39 @@ function isValidDate(dateString) {
  */
 function formatDate(dateString) {
     if (!dateString) return '';
-    
+
     // Remover espaços extras
     dateString = String(dateString).trim();
-    
+
     // Se já estiver no formato YYYY-MM-DD, retornar
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
         return dateString;
     }
-    
+
     // Formato Sigma: YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateString)) {
         return dateString.split(' ')[0];
     }
-    
+
     // Converter DD/MM/YYYY para YYYY-MM-DD
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
         const [day, month, year] = dateString.split('/');
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
-    
+
     // Converter DD-MM-YYYY para YYYY-MM-DD
     if (/^\d{2}-\d{2}-\d{4}$/.test(dateString)) {
         const [day, month, year] = dateString.split('-');
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
-    
+
     // Converter serial number do Excel para data
     // Excel armazena datas como números seriais onde 1 = 01/01/1900
     if (!isNaN(dateString) && Number(dateString) > 0) {
         const excelEpoch = new Date(1899, 11, 30); // 30/12/1899 (Excel base)
         const days = Math.floor(Number(dateString));
         const date = new Date(excelEpoch.getTime() + days * 86400000);
-        
+
         if (!isNaN(date.getTime())) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -1027,7 +1020,7 @@ function formatDate(dateString) {
             return `${year}-${month}-${day}`;
         }
     }
-    
+
     // Tentar parsear como Date (último recurso)
     try {
         const date = new Date(dateString);
@@ -1040,7 +1033,7 @@ function formatDate(dateString) {
     } catch (e) {
         console.error('Erro ao formatar data:', dateString, e);
     }
-    
+
     return '';
 }
 
@@ -1049,11 +1042,11 @@ function formatDate(dateString) {
  */
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
-    
+
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
@@ -1065,17 +1058,17 @@ async function convertCsvToXlsx() {
         showNotification('Nenhum arquivo CSV selecionado', 'error');
         return;
     }
-    
+
     try {
         GlobalLoading.show('Convertendo...', 'Gerando arquivo XLSX');
-        
+
         // Ler CSV
         const text = await readFileAsText(selectedFile);
         const workbook = XLSX.read(text, { type: 'string' });
-        
+
         // Converter para XLSX
         const xlsxData = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        
+
         // Criar blob e baixar
         const blob = new Blob([xlsxData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
@@ -1086,10 +1079,10 @@ async function convertCsvToXlsx() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
+
         GlobalLoading.hide();
         showNotification('Arquivo XLSX baixado com sucesso!', 'success');
-        
+
     } catch (error) {
         GlobalLoading.hide();
         showNotification('Erro ao converter arquivo: ' + error.message, 'error');
@@ -1117,44 +1110,44 @@ function removeExpiredClients() {
     // Obter data de hoje no formato YYYY-MM-DD (sem hora)
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    
+
     const expiredClients = parsedData.filter(client => {
         if (!client.renewal_date) return false;
-        
+
         // Garantir que a data está no formato YYYY-MM-DD
         const renewalDateStr = formatDate(client.renewal_date);
         if (!renewalDateStr) return false;
-        
+
         // Comparar strings de data (YYYY-MM-DD)
         return renewalDateStr < todayStr;
     });
-    
+
     if (expiredClients.length === 0) {
         showNotification('Nenhum cliente vencido encontrado', 'info');
         return;
     }
-    
+
     if (!confirm(`Deseja remover ${expiredClients.length} cliente(s) vencido(s) da importação?\n\nEsta ação não pode ser desfeita.`)) {
         return;
     }
-    
+
     // Remover clientes vencidos
     parsedData = parsedData.filter(client => {
         if (!client.renewal_date) return true;
-        
+
         // Garantir que a data está no formato YYYY-MM-DD
         const renewalDateStr = formatDate(client.renewal_date);
         if (!renewalDateStr) return true;
-        
+
         // Manter apenas clientes com data >= hoje
         return renewalDateStr >= todayStr;
     });
-    
+
     // Reindexar
     parsedData.forEach((client, idx) => {
         client.index = idx + 1;
     });
-    
+
     showNotification(`${expiredClients.length} cliente(s) vencido(s) removido(s)`, 'success');
     renderPreview();
 }
@@ -1164,46 +1157,46 @@ function removeExpiredClients() {
  */
 function removeTestClients() {
     const testKeywords = ['teste', 'test', 'demo', 'trial', 'prova'];
-    
+
     const testClients = parsedData.filter(client => {
         const name = (client.name || '').toLowerCase();
         const plan = (client.plan || '').toLowerCase();
         const username = (client.username || '').toLowerCase();
-        
-        return testKeywords.some(keyword => 
-            name.includes(keyword) || 
-            plan.includes(keyword) || 
+
+        return testKeywords.some(keyword =>
+            name.includes(keyword) ||
+            plan.includes(keyword) ||
             username.includes(keyword)
         );
     });
-    
+
     if (testClients.length === 0) {
         showNotification('Nenhum cliente de teste encontrado', 'info');
         return;
     }
-    
+
     if (!confirm(`Deseja remover ${testClients.length} cliente(s) de teste da importação?\n\nSerão removidos clientes com "teste", "test", "demo", "trial" ou "prova" no nome, usuário ou plano.\n\nEsta ação não pode ser desfeita.`)) {
         return;
     }
-    
+
     // Remover clientes de teste
     parsedData = parsedData.filter(client => {
         const name = (client.name || '').toLowerCase();
         const plan = (client.plan || '').toLowerCase();
         const username = (client.username || '').toLowerCase();
-        
-        return !testKeywords.some(keyword => 
-            name.includes(keyword) || 
-            plan.includes(keyword) || 
+
+        return !testKeywords.some(keyword =>
+            name.includes(keyword) ||
+            plan.includes(keyword) ||
             username.includes(keyword)
         );
     });
-    
+
     // Reindexar
     parsedData.forEach((client, idx) => {
         client.index = idx + 1;
     });
-    
+
     showNotification(`${testClients.length} cliente(s) de teste removido(s)`, 'success');
     renderPreview();
 }
@@ -1227,10 +1220,10 @@ function showNotification(message, type = 'info') {
         animation: slideIn 0.3s ease;
         max-width: 400px;
     `;
-    
+
     notification.textContent = message;
     document.body.appendChild(notification);
-    
+
     // Remover após 5 segundos
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease';

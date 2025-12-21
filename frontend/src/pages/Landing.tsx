@@ -6,8 +6,10 @@ import {
 } from 'lucide-react'
 import { publicPlansService, PublicPlan } from '../services/publicPlansService'
 import toast from 'react-hot-toast'
+import { usePageTitle } from '@/hooks/usePageTitle'
 
 export default function Landing() {
+  usePageTitle('UltraGestor - Gestão IPTV Profissional')
   const [isDark, setIsDark] = useState(true)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)

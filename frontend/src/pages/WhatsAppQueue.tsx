@@ -18,7 +18,10 @@ interface QueueMessage {
   error_message?: string
 }
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function WhatsAppQueue() {
+  usePageTitle('Fila de Mensagens')
   const [messages, setMessages] = useState<QueueMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')

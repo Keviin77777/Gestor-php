@@ -3,8 +3,10 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { authService } from '@/services/authService'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Users, MessageCircle, BarChart3, Shield, Loader2, LogIn, UserPlus } from 'lucide-react'
+import { usePageTitle } from '@/hooks/usePageTitle'
 
 export default function Login() {
+  usePageTitle('Login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')

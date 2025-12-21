@@ -4,8 +4,10 @@ import { useClientStore } from '@/stores/useClientStore'
 import { invoiceService } from '@/services/invoiceService'
 import { Invoice } from '@/types'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { usePageTitle } from '@/hooks/usePageTitle'
 
 export default function Dashboard() {
+  usePageTitle('Dashboard')
   const { clients, fetchClients } = useClientStore()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [stats, setStats] = useState({
@@ -406,13 +408,8 @@ export default function Dashboard() {
               className="px-4 py-2 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white font-medium"
             >
               {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map((month, index) => (
-                <option key={`${new Date().getFullYear()}-${index}`} value={`${new Date().getFullYear()}-${index}`}>
-                  {month} {new Date().getFullYear()}
-                </option>
-              ))}
-              {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map((month, index) => (
-                <option key={`${new Date().getFullYear() + 1}-${index}`} value={`${new Date().getFullYear() + 1}-${index}`}>
-                  {month} {new Date().getFullYear() + 1}
+                <option key={`${currentDate.getFullYear()}-${index}`} value={`${currentDate.getFullYear()}-${index}`}>
+                  {month} {currentDate.getFullYear()}
                 </option>
               ))}
             </select>

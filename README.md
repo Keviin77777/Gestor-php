@@ -1,342 +1,488 @@
-# 🚀 UltraGestor - Sistema de Gestão IPTV
+# 🎯 UltraGestor - Sistema de Gestão IPTV
 
 ![PHP](https://img.shields.io/badge/PHP-8.1+-777BB4?style=flat&logo=php&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=flat&logo=javascript&logoColor=black)
+![React](https://img.shields.io/badge/React-18+-61DAFB?style=flat&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6?style=flat&logo=typescript&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=flat&logo=mysql&logoColor=white)
 ![WhatsApp](https://img.shields.io/badge/WhatsApp-Business-25D366?style=flat&logo=whatsapp&logoColor=white)
 
-Sistema completo de gestão para provedores IPTV com integração WhatsApp, automação de lembretes e interface moderna.
-
-## ✨ Funcionalidades
-
-### 📊 Dashboard
-- Visão geral de clientes, faturas e vencimentos
-- Gráficos e estatísticas em tempo real
-- Interface responsiva e moderna
-
-### 👥 Gestão de Clientes
-- CRUD completo de clientes
-- Controle de planos e servidores
-- Histórico de pagamentos
-- Geração automática de credenciais
-
-### 💰 Faturamento
-- Geração automática de faturas
-- Controle de vencimentos
-- Histórico de pagamentos
-- Relatórios financeiros
-
-### 📱 WhatsApp Business
-- **Pareamento automático** com QR Code
-- **Templates personalizáveis** para diferentes situações
-- **Agendamento inteligente** de mensagens
-- **Automação completa** de lembretes
-
-#### 🤖 Automação WhatsApp
-- ✅ Lembretes de vencimento (7 dias, 3 dias)
-- ✅ Notificações de vencimento (hoje)
-- ✅ Cobrança pós-vencimento (1 dia, 3 dias)
-- ✅ Confirmação de renovação
-- ✅ Boas-vindas para novos clientes
-- ✅ Agendamento por dias da semana e horários
-
-## 🛠️ Tecnologias
-
-- **Backend:** PHP 8.1+ (Vanilla)
-- **Frontend:** HTML5, CSS3, JavaScript ES6+
-- **Banco de Dados:** MySQL 8.0+
-- **WhatsApp:** whatsapp-web.js (Node.js)
-- **Servidor Web:** Apache/Nginx
-- **Automação:** Cron Jobs + Systemd Services
-
-## 🚀 Instalação
-
-### Pré-requisitos
-- PHP 8.1+ com extensões: mysql, curl, json, mbstring
-- MySQL 8.0+
-- Node.js 18+
-- Apache/Nginx
-- PM2 (para gerenciar a API WhatsApp)
-
-### Instalação Rápida
-
-#### 1. Clone o repositório
-```bash
-git clone https://github.com/Keviin77777/Gestor-php.git
-cd Gestor-php
-```
-
-#### 2. Configure o banco de dados
-```bash
-# Importe o schema
-mysql -u root -p < database/schema.sql
-```
-
-#### 3. Configure o .env
-```bash
-# Copie e edite o arquivo .env
-cp .env.example .env
-nano .env
-```
-
-#### 4. Instale a API WhatsApp Nativa
-```bash
-cd whatsapp-api
-npm install
-```
-
-#### 5. Configure o .env da API
-```bash
-# Edite whatsapp-api/.env com suas credenciais do banco
-nano .env
-```
-
-### Iniciar o Projeto
-
-#### Opção 1: Desenvolvimento (Windows)
-```cmd
-# Terminal 1 - Servidor PHP (na raiz do projeto)
-php -S localhost:8000 -t public
-
-# Terminal 2 - API WhatsApp (na pasta whatsapp-api)
-cd whatsapp-api
-npm start
-```
-
-#### Opção 2: Produção (Linux/VPS)
-```bash
-# Instalar PM2 globalmente
-npm install -g pm2
-
-# Iniciar API WhatsApp com PM2
-cd whatsapp-api
-pm2 start server.js --name whatsapp-api
-pm2 save
-pm2 startup
-
-# Configurar Apache/Nginx para servir a aplicação PHP
-# Veja DEPLOY-PRODUCTION.md para detalhes
-```
-
-### Acessar o Sistema
-- **Aplicação:** http://localhost:8000
-- **API WhatsApp:** http://localhost:3000/health
-
-### Deploy Automático (VPS)
-```bash
-chmod +x scripts/deploy-production.sh
-bash scripts/deploy-production.sh
-```
-
-## ⚙️ Configuração
-
-### 1. Banco de Dados
-```sql
-CREATE DATABASE ultragestor CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'gestor_user'@'localhost' IDENTIFIED BY 'sua_senha';
-GRANT ALL PRIVILEGES ON ultragestor.* TO 'gestor_user'@'localhost';
-```
-
-### 2. Arquivo .env
-```env
-# Banco de Dados
-DB_HOST=localhost
-DB_NAME=ultragestor
-DB_USER=gestor_user
-DB_PASS=sua_senha
-
-# WhatsApp
-WHATSAPP_SESSION_PATH=/caminho/para/sessions
-WHATSAPP_WEBHOOK_URL=https://seudominio.com/api-whatsapp-webhook.php
-
-# URLs
-BASE_URL=https://seudominio.com
-API_BASE_URL=https://seudominio.com
-```
-
-### 3. WhatsApp
-```bash
-# Instalar dependências
-npm install whatsapp-web.js qrcode-terminal
-
-# Configurar serviço
-sudo systemctl enable whatsapp-gestor
-sudo systemctl start whatsapp-gestor
-```
-
-## 📱 Configuração WhatsApp
-
-### Verificar se a API está rodando
-```bash
-# Verificar status
-curl http://localhost:3000/health
-
-# Ver logs (se usando PM2)
-pm2 logs whatsapp-api
-
-# Reiniciar API (se necessário)
-pm2 restart whatsapp-api
-```
-
-### 1. Pareamento
-1. Acesse **WhatsApp → Parear WhatsApp**
-2. Selecione **API Premium** (recomendado) ou **API Básica**
-3. Clique em **Conectar**
-4. Escaneie o QR Code com seu WhatsApp Business
-5. Aguarde a confirmação de conexão
-
-### 2. Templates
-1. Acesse **WhatsApp → Templates**
-2. Configure os templates para cada situação
-3. Personalize as mensagens com variáveis
-
-### 3. Agendamentos
-1. Acesse **WhatsApp → Agendamentos**
-2. Configure dias da semana e horários
-3. Ative os templates desejados
-
-### Solução de Problemas
-
-#### Erro ao reconectar WhatsApp
-Se após desconectar você não conseguir reconectar:
-```bash
-# Parar a API
-pm2 stop whatsapp-api
-
-# Limpar sessões antigas
-cd whatsapp-api
-rm -rf sessions/*
-rm -rf .wwebjs_cache/*
-
-# Reiniciar
-pm2 start whatsapp-api
-```
-
-#### API não inicia
-```bash
-# Verificar se a porta 3000 está livre
-netstat -ano | findstr :3000  # Windows
-lsof -i :3000                 # Linux/Mac
-
-# Verificar logs de erro
-pm2 logs whatsapp-api --err
-```
-
-## 🔧 Uso
-
-### Dashboard
-- Visualize estatísticas gerais
-- Monitore vencimentos próximos
-- Acompanhe faturamento
-
-### Clientes
-- **Adicionar:** Botão "Novo Cliente"
-- **Editar:** Clique no ícone de edição
-- **Faturar:** Botão "Gerar Fatura"
-- **WhatsApp:** Envio manual de mensagens
-
-### WhatsApp
-- **Automático:** Mensagens enviadas conforme agendamento
-- **Manual:** Envio direto pela interface
-- **Monitoramento:** Logs detalhados de envios
-
-## 📊 Monitoramento
-
-### Logs
-```bash
-# Logs da aplicação
-tail -f logs/app.log
-
-# Logs do WhatsApp
-sudo journalctl -u whatsapp-gestor -f
-
-# Status dos serviços
-php scripts/whatsapp-service-control.php status
-```
-
-### Comandos Úteis
-```bash
-# Testar automação
-php scripts/whatsapp-service-control.php run
-
-# Reiniciar WhatsApp
-sudo systemctl restart whatsapp-gestor
-
-# Verificar conexão
-curl -I https://seudominio.com
-```
-
-## 🔒 Segurança
-
-- ✅ Autenticação JWT
-- ✅ Proteção CSRF
-- ✅ Sanitização de dados
-- ✅ Arquivos sensíveis protegidos
-- ✅ SSL/HTTPS obrigatório
-- ✅ Firewall configurado
-
-## 📋 Estrutura do Projeto
-
-```
-Gestor-php/
-├── app/
-│   ├── controllers/     # Controladores
-│   ├── models/         # Modelos de dados
-│   ├── views/          # Views/Templates
-│   ├── helpers/        # Funções auxiliares
-│   └── core/           # Classes principais
-├── public/
-│   ├── assets/         # CSS, JS, imagens
-│   ├── api-*.php       # APIs REST
-│   └── index.php       # Ponto de entrada
-├── database/
-│   ├── schema.sql      # Estrutura do banco
-│   └── migrations/     # Migrações
-├── scripts/
-│   ├── deploy-production.sh
-│   └── whatsapp-*.php  # Scripts de automação
-├── logs/               # Arquivos de log
-└── docs/               # Documentação
-```
-
-## 🤝 Contribuição
-
-1. Fork o projeto
-2. Crie uma branch: `git checkout -b feature/nova-funcionalidade`
-3. Commit suas mudanças: `git commit -m 'Adiciona nova funcionalidade'`
-4. Push para a branch: `git push origin feature/nova-funcionalidade`
-5. Abra um Pull Request
-
-## 📝 Changelog
-
-### v2.0.0 (2024-10-25)
-- ✨ Sistema completo de agendamento WhatsApp
-- 🎨 Interface moderna e responsiva
-- 🤖 Automação inteligente de lembretes
-- 📱 Templates personalizáveis
-- 🔧 Deploy automatizado
-
-### v1.0.0 (2024-10-01)
-- 🚀 Versão inicial
-- 👥 Gestão de clientes
-- 💰 Sistema de faturamento
-- 📱 Integração WhatsApp básica
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## 🆘 Suporte
-
-- 📧 **Email:** suporte@ultragestor.com
-- 💬 **WhatsApp:** +55 (14) 99734-9352
-- 🐛 **Issues:** [GitHub Issues](https://github.com/Keviin77777/Gestor-php/issues)
-- 📖 **Docs:** [Documentação Completa](docs/)
-
-## 🏆 Créditos
-
-Desenvolvido com ❤️ por [Kevin](https://github.com/Keviin77777)
+Sistema completo de gestão para revendedores IPTV com frontend React moderno e backend PHP robusto.
 
 ---
 
-⭐ **Se este projeto te ajudou, deixe uma estrela!** ⭐
+## 🚀 Tecnologias
+
+### Frontend
+- **React 18** com TypeScript
+- **Vite** para build ultrarrápido
+- **TailwindCSS** para estilização
+- **Zustand** para gerenciamento de estado
+- **React Router** para navegação
+- **Axios** para requisições HTTP
+
+### Backend
+- **PHP 8+** com arquitetura MVC
+- **MySQL 8+** para banco de dados
+- **JWT** para autenticação
+- **PDO** com prepared statements
+
+### Integrações
+- **WhatsApp API** (Node.js + whatsapp-web.js)
+- **Mercado Pago** para pagamentos
+- **Asaas** gateway de pagamento
+- **EFI Bank** (Gerencianet)
+- **Ciabra** para PIX
+- **Sigma IPTV** sincronização
+
+---
+
+## ✨ Funcionalidades
+
+### 👥 Gestão de Clientes
+- ✅ Cadastro completo de clientes
+- ✅ Importação em massa (Excel/CSV)
+- ✅ Sincronização automática com Sigma IPTV
+- ✅ Controle de status e renovações
+- ✅ Histórico de pagamentos
+
+### 💰 Financeiro Completo
+- ✅ Geração automática de faturas
+- ✅ Múltiplos métodos de pagamento (PIX, Boleto, Cartão)
+- ✅ Relatórios financeiros detalhados
+- ✅ Gráficos de receita e despesas
+- ✅ Controle de inadimplência
+- ✅ Análise de crescimento mensal/anual
+
+### 📱 WhatsApp Automático
+- ✅ Envio automático de credenciais
+- ✅ Lembretes de vencimento personalizáveis
+- ✅ Templates de mensagens
+- ✅ Fila de mensagens inteligente
+- ✅ Agendamento de envios
+- ✅ Histórico completo
+
+### 📊 Dashboard e Relatórios
+- ✅ Métricas em tempo real
+- ✅ Gráficos interativos
+- ✅ Relatórios mensais detalhados
+- ✅ Análise de crescimento
+- ✅ Clientes expirando
+- ✅ Inadimplência
+
+### 🔐 Sistema de Revendas (Admin)
+- ✅ Gestão de revendedores
+- ✅ Planos de assinatura
+- ✅ Renovação automática
+- ✅ Notificações WhatsApp
+- ✅ Histórico de pagamentos
+- ✅ Controle de acesso
+
+### 🎨 Interface Moderna
+- ✅ Design responsivo (Mobile/Desktop)
+- ✅ Modo escuro/claro
+- ✅ Animações suaves
+- ✅ UX otimizada
+- ✅ Performance otimizada
+
+---
+
+## 📋 Pré-requisitos
+
+- PHP 8.0 ou superior
+- MySQL 8.0 ou superior
+- Node.js 18 ou superior
+- npm ou yarn
+- Apache ou Nginx
+- Git
+
+---
+
+## 🛠️ Instalação Local (Desenvolvimento)
+
+### 1. Clonar Repositório
+
+```bash
+git clone https://github.com/SEU-USUARIO/ultragestor.git
+cd ultragestor
+```
+
+### 2. Configurar Backend (PHP)
+
+```bash
+# Copiar arquivo de configuração
+cp .env.example .env
+
+# Editar .env com suas configurações
+nano .env
+
+# Criar database
+mysql -u root -p
+CREATE DATABASE ultragestor_php CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+exit;
+
+# Importar schema
+mysql -u root -p ultragestor_php < database/schema.sql
+```
+
+### 3. Configurar Frontend (React)
+
+```bash
+cd frontend
+
+# Copiar configuração
+cp .env.example .env
+
+# Instalar dependências
+npm install
+
+# Iniciar servidor de desenvolvimento
+npm run dev
+```
+
+Acesse: `http://localhost:5173`
+
+### 4. Configurar WhatsApp API
+
+```bash
+cd whatsapp-api
+
+# Copiar configuração
+cp .env.example .env
+
+# Instalar dependências
+npm install
+
+# Iniciar API
+npm start
+```
+
+API rodando em: `http://localhost:3000`
+
+---
+
+## 🚀 Deploy em Produção
+
+### Guia Completo
+
+Consulte o guia detalhado: **[DEPLOY-PRODUCTION.md](DEPLOY-PRODUCTION.md)**
+
+### Deploy Rápido
+
+```bash
+# 1. Clonar no servidor
+git clone https://github.com/SEU-USUARIO/ultragestor.git
+cd ultragestor
+
+# 2. Configurar .env
+cp .env.example .env
+nano .env
+
+# 3. Importar database
+mysql -u root -p ultragestor_php < database/schema-production.sql
+
+# 4. Tornar script executável
+chmod +x deploy.sh
+
+# 5. Executar deploy
+./deploy.sh
+```
+
+---
+
+## 📁 Estrutura do Projeto
+
+```
+ultragestor/
+├── 📂 app/                     # Backend PHP
+│   ├── api/                   # Endpoints da API
+│   ├── core/                  # Classes principais (Auth, Database, etc)
+│   ├── helpers/               # Funções auxiliares
+│   └── views/                 # Views PHP (sistema legado)
+│
+├── 📂 frontend/                # Frontend React + TypeScript
+│   ├── src/
+│   │   ├── components/       # Componentes reutilizáveis
+│   │   ├── pages/            # Páginas da aplicação
+│   │   ├── services/         # Serviços de API
+│   │   ├── stores/           # Gerenciamento de estado (Zustand)
+│   │   ├── hooks/            # Custom hooks
+│   │   └── types/            # TypeScript types
+│   ├── dist/                 # Build de produção (gerado)
+│   └── .env                  # Configurações do frontend
+│
+├── 📂 public/                  # Arquivos públicos
+│   ├── api-*.php             # APIs PHP
+│   ├── assets/               # CSS/JS do sistema legado
+│   ├── app/                  # Build React (produção)
+│   └── .htaccess             # Configuração Apache
+│
+├── 📂 whatsapp-api/            # API WhatsApp (Node.js)
+│   ├── src/                  # Código fonte
+│   ├── sessions/             # Sessões WhatsApp
+│   └── .env                  # Configurações da API
+│
+├── 📂 database/                # Schemas e migrações
+│   ├── schema.sql            # Schema desenvolvimento
+│   ├── schema-production.sql # Schema produção
+│   └── complete-schema.sql   # Schema completo
+│
+├── 📂 scripts/                 # Scripts de automação
+│   ├── process-queue.php     # Processar fila WhatsApp
+│   ├── invoice-automation-cron.php
+│   └── reseller-renewal-automation.php
+│
+├── 📂 logs/                    # Logs do sistema
+│
+├── 📄 .env                     # Configurações backend
+├── 📄 .env.example             # Exemplo de configurações
+├── 📄 deploy.sh                # Script de deploy
+├── 📄 DEPLOY-PRODUCTION.md     # Guia de deploy
+└── 📄 README.md                # Este arquivo
+```
+
+---
+
+## 🔒 Segurança
+
+### Implementações de Segurança
+
+- ✅ **Autenticação JWT** com tokens seguros
+- ✅ **Prepared Statements** (proteção contra SQL Injection)
+- ✅ **CORS** configurado corretamente
+- ✅ **Validação de Roles** (Admin/Reseller)
+- ✅ **Sanitização de Inputs** em todas as entradas
+- ✅ **HTTPS** obrigatório em produção
+- ✅ **Rate Limiting** nas APIs
+- ✅ **Logs de Auditoria**
+- ✅ **Senhas Hasheadas** (bcrypt)
+- ✅ **Proteção CSRF**
+
+### Arquivos Removidos (Segurança)
+
+Durante a auditoria, foram removidos 20 arquivos perigosos:
+- phpinfo.php (expunha configurações)
+- force-login.php (bypass de autenticação)
+- decode-token.php (token hardcoded)
+- Arquivos de teste e debug
+- Scripts de migração em produção
+
+---
+
+## 📝 Variáveis de Ambiente
+
+### Backend (.env)
+
+```env
+# Database
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=ultragestor_php
+DB_USER=root
+DB_PASS=senha_segura
+
+# JWT
+JWT_SECRET=chave_secreta_muito_forte_minimo_32_caracteres
+
+# URLs
+APP_URL=https://seudominio.com
+FRONTEND_URL=https://seudominio.com
+
+# WhatsApp
+EVOLUTION_API_URL=http://localhost:8081
+EVOLUTION_API_KEY=sua_chave
+
+# Pagamentos
+MERCADOPAGO_ACCESS_TOKEN=seu_token
+ASAAS_API_KEY=seu_token
+EFIBANK_CLIENT_ID=seu_client_id
+CIABRA_API_KEY=sua_chave
+```
+
+### Frontend (frontend/.env)
+
+```env
+VITE_API_URL=https://seudominio.com
+VITE_APP_NAME=UltraGestor
+```
+
+### WhatsApp API (whatsapp-api/.env)
+
+```env
+PORT=3000
+DB_HOST=localhost
+DB_NAME=ultragestor_php
+DB_USER=root
+DB_PASS=senha
+SESSION_PATH=./sessions
+```
+
+---
+
+## �G Atualizações
+
+### Atualizar Sistema
+
+```bash
+cd /var/www/ultragestor
+git pull origin main
+./deploy.sh
+```
+
+### Atualizar Apenas Frontend
+
+```bash
+cd frontend
+npm run build
+cp -r dist/* ../public/app/
+```
+
+### Atualizar Apenas WhatsApp API
+
+```bash
+cd whatsapp-api
+npm install
+pm2 restart whatsapp-api
+```
+
+---
+
+## 📊 Monitoramento
+
+### Verificar Logs
+
+```bash
+# Logs da aplicação
+tail -f logs/*.log
+
+# Logs do WhatsApp API
+pm2 logs whatsapp-api
+
+# Logs do Apache
+tail -f /var/log/apache2/error.log
+
+# Logs do Nginx
+tail -f /var/log/nginx/error.log
+```
+
+### Status dos Serviços
+
+```bash
+# WhatsApp API
+pm2 status
+
+# Apache
+sudo systemctl status apache2
+
+# Nginx
+sudo systemctl status nginx
+
+# MySQL
+sudo systemctl status mysql
+```
+
+---
+
+## 🔧 Cron Jobs
+
+Configurar no servidor:
+
+```bash
+crontab -e
+```
+
+Adicionar:
+
+```cron
+# Processar fila WhatsApp (a cada minuto)
+* * * * * php /var/www/ultragestor/scripts/process-queue.php >> /var/www/ultragestor/logs/queue.log 2>&1
+
+# Automação de faturas (todo dia às 9h)
+0 9 * * * php /var/www/ultragestor/scripts/invoice-automation-cron.php >> /var/www/ultragestor/logs/invoices.log 2>&1
+
+# Renovação de revendedores (todo dia às 10h)
+0 10 * * * php /var/www/ultragestor/scripts/reseller-renewal-automation.php >> /var/www/ultragestor/logs/resellers.log 2>&1
+
+# Processar mensagens pendentes (a cada 5 minutos)
+*/5 * * * * php /var/www/ultragestor/scripts/process-pending-messages.php >> /var/www/ultragestor/logs/pending.log 2>&1
+```
+
+---
+
+## 🆘 Troubleshooting
+
+### Erro de Permissão
+
+```bash
+sudo chown -R www-data:www-data /var/www/ultragestor
+sudo chmod -R 755 /var/www/ultragestor
+chmod 777 whatsapp-api/sessions
+chmod 777 logs
+```
+
+### WhatsApp API não inicia
+
+```bash
+pm2 delete whatsapp-api
+cd whatsapp-api
+pm2 start src/server.js --name whatsapp-api
+pm2 save
+```
+
+### Erro de Database
+
+```bash
+mysql -u root -p ultragestor_php < database/schema-production.sql
+```
+
+### React não carrega
+
+```bash
+cd frontend
+rm -rf node_modules dist
+npm install
+npm run build
+cp -r dist/* ../public/app/
+```
+
+---
+
+## 📚 Documentação Adicional
+
+- [Guia de Deploy](DEPLOY-PRODUCTION.md)
+- [Configuração de Pagamentos](docs/PAYMENTS.md) *(em breve)*
+- [API Documentation](docs/API.md) *(em breve)*
+- [WhatsApp Integration](docs/WHATSAPP.md) *(em breve)*
+
+---
+
+## 🤝 Contribuindo
+
+Este é um projeto proprietário. Para contribuições, entre em contato.
+
+---
+
+## 📄 Licença
+
+Proprietário - Todos os direitos reservados © 2024
+
+---
+
+## 👨‍💻 Desenvolvedor
+
+**Kevin Souza**
+- 📧 Email: souzaszkeviin@gmail.com
+- 💼 GitHub: [@kevinsouza](https://github.com/kevinsouza)
+- 📱 WhatsApp: +55 14 99734-9352
+
+---
+
+## 🎉 Agradecimentos
+
+Obrigado por usar o UltraGestor! 
+
+Para suporte, abra uma issue ou entre em contato.
+
+---
+
+**Versão:** 2.0.0 (React + PHP)  
+**Última atualização:** Dezembro 2025

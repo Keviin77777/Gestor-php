@@ -3,8 +3,10 @@ import { User, Mail, Calendar, CreditCard, Save, Send, MessageCircle } from 'luc
 import toast from 'react-hot-toast'
 import api from '../services/api'
 import { useAuthStore } from '../stores/useAuthStore'
+import { usePageTitle } from '@/hooks/usePageTitle'
 
 export default function Profile() {
+  usePageTitle('Perfil')
   const { user, updateUser } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [profileData, setProfileData] = useState<any>(null)

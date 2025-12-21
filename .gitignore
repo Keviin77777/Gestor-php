@@ -44,6 +44,14 @@ package-lock.json
 yarn.lock
 
 # ===========================================
+# REACT BUILD
+# ===========================================
+frontend/dist/
+frontend/build/
+frontend/.vite/
+whatsapp-api/sessions/
+
+# ===========================================
 # COMPOSER
 # ===========================================
 vendor/

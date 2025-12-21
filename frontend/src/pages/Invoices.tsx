@@ -21,7 +21,10 @@ import {
 
 type FilterStatus = 'all' | 'pending' | 'paid' | 'overdue';
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function Invoices() {
+  usePageTitle('Faturas')
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [summary, setSummary] = useState<InvoiceSummary>({

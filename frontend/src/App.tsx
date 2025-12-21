@@ -27,6 +27,12 @@ import RenewAccess from './pages/RenewAccess'
 import Login from './pages/Login'
 import Landing from './pages/Landing'
 
+// Admin Pages
+import Resellers from './pages/admin/Resellers'
+import ResellerPlans from './pages/admin/ResellerPlans'
+import PaymentHistory from './pages/admin/PaymentHistory'
+import ResellerNotifications from './pages/admin/ResellerNotifications'
+
 function App() {
   const { isAuthenticated, loadFromStorage } = useAuthStore()
 
@@ -41,7 +47,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>
         <Toaster position="top-right" />
@@ -71,6 +77,12 @@ function App() {
             <Route path="/reports" element={<Reports />} />
             <Route path="/reports/financial" element={<FinancialReport />} />
             <Route path="/reports/monthly" element={<MonthlyReport />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin/resellers" element={<Resellers />} />
+            <Route path="/admin/reseller-plans" element={<ResellerPlans />} />
+            <Route path="/admin/payment-history" element={<PaymentHistory />} />
+            <Route path="/admin/reseller-notifications" element={<ResellerNotifications />} />
           </Route>
           {/* Redirecionar rotas públicas para dashboard quando autenticado */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

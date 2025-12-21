@@ -24,7 +24,10 @@ interface ClientData {
   isSigmaFormat?: boolean
 }
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function ClientsImport() {
+  usePageTitle('Importar Clientes')
   const [currentStep, setCurrentStep] = useState(1)
   const [file, setFile] = useState<File | null>(null)
   const [parsedData, setParsedData] = useState<ClientData[]>([])

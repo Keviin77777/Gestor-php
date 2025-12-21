@@ -14,7 +14,10 @@ interface Plan {
   created_at: string
 }
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function Plans() {
+  usePageTitle('Planos')
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')

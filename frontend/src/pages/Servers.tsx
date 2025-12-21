@@ -5,8 +5,10 @@ import toast from 'react-hot-toast'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 import type { Server } from '@/types'
+import { usePageTitle } from '@/hooks/usePageTitle'
 
 export default function Servers() {
+  usePageTitle('Servidores')
   const [servers, setServers] = useState<Server[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')

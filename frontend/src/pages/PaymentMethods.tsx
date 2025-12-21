@@ -18,7 +18,10 @@ interface PaymentMethods {
   ciabra?: PaymentMethod
 }
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function PaymentMethods() {
+  usePageTitle('Métodos de Pagamento')
   const [loading, setLoading] = useState(true)
   const [methods, setMethods] = useState<PaymentMethods>({})
   const [isAdmin, setIsAdmin] = useState(false)

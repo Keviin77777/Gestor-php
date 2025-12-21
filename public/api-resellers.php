@@ -127,6 +127,8 @@ function listResellers() {
             u.id,
             u.email,
             u.name,
+            u.phone,
+            u.whatsapp,
             u.current_plan_id,
             u.plan_expires_at,
             u.plan_status,
@@ -399,6 +401,11 @@ function updateReseller($resellerId) {
     if (isset($data['whatsapp'])) {
         $fields[] = 'whatsapp = ?';
         $values[] = $data['whatsapp'];
+    }
+    
+    if (isset($data['phone'])) {
+        $fields[] = 'phone = ?';
+        $values[] = $data['phone'];
     }
     
     if (isset($data['password']) && !empty($data['password'])) {

@@ -16,9 +16,15 @@ import {
   X,
   AlertCircle,
   CheckCircle,
-  Zap
+  Zap,
+  UserCog,
+  Package,
+  History,
+  Shield,
+  Bell
 } from 'lucide-react'
 import api from '../services/api'
+import { useAuthStore } from '../stores/useAuthStore'
 
 interface MenuItem {
   name: string
@@ -34,61 +40,94 @@ interface SidebarProps {
 interface Category {
   name: string
   items: MenuItem[]
+  adminOnly?: boolean
 }
 
-const navigation: Category[] = [
-  {
-    name: 'Conta',
-    items: [
-      { name: 'Renovar Acesso', href: '/renew-access', icon: Zap },
-    ]
-  },
-  {
-    name: 'Principal',
-    items: [
-      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    ]
-  },
-  {
-    name: 'Relatórios',
-    items: [
-      { name: 'Geral', href: '/reports', icon: BarChart3 },
-      { name: 'Gráfico Financeiro', href: '/reports/financial', icon: BarChart3 },
-      { name: 'Detalhamento Mensal', href: '/reports/monthly', icon: Calendar },
-    ]
-  },
-  {
-    name: 'Gestão',
-    items: [
-      { name: 'Clientes', href: '/clients', icon: Users },
-      { name: 'Planos', href: '/plans', icon: Calendar },
-      { name: 'Aplicativos', href: '/applications', icon: Smartphone },
-      { name: 'Importar Clientes', href: '/clients/import', icon: Upload },
-      { name: 'Faturas', href: '/invoices', icon: FileText },
-      { name: 'Servidores', href: '/servers', icon: Server },
-    ]
-  },
-  {
-    name: 'WhatsApp',
-    items: [
-      { name: 'Parear WhatsApp', href: '/whatsapp', icon: MessageSquare },
-      { name: 'Templates', href: '/whatsapp/templates', icon: FileText },
-      { name: 'Agendamento', href: '/whatsapp/scheduling', icon: Clock },
-      { name: 'Fila de Mensagens', href: '/whatsapp/queue', icon: Inbox },
-    ]
-  },
-  {
-    name: 'Financeiro',
-    items: [
-      { name: 'Métodos de Pagamento', href: '/payment-methods', icon: CreditCard },
-    ]
-  },
-]
+const getNavigation = (isAdmin: boolean): Category[] => {
+  const categories: Category[] = []
+
+  // Seção de Revendas (apenas para admins)
+  if (isAdmin) {
+    categories.push({
+      name: 'Revendas',
+      adminOnly: true,
+      items: [
+        { name: 'Revendedores', href: '/admin/resellers', icon: UserCog },
+        { name: 'Planos de Revendedores', href: '/admin/reseller-plans', icon: Package },
+        { name: 'Histórico de Pagamentos', href: '/admin/payment-history', icon: History },
+        { name: 'Notificações WhatsApp', href: '/admin/reseller-notifications', icon: Bell },
+      ]
+    })
+  }
+
+  // Seção de Conta (apenas para não-admins)
+  if (!isAdmin) {
+    categories.push({
+      name: 'Conta',
+      items: [
+        { name: 'Renovar Acesso', href: '/renew-access', icon: Zap },
+      ]
+    })
+  }
+
+  // Seções comuns
+  categories.push(
+    {
+      name: 'Principal',
+      items: [
+        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      ]
+    },
+    {
+      name: 'Relatórios',
+      items: [
+        { name: 'Geral', href: '/reports', icon: BarChart3 },
+        { name: 'Gráfico Financeiro', href: '/reports/financial', icon: BarChart3 },
+        { name: 'Detalhamento Mensal', href: '/reports/monthly', icon: Calendar },
+      ]
+    },
+    {
+      name: 'Gestão',
+      items: [
+        { name: 'Clientes', href: '/clients', icon: Users },
+        { name: 'Planos', href: '/plans', icon: Calendar },
+        { name: 'Aplicativos', href: '/applications', icon: Smartphone },
+        { name: 'Importar Clientes', href: '/clients/import', icon: Upload },
+        { name: 'Faturas', href: '/invoices', icon: FileText },
+        { name: 'Servidores', href: '/servers', icon: Server },
+      ]
+    },
+    {
+      name: 'WhatsApp',
+      items: [
+        { name: 'Parear WhatsApp', href: '/whatsapp', icon: MessageSquare },
+        { name: 'Templates', href: '/whatsapp/templates', icon: FileText },
+        { name: 'Agendamento', href: '/whatsapp/scheduling', icon: Clock },
+        { name: 'Fila de Mensagens', href: '/whatsapp/queue', icon: Inbox },
+      ]
+    },
+    {
+      name: 'Financeiro',
+      items: [
+        { name: 'Métodos de Pagamento', href: '/payment-methods', icon: CreditCard },
+      ]
+    }
+  )
+
+  return categories
+}
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { user } = useAuthStore()
   const [whatsappStatus, setWhatsappStatus] = useState<'connected' | 'disconnected'>('disconnected')
   const [expiryDate, setExpiryDate] = useState<string | null>(null)
   const [daysUntilExpiry, setDaysUntilExpiry] = useState<number>(0)
+
+  // Verificar se é admin
+  const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.is_admin === true
+
+  // Obter navegação baseada no tipo de usuário
+  const navigation = getNavigation(isAdmin)
 
   useEffect(() => {
     // Verificar status do WhatsApp em BACKGROUND (não bloqueia renderização)
@@ -182,6 +221,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* Status Cards */}
           <div className="px-3 pb-3 space-y-2">
+            {/* Admin Badge */}
+            {isAdmin && (
+              <div className="flex items-center justify-center px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 dark:border-purple-400/20">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span className="text-xs font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    ADMINISTRADOR
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* WhatsApp Status */}
             <div className={`flex items-center justify-between px-3 py-2 rounded-lg ${
               whatsappStatus === 'connected' 
@@ -207,8 +258,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </span>
             </div>
 
-            {/* Expiry Date */}
-            {expiryDate && (
+            {/* Expiry Date (apenas para não-admins) */}
+            {!isAdmin && expiryDate && (
               <div className={`flex items-center justify-between px-3 py-2 rounded-lg ${
                 daysUntilExpiry <= 7 
                   ? 'bg-red-50 dark:bg-red-900/20' 
@@ -252,7 +303,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div key={category.name} className={categoryIndex > 0 ? 'mt-6' : ''}>
               {/* Category Header */}
               <div className="px-4 mb-2">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-600 uppercase tracking-wider">
+                <h3 className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-2 ${
+                  category.adminOnly 
+                    ? 'text-purple-600 dark:text-purple-400' 
+                    : 'text-gray-500 dark:text-gray-600'
+                }`}>
+                  {category.adminOnly && <Shield className="w-3 h-3" />}
                   {category.name}
                 </h3>
               </div>
@@ -265,14 +321,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     to={item.href!}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `flex items-center px-4 py-2.5 rounded-lg transition-colors ${
+                      `flex items-center px-4 py-2.5 rounded-lg transition-all duration-200 ${
                         isActive
-                          ? 'bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400'
+                          ? category.adminOnly
+                            ? 'bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-500/10 dark:to-blue-500/10 text-purple-600 dark:text-purple-400 shadow-sm'
+                            : 'bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400'
                           : 'text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50'
                       }`
                     }
                   >
-                    <item.icon className="w-5 h-5 mr-3" />
+                    <item.icon className="w-5 h-5 mr-3 flex-shrink-0" />
                     <span className="text-sm font-medium">{item.name}</span>
                   </NavLink>
                 ))}

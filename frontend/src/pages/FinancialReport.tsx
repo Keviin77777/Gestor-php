@@ -12,7 +12,10 @@ interface MonthData {
   custos: number
 }
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function FinancialReport() {
+  usePageTitle('Relatório Financeiro')
   const [loading, setLoading] = useState(true)
   const [year, setYear] = useState(new Date().getFullYear())
   const [data, setData] = useState<MonthData[]>([])

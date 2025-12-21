@@ -62,7 +62,10 @@ const dayFullLabels: Record<string, string> = {
 
 const allDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function WhatsAppScheduling() {
+  usePageTitle('Agendamentos WhatsApp')
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)

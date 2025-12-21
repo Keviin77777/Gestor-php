@@ -10,7 +10,10 @@ interface Application {
   created_at: string
 }
 
+import { usePageTitle } from '@/hooks/usePageTitle'
+
 export default function Applications() {
+  usePageTitle('Aplicações')
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
