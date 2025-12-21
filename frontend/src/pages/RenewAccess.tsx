@@ -396,7 +396,7 @@ export default function RenewAccess() {
               </div>
 
               {/* QR Code */}
-              <div className="bg-white p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 mb-6">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 mb-6">
                 {pixData.qr_code_base64 ? (
                   <img
                     src={`data:image/png;base64,${pixData.qr_code_base64}`}
@@ -404,7 +404,7 @@ export default function RenewAccess() {
                     className="w-full max-w-xs mx-auto"
                   />
                 ) : (
-                  <div className="text-center text-gray-500 py-12">
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-12">
                     Use o código copia e cola abaixo
                   </div>
                 )}
@@ -420,11 +420,11 @@ export default function RenewAccess() {
                     value={pixData.qr_code}
                     readOnly
                     rows={3}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-mono resize-none"
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-mono resize-none text-gray-900 dark:text-gray-100"
                   />
                   <button
                     onClick={copyPixCode}
-                    className="absolute top-2 right-2 bg-primary-600 hover:bg-primary-700 text-white px-3 py-1 rounded-lg text-sm font-semibold flex items-center gap-2"
+                    className="absolute top-2 right-2 bg-primary-600 hover:bg-primary-700 text-white px-3 py-1 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors"
                   >
                     <Copy className="w-4 h-4" />
                     Copiar
