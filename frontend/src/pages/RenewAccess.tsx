@@ -3,6 +3,17 @@ import { Zap, Check, Clock, AlertCircle, QrCode, Copy, RefreshCw, X } from 'luci
 import api from '@/services/api'
 import LoadingSpinner from '@/components/LoadingSpinner'
 
+// Função para gerar QR Code como Data URL
+const generateQRCode = async (text: string): Promise<string> => {
+  try {
+    // Usar API pública para gerar QR Code
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(text)}`
+  } catch (error) {
+    console.error('Erro ao gerar QR Code:', error)
+    return ''
+  }
+}
+
 interface Plan {
   id: string
   name: string
@@ -42,6 +53,7 @@ export default function RenewAccess() {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'approved' | 'rejected'>('pending')
   const [checkingPayment, setCheckingPayment] = useState(false)
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
 
   useEffect(() => {
     loadData()
@@ -141,6 +153,11 @@ export default function RenewAccess() {
         setPixData(response.data)
         setShowPixModal(true)
         setPaymentStatus('pending')
+        
+        // Gerar QR Code a partir do código PIX
+        const qrUrl = await generateQRCode(response.data.qr_code)
+        setQrCodeUrl(qrUrl)
+        
         startPaymentCheck(response.data.payment_id)
       } else {
         alert(response.data.error || 'Erro ao gerar PIX')
@@ -397,15 +414,16 @@ export default function RenewAccess() {
 
               {/* QR Code */}
               <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 mb-6">
-                {pixData.qr_code_base64 ? (
+                {qrCodeUrl ? (
                   <img
-                    src={`data:image/png;base64,${pixData.qr_code_base64}`}
+                    src={qrCodeUrl}
                     alt="QR Code PIX"
                     className="w-full max-w-xs mx-auto"
                   />
                 ) : (
                   <div className="text-center text-gray-500 dark:text-gray-400 py-12">
-                    Use o código copia e cola abaixo
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                    <p>Gerando QR Code...</p>
                   </div>
                 )}
               </div>
