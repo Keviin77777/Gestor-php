@@ -34,11 +34,23 @@ import PaymentHistory from './pages/admin/PaymentHistory'
 import ResellerNotifications from './pages/admin/ResellerNotifications'
 
 function App() {
-  const { isAuthenticated, loadFromStorage } = useAuthStore()
+  const { isAuthenticated, isLoading, loadFromStorage } = useAuthStore()
 
   useEffect(() => {
     loadFromStorage()
   }, [loadFromStorage])
+
+  // Mostrar loading enquanto verifica autenticação
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!isAuthenticated) {
     return (
@@ -84,10 +96,9 @@ function App() {
             <Route path="/admin/payment-history" element={<PaymentHistory />} />
             <Route path="/admin/reseller-notifications" element={<ResellerNotifications />} />
           </Route>
-          {/* Redirecionar rotas públicas para dashboard quando autenticado */}
+          {/* Redirecionar apenas rotas públicas para dashboard quando autenticado */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" />
