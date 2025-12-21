@@ -238,7 +238,8 @@ export default function WhatsAppScheduling() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1">
+                        {/* Desktop: Flex wrap */}
+                        <div className="hidden md:flex flex-wrap gap-1">
                           {allDays.map(day => (
                             <span
                               key={day}
@@ -251,6 +252,23 @@ export default function WhatsAppScheduling() {
                               {dayLabels[day]}
                             </span>
                           ))}
+                        </div>
+                        {/* Mobile: Scroll horizontal */}
+                        <div className="md:hidden overflow-x-auto pb-1 -mx-2 px-2">
+                          <div className="flex gap-1 min-w-max">
+                            {allDays.map(day => (
+                              <span
+                                key={day}
+                                className={`px-2 py-1 text-xs font-medium rounded whitespace-nowrap ${
+                                  days.includes(day)
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600'
+                                }`}
+                              >
+                                {dayLabels[day]}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -365,12 +383,13 @@ export default function WhatsAppScheduling() {
                   <button
                     type="button"
                     onClick={toggleAllDays}
-                    className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                    className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium"
                   >
                     {selectedDays.length === allDays.length ? 'Desmarcar Todos' : 'Marcar Todos'}
                   </button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Desktop: Grid 2 colunas */}
+                <div className="hidden sm:grid grid-cols-2 gap-2">
                   {allDays.map(day => (
                     <label
                       key={day}
@@ -391,6 +410,31 @@ export default function WhatsAppScheduling() {
                       </span>
                     </label>
                   ))}
+                </div>
+                {/* Mobile: Scroll Horizontal */}
+                <div className="sm:hidden overflow-x-auto pb-2 -mx-2 px-2">
+                  <div className="flex gap-2 min-w-max">
+                    {allDays.map(day => (
+                      <label
+                        key={day}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors min-w-[80px] ${
+                          selectedDays.includes(day)
+                            ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                            : 'border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedDays.includes(day)}
+                          onChange={() => toggleDay(day)}
+                          className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
+                        />
+                        <span className="text-xs font-medium text-gray-900 dark:text-white text-center">
+                          {dayFullLabels[day].split('-')[0]}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
