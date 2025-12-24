@@ -203,12 +203,45 @@ router.post('/message/send', async (req, res) => {
 
         // Enviar mensagem
         const client = await instanceManager.getInstance(reseller_id);
-        const chatId = phone_number.includes('@') ? phone_number : `${phone_number}@c.us`;
+        
+        // Formatar chatId corretamente
+        // Se o número já tem @c.us, usar como está
+        // Se não, adicionar @c.us ao número limpo
+        let chatId;
+        if (phone_number.includes('@')) {
+            chatId = phone_number;
+        } else {
+            // Limpar número (remover caracteres não numéricos)
+            const cleanPhone = phone_number.replace(/\D/g, '');
+            chatId = `${cleanPhone}@c.us`;
+        }
+        
+        console.log(`📤 Enviando mensagem para ${chatId} (reseller: ${reseller_id})`);
+        
+        // Verificar se o número existe no WhatsApp antes de enviar
+        try {
+            const numberId = await client.getNumberId(chatId.replace('@c.us', ''));
+            if (!numberId) {
+                throw new Error('Número não encontrado no WhatsApp. Verifique se o número está correto e tem WhatsApp ativo.');
+            }
+            // Usar o ID retornado pelo WhatsApp (mais confiável)
+            chatId = numberId._serialized;
+            console.log(`✅ Número validado: ${chatId}`);
+        } catch (validateErr) {
+            console.error(`❌ Erro ao validar número: ${validateErr.message}`);
+            await db.markMessageAsFailed(messageId, `Número inválido: ${validateErr.message}`);
+            return res.status(400).json({ 
+                success: false, 
+                error: `Número inválido ou não tem WhatsApp: ${validateErr.message}` 
+            });
+        }
         
         const sentMessage = await client.sendMessage(chatId, message);
         
         // Atualizar com ID da mensagem
         await db.updateMessageWithEvolutionId(messageId, sentMessage.id.id);
+        
+        console.log(`✅ Mensagem enviada com sucesso: ${messageId}`);
         
         res.json({ 
             success: true, 

@@ -449,18 +449,26 @@ function formatPhoneNumber($phone) {
     $phone = preg_replace('/[^0-9]/', '', $phone);
     
     // Se não tem código do país, adicionar 55 (Brasil)
-    if (strlen($phone) === 11 && substr($phone, 0, 1) !== '5') {
+    if (strlen($phone) === 11 && substr($phone, 0, 2) !== '55') {
         $phone = '55' . $phone;
-    } elseif (strlen($phone) === 10 && substr($phone, 0, 1) !== '5') {
+    } elseif (strlen($phone) === 10 && substr($phone, 0, 2) !== '55') {
+        // Número com 10 dígitos (sem o 9), adicionar código do país
         $phone = '55' . $phone;
     }
     
-    // Adicionar 9 no celular se necessário (padrão brasileiro)
-    if (strlen($phone) === 12 && substr($phone, 2, 1) !== '9') {
+    // Adicionar 9 no celular APENAS se tiver 12 dígitos (55 + DDD + 8 dígitos)
+    // E o terceiro dígito após o código do país NÃO for 9
+    if (strlen($phone) === 12) {
         $ddd = substr($phone, 2, 2);
-        $numero = substr($phone, 4);
-        if (strlen($numero) === 8 && in_array($ddd, ['11', '12', '13', '14', '15', '16', '17', '18', '19', '21', '22', '24', '27', '28'])) {
-            $phone = '55' . $ddd . '9' . $numero;
+        $primeiroDigito = substr($phone, 4, 1);
+        
+        // Se o primeiro dígito do número não é 9, adicionar
+        if ($primeiroDigito !== '9') {
+            $numero = substr($phone, 4);
+            // Verificar se é DDD válido e número tem 8 dígitos
+            if (strlen($numero) === 8) {
+                $phone = '55' . $ddd . '9' . $numero;
+            }
         }
     }
     

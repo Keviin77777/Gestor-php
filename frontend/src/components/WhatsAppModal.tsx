@@ -129,6 +129,24 @@ export default function WhatsAppModal({ client, onClose }: WhatsAppModalProps) {
       return
     }
 
+    // Validar número de telefone
+    if (!client.phone) {
+      toast.error('Cliente não possui número de telefone cadastrado.', {
+        duration: 5000,
+        icon: '⚠️'
+      })
+      return
+    }
+    
+    const phoneDigits = client.phone.replace(/\D/g, '')
+    if (phoneDigits.length < 10 || phoneDigits.length > 13) {
+      toast.error('Número de telefone inválido. Deve ter entre 10 e 13 dígitos.', {
+        duration: 5000,
+        icon: '⚠️'
+      })
+      return
+    }
+
     try {
       setSending(true)
       const response = await api.post('/api-whatsapp-send.php', {
