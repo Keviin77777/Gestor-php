@@ -38,7 +38,164 @@ try {
         exit;
     }
     
-    // Buscar pagamento no banco
+    // Primeiro, verificar se é renovação de revendedor
+    $resellerPayment = Database::fetch(
+        "SELECT * FROM renewal_payments WHERE payment_id = ?",
+        [$paymentId]
+    );
+    
+    if ($resellerPayment) {
+        // É renovação de revendedor
+        error_log("💰 Verificando renovação de revendedor: {$paymentId}");
+        
+        // Se já está aprovado, retornar status
+        if ($resellerPayment['status'] === 'approved') {
+            echo json_encode([
+                'success' => true,
+                'status' => 'approved',
+                'message' => 'Pagamento já aprovado'
+            ]);
+            exit;
+        }
+        
+        // Buscar credenciais do admin (revendedores usam credenciais do admin)
+        $admin = Database::fetch("SELECT id FROM users WHERE is_admin = 1 OR role = 'admin' LIMIT 1");
+        
+        if (!$admin) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Sistema não configurado']);
+            exit;
+        }
+        
+        $paymentProvider = $resellerPayment['payment_provider'] ?? 'efibank';
+        
+        $credentials = Database::fetch(
+            "SELECT config_value FROM payment_methods 
+             WHERE reseller_id = ? AND method_name = ? AND enabled = 1",
+            [$admin['id'], $paymentProvider]
+        );
+        
+        if (!$credentials) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Provedor de pagamento não configurado']);
+            exit;
+        }
+        
+        $config = json_decode($credentials['config_value'], true);
+        
+        // Criar instância do provedor correto
+        if ($paymentProvider === 'asaas') {
+            $provider = new AsaasHelper($config['api_key'] ?? '', $config['sandbox'] ?? false);
+        } elseif ($paymentProvider === 'efibank') {
+            $provider = new EfiBankHelper(
+                $config['client_id'] ?? '',
+                $config['client_secret'] ?? '',
+                $config['certificate'] ?? '',
+                $config['sandbox'] ?? false
+            );
+        } else {
+            // Mercado Pago
+            $provider = new MercadoPagoHelper($config['public_key'] ?? '', $config['access_token'] ?? '');
+        }
+        
+        // Consultar status na API do provedor
+        $result = $provider->getPaymentStatus($paymentId);
+        
+        if (!$result['success']) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => $result['error'] ?? 'Erro ao consultar pagamento'
+            ]);
+            exit;
+        }
+        
+        // Atualizar status no banco
+        Database::query(
+            "UPDATE renewal_payments 
+             SET status = ?, 
+                 updated_at = NOW()
+             WHERE payment_id = ?",
+            [
+                $result['status'],
+                $paymentId
+            ]
+        );
+        
+        // Se foi aprovado, processar renovação
+        if ($result['status'] === 'approved') {
+            error_log("💰 Pagamento de renovação aprovado via polling: {$paymentId}");
+            
+            // Buscar dados do plano
+            $plan = Database::fetch(
+                "SELECT * FROM reseller_plans WHERE id = ?",
+                [$resellerPayment['plan_id']]
+            );
+            
+            if ($plan) {
+                // Buscar dados do usuário
+                $user = Database::fetch(
+                    "SELECT * FROM users WHERE id = ?",
+                    [$resellerPayment['user_id']]
+                );
+                
+                if ($user) {
+                    // Calcular nova data de expiração
+                    $currentExpires = new DateTime($user['plan_expires_at'] ?? 'now');
+                    $now = new DateTime();
+                    
+                    // Se o plano já expirou, começar de hoje
+                    if ($currentExpires < $now) {
+                        $currentExpires = $now;
+                    }
+                    
+                    // Adicionar dias do novo plano
+                    $currentExpires->modify("+{$plan['duration_days']} days");
+                    $newExpiryDate = $currentExpires->format('Y-m-d H:i:s');
+                    
+                    // Atualizar usuário
+                    Database::query(
+                        "UPDATE users 
+                         SET current_plan_id = ?,
+                             plan_expires_at = ?,
+                             plan_status = 'active',
+                             updated_at = NOW()
+                         WHERE id = ?",
+                        [$plan['id'], $newExpiryDate, $user['id']]
+                    );
+                    
+                    error_log("✅ Revendedor renovado: {$user['id']} até {$newExpiryDate}");
+                    
+                    // Registrar no histórico
+                    $historyId = 'hist-' . uniqid();
+                    Database::query(
+                        "INSERT INTO reseller_plan_history 
+                         (id, user_id, plan_id, started_at, expires_at, status, payment_amount, payment_method) 
+                         VALUES (?, ?, ?, NOW(), ?, 'active', ?, ?)",
+                        [
+                            $historyId,
+                            $user['id'],
+                            $plan['id'],
+                            $newExpiryDate,
+                            $resellerPayment['amount'],
+                            $paymentProvider
+                        ]
+                    );
+                }
+            }
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'status' => $result['status'],
+            'status_detail' => $result['status_detail'] ?? null,
+            'amount' => $result['amount'] ?? null,
+            'message' => $result['status'] === 'approved' ? 'Pagamento aprovado! Plano renovado automaticamente.' : 'Aguardando pagamento...'
+        ]);
+        exit;
+    }
+    
+    // Se não é renovação de revendedor, processar como pagamento de fatura de cliente
     $payment = Database::fetch(
         "SELECT ip.*, i.client_id, i.reseller_id, i.id as invoice_id, i.value as invoice_value
          FROM invoice_payments ip

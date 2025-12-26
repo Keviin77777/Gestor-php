@@ -218,24 +218,20 @@ router.post('/message/send', async (req, res) => {
         
         console.log(`📤 Enviando mensagem para ${chatId} (reseller: ${reseller_id})`);
         
-        // Verificar se o número existe no WhatsApp antes de enviar
+        // Tentar validar o número (opcional - não bloquear se falhar)
         try {
             const numberId = await client.getNumberId(chatId.replace('@c.us', ''));
-            if (!numberId) {
-                throw new Error('Número não encontrado no WhatsApp. Verifique se o número está correto e tem WhatsApp ativo.');
+            if (numberId && numberId._serialized) {
+                // Usar o ID retornado pelo WhatsApp (mais confiável)
+                chatId = numberId._serialized;
+                console.log(`✅ Número validado: ${chatId}`);
             }
-            // Usar o ID retornado pelo WhatsApp (mais confiável)
-            chatId = numberId._serialized;
-            console.log(`✅ Número validado: ${chatId}`);
         } catch (validateErr) {
-            console.error(`❌ Erro ao validar número: ${validateErr.message}`);
-            await db.markMessageAsFailed(messageId, `Número inválido: ${validateErr.message}`);
-            return res.status(400).json({ 
-                success: false, 
-                error: `Número inválido ou não tem WhatsApp: ${validateErr.message}` 
-            });
+            // Apenas avisar, mas continuar com o envio
+            console.log(`⚠️ Não foi possível validar número (continuando): ${validateErr.message}`);
         }
         
+        // Tentar enviar a mensagem
         const sentMessage = await client.sendMessage(chatId, message);
         
         // Atualizar com ID da mensagem
@@ -251,12 +247,26 @@ router.post('/message/send', async (req, res) => {
     } catch (error) {
         console.error('Erro ao enviar mensagem:', error);
         
-        // Marcar como falha no banco se tiver messageId
+        // Marcar como falha no banco
         if (req.body.message_id) {
             await db.markMessageAsFailed(req.body.message_id, error.message);
         }
         
-        res.status(500).json({ success: false, error: error.message });
+        // Mensagens de erro mais amigáveis
+        let errorMessage = error.message;
+        
+        if (error.message.includes('No LID for user')) {
+            errorMessage = 'Número não encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.';
+        } else if (error.message.includes('phone number is not registered')) {
+            errorMessage = 'Este número não está registrado no WhatsApp.';
+        } else if (error.message.includes('Execution context was destroyed')) {
+            errorMessage = 'Erro de conexão com WhatsApp. Tente reconectar o WhatsApp.';
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            error: errorMessage 
+        });
     }
 });
 

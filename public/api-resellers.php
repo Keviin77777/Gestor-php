@@ -34,6 +34,17 @@ try {
     $resellerId = $_GET['id'] ?? null;
     $action = $_GET['action'] ?? null;
     
+    // Se não veio via GET, tentar extrair do body (para compatibilidade com servidores que não suportam PUT)
+    if (!$resellerId || !$action) {
+        $rawBody = file_get_contents('php://input');
+        $bodyData = json_decode($rawBody, true);
+        
+        if ($bodyData) {
+            $resellerId = $resellerId ?? $bodyData['reseller_id'] ?? $bodyData['id'] ?? null;
+            $action = $action ?? $bodyData['action'] ?? null;
+        }
+    }
+    
     // Fallback: tentar extrair do path se não vier via query string
     if (!$resellerId) {
         $path = $_SERVER['REQUEST_URI'];
@@ -70,17 +81,17 @@ try {
             break;
             
         case 'POST':
-            // Suporte para ações via POST (compatibilidade com Nginx)
+            // Suporte para ações via POST (compatibilidade com Nginx e servidores que não suportam PUT)
             $data = json_decode(file_get_contents('php://input'), true);
-            $postAction = $data['_method'] ?? null;
+            $postAction = $data['_method'] ?? $action ?? null;
             
             if ($postAction === 'DELETE') {
                 deleteReseller($resellerId);
-            } elseif ($action === 'suspend') {
+            } elseif ($postAction === 'suspend') {
                 suspendReseller($resellerId);
-            } elseif ($action === 'activate') {
+            } elseif ($postAction === 'activate') {
                 activateReseller($resellerId);
-            } elseif ($action === 'change-plan') {
+            } elseif ($postAction === 'change-plan' || $action === 'change-plan') {
                 changeResellerPlan($resellerId);
             } else {
                 updateReseller($resellerId);
@@ -306,14 +317,20 @@ function activateReseller($resellerId) {
 function changeResellerPlan($resellerId) {
     $data = json_decode(file_get_contents('php://input'), true);
     
-    if (!$data['plan_id']) {
+    if (!$resellerId) {
+        throw new Exception('ID do revendedor é obrigatório');
+    }
+    
+    if (!isset($data['plan_id']) || empty($data['plan_id'])) {
         throw new Exception('ID do plano é obrigatório');
     }
+    
+    $planId = $data['plan_id'];
     
     // Verificar se o plano existe
     $plan = Database::fetch(
         "SELECT * FROM reseller_plans WHERE id = ? AND is_active = TRUE",
-        [$data['plan_id']]
+        [$planId]
     );
     
     if (!$plan) {
@@ -328,7 +345,7 @@ function changeResellerPlan($resellerId) {
         "UPDATE users 
          SET current_plan_id = ?, plan_expires_at = ?, plan_status = 'active' 
          WHERE id = ? AND is_admin = FALSE",
-        [$data['plan_id'], $expiresAt, $resellerId]
+        [$planId, $expiresAt, $resellerId]
     );
     
     // Registrar no histórico
@@ -340,7 +357,7 @@ function changeResellerPlan($resellerId) {
         [
             $historyId,
             $resellerId,
-            $data['plan_id'],
+            $planId,
             $expiresAt,
             $data['payment_amount'] ?? $plan['price'],
             $data['payment_method'] ?? 'admin_change'

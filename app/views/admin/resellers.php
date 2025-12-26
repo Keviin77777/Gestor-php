@@ -1633,6 +1633,12 @@
             const paymentMethod = document.getElementById('paymentMethod').value;
             const notes = document.getElementById('planNotes').value;
             
+            // Validações
+            if (!resellerId) {
+                showError('ID do revendedor não encontrado. Feche e abra o modal novamente.');
+                return;
+            }
+            
             if (!planId) {
                 showError('Selecione um plano');
                 return;
@@ -1643,6 +1649,8 @@
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        reseller_id: resellerId,
+                        action: 'change-plan',
                         plan_id: planId,
                         payment_amount: paymentAmount || null,
                         payment_method: paymentMethod,

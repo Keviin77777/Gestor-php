@@ -123,6 +123,7 @@ try {
                         SET 
                             current_plan_id = ?,
                             plan_expires_at = ?,
+                            plan_status = 'active',
                             updated_at = NOW()
                         WHERE id = ?
                     ");
