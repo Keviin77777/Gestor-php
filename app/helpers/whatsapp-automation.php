@@ -270,14 +270,33 @@ function prepareTemplateVariables($template, $client) {
         'cliente_servidor' => $client['server'] ?? 'N/A'
     ];
 
-    // Buscar fatura mais recente do cliente (pendente ou paga)
+    // Buscar fatura pendente mais recente do cliente
+    // Priorizar faturas pendentes, depois overdue, depois qualquer outra
     $invoice = Database::fetch(
         "SELECT * FROM invoices 
          WHERE client_id = ? 
-         ORDER BY created_at DESC 
+         AND status IN ('pending', 'overdue')
+         ORDER BY 
+            CASE 
+                WHEN status = 'pending' THEN 1
+                WHEN status = 'overdue' THEN 2
+                ELSE 3
+            END,
+            created_at DESC 
          LIMIT 1",
         [$client['id']]
     );
+    
+    // Se não encontrou fatura pendente/overdue, buscar a mais recente de qualquer status
+    if (!$invoice) {
+        $invoice = Database::fetch(
+            "SELECT * FROM invoices 
+             WHERE client_id = ? 
+             ORDER BY created_at DESC 
+             LIMIT 1",
+            [$client['id']]
+        );
+    }
     
     if ($invoice) {
         // Variáveis de fatura
@@ -295,8 +314,8 @@ function prepareTemplateVariables($template, $client) {
         $year = $issueDate->format('Y');
         $variables['fatura_periodo'] = $monthNames[$month] . '/' . $year;
         
-        // Se a fatura estiver pendente, adicionar payment_link
-        if ($invoice['status'] === 'pending') {
+        // Se a fatura estiver pendente ou vencida, adicionar payment_link
+        if (in_array($invoice['status'], ['pending', 'overdue'])) {
             // Obter domínio do sistema - priorizar APP_URL do .env
             $baseUrl = env('APP_URL');
             
@@ -539,14 +558,9 @@ function runWhatsAppReminderAutomation($resellerId = null) {
                 }
                 
                 if (!$alreadySent) {
-                    // Preparar variáveis do template
-                    $variables = [
-                        'cliente_nome' => $client['name'],
-                        'cliente_plano' => $client['plan'] ?: 'Personalizado',
-                        'cliente_vencimento' => date('d/m/Y', strtotime($client['renewal_date'])),
-                        'cliente_valor' => 'R$ ' . number_format($client['value'], 2, ',', '.'),
-                        'cliente_servidor' => $client['server'] ?: 'Principal'
-                    ];
+                    // Preparar variáveis do template usando prepareTemplateVariables
+                    // Isso garante que payment_link seja incluído se houver fatura pendente
+                    $variables = prepareTemplateVariables($template, $client);
                     
                     error_log("Enviando mensagem para {$client['name']} ({$client['phone']})");
                     
@@ -819,14 +833,20 @@ function checkAndSendReminder($clientId) {
             return ['success' => false, 'error' => 'Lembrete já enviado hoje'];
         }
         
-        // Preparar variáveis do template
-        $variables = [
-            'cliente_nome' => $client['name'],
-            'cliente_plano' => $client['plan'] ?: 'Personalizado',
-            'cliente_vencimento' => date('d/m/Y', strtotime($client['renewal_date'])),
-            'cliente_valor' => 'R$ ' . number_format($client['value'], 2, ',', '.'),
-            'cliente_servidor' => $client['server'] ?: 'Principal'
-        ];
+        // Buscar template completo para preparar variáveis corretamente
+        $template = Database::fetch(
+            "SELECT * FROM whatsapp_templates 
+             WHERE type = ? AND reseller_id = ? AND is_active = 1",
+            [$templateType, $client['reseller_id']]
+        );
+        
+        if (!$template) {
+            return ['success' => false, 'error' => 'Template não encontrado'];
+        }
+        
+        // Preparar variáveis do template usando prepareTemplateVariables
+        // Isso garante que payment_link seja incluído se houver fatura pendente
+        $variables = prepareTemplateVariables($template, $client);
         
         // Enviar mensagem
         return sendTemplateMessage(
