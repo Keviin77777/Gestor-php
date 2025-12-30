@@ -260,11 +260,6 @@ function getClientsForTemplate($template, $resellerId) {
  * @return array
  */
 function prepareTemplateVariables($template, $client) {
-    error_log("=== prepareTemplateVariables DEBUG ===");
-    error_log("Template type: " . ($template['type'] ?? 'N/A'));
-    error_log("Cliente ID: " . ($client['id'] ?? 'N/A'));
-    error_log("Cliente nome: " . ($client['name'] ?? 'N/A'));
-    
     $variables = [
         'cliente_nome' => $client['name'],
         'cliente_usuario' => $client['username'] ?? 'N/A',
@@ -292,8 +287,6 @@ function prepareTemplateVariables($template, $client) {
         [$client['id']]
     );
     
-    error_log("Fatura pendente encontrada: " . ($invoice ? $invoice['id'] . " (status: {$invoice['status']})" : 'NENHUMA'));
-    
     // Se não encontrou fatura pendente/overdue, buscar a mais recente de qualquer status
     if (!$invoice) {
         $invoice = Database::fetch(
@@ -303,10 +296,6 @@ function prepareTemplateVariables($template, $client) {
              LIMIT 1",
             [$client['id']]
         );
-        
-        if ($invoice) {
-            error_log("Fatura alternativa encontrada: {$invoice['id']} (status: {$invoice['status']})");
-        }
     }
     
     if ($invoice) {
@@ -338,14 +327,11 @@ function prepareTemplateVariables($template, $client) {
             }
             
             $variables['payment_link'] = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
-            error_log("✅ Payment link gerado: {$variables['payment_link']}");
         } else {
             $variables['payment_link'] = '';
-            error_log("❌ Payment link NÃO gerado - status da fatura: {$invoice['status']}");
         }
     } else {
         // Sem fatura, usar valores do cliente
-        error_log("⚠️ Nenhuma fatura encontrada - payment_link será vazio");
         $variables['fatura_valor'] = 'R$ ' . number_format($client['value'], 2, ',', '.');
         $variables['fatura_vencimento'] = date('d/m/Y', strtotime($client['renewal_date']));
         
@@ -362,9 +348,6 @@ function prepareTemplateVariables($template, $client) {
         $variables['payment_link'] = '';
     }
 
-    error_log("=== FIM prepareTemplateVariables ===");
-    error_log("");
-    
     // Adicionar variáveis específicas do template se necessário
     if (isset($template['variables']) && $template['variables']) {
         $templateVars = json_decode($template['variables'], true);
