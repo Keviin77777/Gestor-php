@@ -558,9 +558,21 @@ function runWhatsAppReminderAutomation($resellerId = null) {
                 }
                 
                 if (!$alreadySent) {
+                    // Buscar template completo
+                    $fullTemplate = Database::fetch(
+                        "SELECT * FROM whatsapp_templates 
+                         WHERE type = ? AND reseller_id = ? AND is_active = 1",
+                        [$templateType, $client['reseller_id']]
+                    );
+                    
+                    if (!$fullTemplate) {
+                        error_log("Template completo não encontrado para {$templateType}");
+                        continue;
+                    }
+                    
                     // Preparar variáveis do template usando prepareTemplateVariables
                     // Isso garante que payment_link seja incluído se houver fatura pendente
-                    $variables = prepareTemplateVariables($template, $client);
+                    $variables = prepareTemplateVariables($fullTemplate, $client);
                     
                     error_log("Enviando mensagem para {$client['name']} ({$client['phone']})");
                     

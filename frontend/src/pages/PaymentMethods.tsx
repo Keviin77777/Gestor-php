@@ -400,6 +400,110 @@ export default function PaymentMethods() {
         </ul>
       </div>
 
+      {/* Webhook Instructions */}
+      <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-800 rounded-xl p-6">
+        <h3 className="text-xl font-bold text-purple-900 dark:text-purple-300 mb-4 flex items-center gap-2">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Configuração de Webhooks (Importante!)
+        </h3>
+        
+        <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 mb-4">
+          <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+            <strong>⚠️ Por que configurar webhooks?</strong>
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            Sem webhooks, o pagamento só é detectado <strong>enquanto o cliente está na página</strong>. 
+            Com webhooks configurados, o sistema recebe notificações automáticas mesmo se o cliente fechar a página.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {/* Mercado Pago */}
+          <details className="bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700">
+            <summary className="cursor-pointer p-4 font-semibold text-gray-900 dark:text-white hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors">
+              💳 Mercado Pago - Como configurar webhook
+            </summary>
+            <div className="p-4 pt-0 space-y-3 text-sm text-gray-700 dark:text-gray-300">
+              <ol className="list-decimal list-inside space-y-2 ml-2">
+                <li>Acesse: <a href="https://www.mercadopago.com.br/developers/panel/app" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">Painel de Desenvolvedores</a></li>
+                <li>Selecione sua aplicação</li>
+                <li>Vá em <strong>Webhooks</strong> no menu lateral</li>
+                <li>Clique em <strong>"Configurar notificações"</strong></li>
+                <li>Cole a URL do webhook:</li>
+              </ol>
+              <div className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg font-mono text-xs break-all">
+                {window.location.origin}/webhook-mercadopago.php
+              </div>
+              <ol start={6} className="list-decimal list-inside space-y-2 ml-2">
+                <li>Selecione os eventos: <strong>payment</strong></li>
+                <li>Clique em <strong>"Salvar"</strong></li>
+              </ol>
+            </div>
+          </details>
+
+          {/* Asaas */}
+          <details className="bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700">
+            <summary className="cursor-pointer p-4 font-semibold text-gray-900 dark:text-white hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors">
+              💰 Asaas - Como configurar webhook
+            </summary>
+            <div className="p-4 pt-0 space-y-3 text-sm text-gray-700 dark:text-gray-300">
+              <ol className="list-decimal list-inside space-y-2 ml-2">
+                <li>Acesse: <a href="https://www.asaas.com/config/webhook" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">Configurações → Webhooks</a></li>
+                <li>Clique em <strong>"Adicionar webhook"</strong></li>
+                <li>Cole a URL do webhook:</li>
+              </ol>
+              <div className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg font-mono text-xs break-all">
+                {window.location.origin}/webhook-asaas.php
+              </div>
+              <ol start={4} className="list-decimal list-inside space-y-2 ml-2">
+                <li>Selecione os eventos:
+                  <ul className="list-disc list-inside ml-4 mt-1">
+                    <li><strong>PAYMENT_RECEIVED</strong> (Pagamento recebido)</li>
+                    <li><strong>PAYMENT_CONFIRMED</strong> (Pagamento confirmado)</li>
+                  </ul>
+                </li>
+                <li>Clique em <strong>"Salvar"</strong></li>
+              </ol>
+            </div>
+          </details>
+
+          {/* EFI Bank */}
+          {isAdmin && (
+            <details className="bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700">
+              <summary className="cursor-pointer p-4 font-semibold text-gray-900 dark:text-white hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors">
+                🏦 EFI Bank - Como configurar webhook
+              </summary>
+              <div className="p-4 pt-0 space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                <ol className="list-decimal list-inside space-y-2 ml-2">
+                  <li>Acesse: <a href="https://gerencianet.com.br/painel" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">Painel EFI Bank</a></li>
+                  <li>Vá em <strong>API → Configurações → Webhooks</strong></li>
+                  <li>Clique em <strong>"Adicionar webhook"</strong></li>
+                  <li>Cole a URL do webhook:</li>
+                </ol>
+                <div className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg font-mono text-xs break-all">
+                  {window.location.origin}/webhook-efibank.php
+                </div>
+                <ol start={5} className="list-decimal list-inside space-y-2 ml-2">
+                  <li>Selecione o tipo: <strong>PIX</strong></li>
+                  <li>Clique em <strong>"Salvar"</strong></li>
+                </ol>
+              </div>
+            </details>
+          )}
+        </div>
+
+        <div className="mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <p className="text-sm text-green-800 dark:text-green-300 flex items-start gap-2">
+            <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <span>
+              <strong>Dica:</strong> Após configurar o webhook, faça um pagamento de teste para garantir que está funcionando corretamente!
+            </span>
+          </p>
+        </div>
+      </div>
+
       {/* Modal */}
       {showModal && selectedMethod && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
