@@ -4,22 +4,40 @@
  * Recebe notificações de pagamentos aprovados/rejeitados
  */
 
-// Log de todas as requisições
-$logFile = __DIR__ . '/../logs/asaas-webhook.log';
-$logDir = dirname($logFile);
+// Desabilitar exibição de erros em produção
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
 
-if (!is_dir($logDir)) {
-    mkdir($logDir, 0755, true);
+// Função helper para log seguro
+function logWebhookAsaas($message) {
+    $logFile = __DIR__ . '/../logs/asaas-webhook.log';
+    $logDir = dirname($logFile);
+    
+    // Tentar criar diretório se não existir
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0755, true);
+    }
+    
+    // Tentar escrever no arquivo, se falhar usar error_log do sistema
+    $timestamp = date('Y-m-d H:i:s');
+    $logMessage = "[$timestamp] $message\n";
+    
+    if (@file_put_contents($logFile, $logMessage, FILE_APPEND) === false) {
+        // Fallback: usar error_log do PHP (vai para log do servidor)
+        error_log("Asaas Webhook: $message");
+    }
 }
 
+// Log de todas as requisições
 $timestamp = date('Y-m-d H:i:s');
 $method = $_SERVER['REQUEST_METHOD'];
 $headers = getallheaders();
 $body = file_get_contents('php://input');
 
-file_put_contents($logFile, "\n[$timestamp] $method Request\n", FILE_APPEND);
-file_put_contents($logFile, "Headers: " . json_encode($headers) . "\n", FILE_APPEND);
-file_put_contents($logFile, "Body: $body\n", FILE_APPEND);
+logWebhookAsaas("\n$method Request");
+logWebhookAsaas("Headers: " . json_encode($headers));
+logWebhookAsaas("Body: $body");
 
 // Processar webhook
 require_once __DIR__ . '/../app/helpers/functions.php';
@@ -32,7 +50,7 @@ try {
     $data = json_decode($body, true);
     
     if (!$data) {
-        file_put_contents($logFile, "Erro: JSON inválido\n", FILE_APPEND);
+        logWebhookAsaas("Erro: JSON inválido");
         http_response_code(400);
         exit;
     }
@@ -41,7 +59,7 @@ try {
     $asaas = new AsaasHelper();
     
     if (!$asaas->isEnabled()) {
-        file_put_contents($logFile, "Asaas não está habilitado\n", FILE_APPEND);
+        logWebhookAsaas("Asaas não está habilitado");
         http_response_code(200);
         exit;
     }
@@ -50,7 +68,7 @@ try {
     $result = $asaas->processWebhook($data);
     
     if (!$result['success']) {
-        file_put_contents($logFile, "Erro ao processar: {$result['error']}\n", FILE_APPEND);
+        logWebhookAsaas("Erro ao processar: {$result['error']}");
         http_response_code(200); // Retornar 200 mesmo com erro para não reenviar
         exit;
     }
@@ -60,7 +78,7 @@ try {
     $event = $result['event'];
     $externalRef = $result['external_reference'] ?? '';
     
-    file_put_contents($logFile, "Payment ID: $paymentId | Status: $status | Event: $event | Ref: $externalRef\n", FILE_APPEND);
+    logWebhookAsaas("Payment ID: $paymentId | Status: $status | Event: $event | Ref: $externalRef");
     
     $db = Database::connect();
     
@@ -68,7 +86,7 @@ try {
     if (preg_match('/INVOICE_(\d+)/', $externalRef, $matches)) {
         $invoiceId = $matches[1];
         
-        file_put_contents($logFile, "Pagamento de fatura detectado - Invoice: $invoiceId\n", FILE_APPEND);
+        logWebhookAsaas("Pagamento de fatura detectado - Invoice: $invoiceId");
         
         // Atualizar status do pagamento na tabela invoice_payments
         $stmt = $db->prepare("
@@ -94,7 +112,7 @@ try {
             ");
             $stmt->execute([$invoiceId]);
             
-            file_put_contents($logFile, "✅ Fatura #$invoiceId marcada como PAGA\n", FILE_APPEND);
+            logWebhookAsaas("✅ Fatura #$invoiceId marcada como PAGA");
             
             // Buscar dados do cliente para renovar acesso
             $stmt = $db->prepare("
@@ -133,7 +151,7 @@ try {
                     $client['id']
                 ]);
                 
-                file_put_contents($logFile, "✅ Cliente #{$client['id']} renovado no gestor até {$currentRenewal->format('Y-m-d')}\n", FILE_APPEND);
+                logWebhookAsaas("✅ Cliente #{$client['id']} renovado no gestor até {$currentRenewal->format('Y-m-d')}");
                 
                 // Renovar cliente no Sigma após pagamento aprovado
                 try {
@@ -142,12 +160,12 @@ try {
                     $sigmaResult = renewClientInSigmaAfterPayment($client, $client['reseller_id']);
                     
                     if ($sigmaResult['success']) {
-                        file_put_contents($logFile, "✅ Cliente renovado no Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                        logWebhookAsaas("✅ Cliente renovado no Sigma: {$sigmaResult['message']}");
                     } else {
-                        file_put_contents($logFile, "⚠️ Erro na renovação Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                        logWebhookAsaas("⚠️ Erro na renovação Sigma: {$sigmaResult['message']}");
                     }
                 } catch (Exception $e) {
-                    file_put_contents($logFile, "⚠️ Erro ao renovar no Sigma: " . $e->getMessage() . "\n", FILE_APPEND);
+                    logWebhookAsaas("⚠️ Erro ao renovar no Sigma: " . $e->getMessage());
                 }
                 
                 // Enviar mensagem WhatsApp de renovação
@@ -157,16 +175,16 @@ try {
                     $whatsappResult = sendRenewalMessage($client['id'], $invoiceId);
                     
                     if ($whatsappResult['success']) {
-                        file_put_contents($logFile, "✅ Mensagem WhatsApp de renovação enviada\n", FILE_APPEND);
+                        logWebhookAsaas("✅ Mensagem WhatsApp de renovação enviada");
                     } else {
-                        file_put_contents($logFile, "⚠️ Erro ao enviar WhatsApp: {$whatsappResult['error']}\n", FILE_APPEND);
+                        logWebhookAsaas("⚠️ Erro ao enviar WhatsApp: {$whatsappResult['error']}");
                     }
                 } catch (Exception $e) {
-                    file_put_contents($logFile, "⚠️ Erro ao enviar mensagem WhatsApp: " . $e->getMessage() . "\n", FILE_APPEND);
+                    logWebhookAsaas("⚠️ Erro ao enviar mensagem WhatsApp: " . $e->getMessage());
                 }
             }
         } elseif ($status === 'cancelled' || $status === 'refunded') {
-            file_put_contents($logFile, "❌ Pagamento da fatura #$invoiceId cancelado/reembolsado\n", FILE_APPEND);
+            logWebhookAsaas("❌ Pagamento da fatura #$invoiceId cancelado/reembolsado");
         }
     }
     // Verificar se é renovação de revendedor
@@ -174,7 +192,7 @@ try {
         $userId = $matches[1];
         $planId = $matches[2];
         
-        file_put_contents($logFile, "Renovação detectada - User: $userId, Plan: $planId\n", FILE_APPEND);
+        logWebhookAsaas("Renovação detectada - User: $userId, Plan: $planId");
         
         // Atualizar status do pagamento
         $stmt = $db->prepare("
@@ -224,7 +242,7 @@ try {
                         $userId
                     ]);
                     
-                    file_put_contents($logFile, "✅ Renovação aprovada - User: $userId, Novo vencimento: {$currentExpires->format('Y-m-d')}\n", FILE_APPEND);
+                    logWebhookAsaas("✅ Renovação aprovada - User: $userId, Novo vencimento: {$currentExpires->format('Y-m-d')}");
                 }
             }
         }
@@ -234,7 +252,7 @@ try {
     echo json_encode(['success' => true]);
     
 } catch (Exception $e) {
-    file_put_contents($logFile, "ERRO: " . $e->getMessage() . "\n", FILE_APPEND);
+    logWebhookAsaas("ERRO: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'Internal server error']);
 }

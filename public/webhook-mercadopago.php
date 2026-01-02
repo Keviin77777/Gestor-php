@@ -4,22 +4,40 @@
  * Recebe notificações de pagamentos aprovados/rejeitados
  */
 
-// Log de todas as requisições
-$logFile = __DIR__ . '/../logs/mercadopago-webhook.log';
-$logDir = dirname($logFile);
+// Desabilitar exibição de erros em produção
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
 
-if (!is_dir($logDir)) {
-    mkdir($logDir, 0755, true);
+// Função helper para log seguro
+function logWebhook($message) {
+    $logFile = __DIR__ . '/../logs/mercadopago-webhook.log';
+    $logDir = dirname($logFile);
+    
+    // Tentar criar diretório se não existir
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0755, true);
+    }
+    
+    // Tentar escrever no arquivo, se falhar usar error_log do sistema
+    $timestamp = date('Y-m-d H:i:s');
+    $logMessage = "[$timestamp] $message\n";
+    
+    if (@file_put_contents($logFile, $logMessage, FILE_APPEND) === false) {
+        // Fallback: usar error_log do PHP (vai para log do servidor)
+        error_log("MercadoPago Webhook: $message");
+    }
 }
 
+// Log de todas as requisições
 $timestamp = date('Y-m-d H:i:s');
 $method = $_SERVER['REQUEST_METHOD'];
 $headers = getallheaders();
 $body = file_get_contents('php://input');
 
-file_put_contents($logFile, "\n[$timestamp] $method Request\n", FILE_APPEND);
-file_put_contents($logFile, "Headers: " . json_encode($headers) . "\n", FILE_APPEND);
-file_put_contents($logFile, "Body: $body\n", FILE_APPEND);
+logWebhook("\n$method Request");
+logWebhook("Headers: " . json_encode($headers));
+logWebhook("Body: $body");
 
 // Processar webhook
 require_once __DIR__ . '/../app/helpers/functions.php';
@@ -32,7 +50,7 @@ try {
     $data = json_decode($body, true);
     
     if (!$data) {
-        file_put_contents($logFile, "Erro: JSON inválido\n", FILE_APPEND);
+        logWebhook("Erro: JSON inválido");
         http_response_code(400);
         exit;
     }
@@ -41,7 +59,7 @@ try {
     $paymentId = $data['data']['id'] ?? null;
     
     if (!$paymentId) {
-        file_put_contents($logFile, "Erro: Payment ID não encontrado no webhook\n", FILE_APPEND);
+        logWebhook("Erro: Payment ID não encontrado no webhook");
         http_response_code(200);
         exit;
     }
@@ -77,10 +95,10 @@ try {
     
     // Se não encontrou credenciais específicas, usar configuração global como fallback
     if (!$mpCredentials) {
-        file_put_contents($logFile, "Usando configuração global do Mercado Pago como fallback\n", FILE_APPEND);
+        logWebhook("Usando configuração global do Mercado Pago como fallback");
         $mp = new MercadoPagoHelper();
     } else {
-        file_put_contents($logFile, "Usando credenciais do revendedor: {$resellerId}\n", FILE_APPEND);
+        logWebhook("Usando credenciais do revendedor: {$resellerId}");
         $mp = new MercadoPagoHelper($mpCredentials['public_key'], $mpCredentials['access_token']);
     }
     
@@ -88,7 +106,7 @@ try {
     $result = $mp->processWebhook($data);
     
     if (!$result['success']) {
-        file_put_contents($logFile, "Erro ao processar: {$result['error']}\n", FILE_APPEND);
+        logWebhook("Erro ao processar: {$result['error']}");
         http_response_code(200); // Retornar 200 mesmo com erro para não reenviar
         exit;
     }
@@ -97,7 +115,7 @@ try {
     $status = $result['status'];
     $externalRef = $result['external_reference'] ?? '';
     
-    file_put_contents($logFile, "Payment ID: $paymentId | Status: $status | Ref: $externalRef\n", FILE_APPEND);
+    logWebhook("Payment ID: $paymentId | Status: $status | Ref: $externalRef");
     
     $db = Database::connect();
     
@@ -109,7 +127,7 @@ try {
     if ($paymentType === 'invoice_payment' && isset($metadata['invoice_id'])) {
         $invoiceId = $metadata['invoice_id'];
         
-        file_put_contents($logFile, "Pagamento de fatura detectado - Invoice: $invoiceId\n", FILE_APPEND);
+        logWebhook("Pagamento de fatura detectado - Invoice: $invoiceId");
         
         // Atualizar status do pagamento na tabela invoice_payments
         $stmt = $db->prepare("
@@ -134,7 +152,7 @@ try {
             ");
             $stmt->execute([$invoiceId]);
             
-            file_put_contents($logFile, "✅ Fatura #$invoiceId marcada como PAGA\n", FILE_APPEND);
+            logWebhook("✅ Fatura #$invoiceId marcada como PAGA");
             
             // Buscar dados do cliente para renovar acesso
             $stmt = $db->prepare("
@@ -151,7 +169,7 @@ try {
                 // Buscar duração do plano (padrão 30 dias se não encontrar)
                 $durationDays = $client['duration_days'] ?? 30;
                 
-                file_put_contents($logFile, "📅 Duração do plano: {$durationDays} dias\n", FILE_APPEND);
+                logWebhook("📅 Duração do plano: {$durationDays} dias");
                 
                 // Calcular nova data de renovação
                 $currentRenewal = new DateTime($client['renewal_date']);
@@ -179,7 +197,7 @@ try {
                     $client['id']
                 ]);
                 
-                file_put_contents($logFile, "✅ Cliente #{$client['id']} renovado no gestor até {$currentRenewal->format('Y-m-d')}\n", FILE_APPEND);
+                logWebhook("✅ Cliente #{$client['id']} renovado no gestor até {$currentRenewal->format('Y-m-d')}");
                 
                 // Renovar cliente no Sigma após pagamento aprovado
                 try {
@@ -188,12 +206,12 @@ try {
                     $sigmaResult = renewClientInSigmaAfterPayment($client, $client['reseller_id']);
                     
                     if ($sigmaResult['success']) {
-                        file_put_contents($logFile, "✅ Cliente renovado no Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                        logWebhook("✅ Cliente renovado no Sigma: {$sigmaResult['message']}");
                     } else {
-                        file_put_contents($logFile, "⚠️ Erro na renovação Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                        logWebhook("⚠️ Erro na renovação Sigma: {$sigmaResult['message']}");
                     }
                 } catch (Exception $e) {
-                    file_put_contents($logFile, "⚠️ Erro ao renovar no Sigma: " . $e->getMessage() . "\n", FILE_APPEND);
+                    logWebhook("⚠️ Erro ao renovar no Sigma: " . $e->getMessage());
                 }
                 
                 // Enviar mensagem WhatsApp de renovação
@@ -203,16 +221,16 @@ try {
                     $whatsappResult = sendRenewalMessage($client['id'], $invoiceId);
                     
                     if ($whatsappResult['success']) {
-                        file_put_contents($logFile, "✅ Mensagem WhatsApp de renovação enviada\n", FILE_APPEND);
+                        logWebhook("✅ Mensagem WhatsApp de renovação enviada");
                     } else {
-                        file_put_contents($logFile, "⚠️ Erro ao enviar WhatsApp: {$whatsappResult['error']}\n", FILE_APPEND);
+                        logWebhook("⚠️ Erro ao enviar WhatsApp: {$whatsappResult['error']}");
                     }
                 } catch (Exception $e) {
-                    file_put_contents($logFile, "⚠️ Erro ao enviar mensagem WhatsApp: " . $e->getMessage() . "\n", FILE_APPEND);
+                    logWebhook("⚠️ Erro ao enviar mensagem WhatsApp: " . $e->getMessage());
                 }
             }
         } elseif ($status === 'rejected' || $status === 'cancelled') {
-            file_put_contents($logFile, "❌ Pagamento da fatura #$invoiceId rejeitado/cancelado\n", FILE_APPEND);
+            logWebhook("❌ Pagamento da fatura #$invoiceId rejeitado/cancelado");
         }
     }
     // Verificar se é renovação de revendedor
@@ -220,7 +238,7 @@ try {
         $userId = $matches[1];
         $planId = $matches[2];
         
-        file_put_contents($logFile, "Renovação detectada - User: $userId, Plan: $planId\n", FILE_APPEND);
+        logWebhook("Renovação detectada - User: $userId, Plan: $planId");
         
         // Atualizar status do pagamento
         $stmt = $db->prepare("
@@ -271,7 +289,7 @@ try {
                         $userId
                     ]);
                     
-                    file_put_contents($logFile, "✅ Renovação aprovada - User: $userId, Novo vencimento: {$currentExpires->format('Y-m-d')}\n", FILE_APPEND);
+                    logWebhook("✅ Renovação aprovada - User: $userId, Novo vencimento: {$currentExpires->format('Y-m-d')}");
                 }
             }
         }
@@ -291,7 +309,7 @@ try {
         $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$invoice) {
-            file_put_contents($logFile, "Fatura #$invoiceId não encontrada\n", FILE_APPEND);
+            logWebhook("Fatura #$invoiceId não encontrada");
             http_response_code(200);
             exit;
         }
@@ -309,7 +327,7 @@ try {
             ");
             $stmt->execute([$invoiceId]);
             
-            file_put_contents($logFile, "✅ Fatura #$invoiceId marcada como PAGA\n", FILE_APPEND);
+            logWebhook("✅ Fatura #$invoiceId marcada como PAGA");
             
             // Buscar duração do plano do cliente
             $stmt = $db->prepare("
@@ -322,7 +340,7 @@ try {
             $planData = $stmt->fetch(PDO::FETCH_ASSOC);
             $durationDays = $planData['duration_days'] ?? 30;
             
-            file_put_contents($logFile, "📅 Duração do plano: {$durationDays} dias\n", FILE_APPEND);
+            logWebhook("📅 Duração do plano: {$durationDays} dias");
             
             // Renovar cliente automaticamente
             $currentRenewal = new DateTime($invoice['renewal_date']);
@@ -350,7 +368,7 @@ try {
                 $invoice['client_id']
             ]);
             
-            file_put_contents($logFile, "✅ Cliente #{$invoice['client_id']} renovado no gestor até {$currentRenewal->format('Y-m-d')}\n", FILE_APPEND);
+            logWebhook("✅ Cliente #{$invoice['client_id']} renovado no gestor até {$currentRenewal->format('Y-m-d')}");
             
             // Renovar cliente no Sigma após pagamento aprovado
             try {
@@ -373,12 +391,12 @@ try {
                 $sigmaResult = renewClientInSigmaAfterPayment($clientData, $invoice['reseller_id']);
                 
                 if ($sigmaResult['success']) {
-                    file_put_contents($logFile, "✅ Cliente renovado no Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                    logWebhook("✅ Cliente renovado no Sigma: {$sigmaResult['message']}");
                 } else {
-                    file_put_contents($logFile, "⚠️ Erro na renovação Sigma: {$sigmaResult['message']}\n", FILE_APPEND);
+                    logWebhook("⚠️ Erro na renovação Sigma: {$sigmaResult['message']}");
                 }
             } catch (Exception $e) {
-                file_put_contents($logFile, "⚠️ Erro ao renovar no Sigma: " . $e->getMessage() . "\n", FILE_APPEND);
+                logWebhook("⚠️ Erro ao renovar no Sigma: " . $e->getMessage());
             }
             
             // Enviar mensagem WhatsApp de renovação
@@ -388,12 +406,12 @@ try {
                 $whatsappResult = sendRenewalMessage($invoice['client_id'], $invoiceId);
                 
                 if ($whatsappResult['success']) {
-                    file_put_contents($logFile, "✅ Mensagem WhatsApp de renovação enviada\n", FILE_APPEND);
+                    logWebhook("✅ Mensagem WhatsApp de renovação enviada");
                 } else {
-                    file_put_contents($logFile, "⚠️ Erro ao enviar WhatsApp: {$whatsappResult['error']}\n", FILE_APPEND);
+                    logWebhook("⚠️ Erro ao enviar WhatsApp: {$whatsappResult['error']}");
                 }
             } catch (Exception $e) {
-                file_put_contents($logFile, "⚠️ Erro ao enviar mensagem WhatsApp: " . $e->getMessage() . "\n", FILE_APPEND);
+                logWebhook("⚠️ Erro ao enviar mensagem WhatsApp: " . $e->getMessage());
             }
             
         } elseif ($status === 'rejected' || $status === 'cancelled') {
@@ -407,11 +425,11 @@ try {
             ");
             $stmt->execute([$invoiceId]);
             
-            file_put_contents($logFile, "❌ Fatura #$invoiceId marcada como CANCELADA\n", FILE_APPEND);
+            logWebhook("❌ Fatura #$invoiceId marcada como CANCELADA");
             
         } elseif ($status === 'pending' || $status === 'in_process') {
             // Pagamento pendente
-            file_put_contents($logFile, "⏳ Fatura #$invoiceId aguardando pagamento\n", FILE_APPEND);
+            logWebhook("⏳ Fatura #$invoiceId aguardando pagamento");
         }
     }
     
@@ -419,7 +437,7 @@ try {
     echo json_encode(['success' => true]);
     
 } catch (Exception $e) {
-    file_put_contents($logFile, "ERRO: " . $e->getMessage() . "\n", FILE_APPEND);
+    logWebhook("ERRO: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'Internal server error']);
 }
