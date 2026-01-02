@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Carregar dependências
 require_once __DIR__ . '/../app/helpers/functions.php';
 require_once __DIR__ . '/../app/helpers/whatsapp-helper.php';
+require_once __DIR__ . '/../app/helpers/plan-guard.php';
 
 loadEnv(__DIR__ . '/../.env');
 
@@ -34,6 +35,9 @@ require_once __DIR__ . '/../app/helpers/auth-helper.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $user = getAuthenticatedUser();
 $resellerId = $user['id'];
+
+// 🔒 VERIFICAR SE O PLANO ESTÁ ATIVO ANTES DE ENVIAR MENSAGENS
+requireActivePlan();
 
 try {
     if ($method === 'POST') {

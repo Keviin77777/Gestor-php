@@ -20,6 +20,9 @@ loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/core/Auth.php';
 
+// Carregar verificação de plano
+require_once __DIR__ . '/../app/helpers/plan-guard.php';
+
 // Carregar automação de faturas
 require_once __DIR__ . '/../app/helpers/invoice-automation.php';
 
@@ -37,6 +40,11 @@ if (!$user) {
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'Não autorizado']);
     exit;
+}
+
+// 🔒 VERIFICAR SE O PLANO ESTÁ ATIVO (exceto para GET que só visualiza)
+if ($method !== 'GET') {
+    requireActivePlan();
 }
 
 try {

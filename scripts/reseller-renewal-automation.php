@@ -78,6 +78,7 @@ function processResellers() {
     $adminResellerId = 'admin-001';
     
     // Buscar revendedores com planos próximos ao vencimento
+    // 🔒 APENAS REVENDEDORES COM PLANO ATIVO OU PRÓXIMO AO VENCIMENTO
     $resellers = Database::fetchAll("
         SELECT 
             u.id,

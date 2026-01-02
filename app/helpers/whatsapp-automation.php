@@ -22,6 +22,19 @@ function runScheduledTemplates($resellerId = null) {
         }
         $resellerId = $user['id'];
     }
+    
+    // 🔒 VERIFICAR SE O REVENDEDOR TEM PLANO ATIVO
+    require_once __DIR__ . '/plan-guard.php';
+    if (!canSendWhatsAppMessages($resellerId)) {
+        return [
+            'execution_time' => date('Y-m-d H:i:s'),
+            'messages_sent' => 0,
+            'templates_processed' => [],
+            'errors' => [['error' => 'Plano do revendedor expirado. Renove para continuar enviando mensagens.']],
+            'debug' => ['Revendedor com plano vencido - automação bloqueada']
+        ];
+    }
+    
     $report = [
         'execution_time' => date('Y-m-d H:i:s'),
         'messages_sent' => 0,
@@ -465,7 +478,8 @@ function runWhatsAppReminderAutomation($resellerId = null) {
             'execution_time' => date('Y-m-d H:i:s'),
             'reminders_sent' => 0,
             'clients_processed' => [],
-            'errors' => []
+            'errors' => [],
+            'skipped_expired_plans' => []
         ];
 
         // Buscar clientes ativos com vencimento próximo
@@ -491,6 +505,19 @@ function runWhatsAppReminderAutomation($resellerId = null) {
         error_log("WhatsApp Automation: Total de clientes encontrados: " . count($clients));
 
         foreach ($clients as $client) {
+            // 🔒 VERIFICAR SE O REVENDEDOR TEM PLANO ATIVO
+            require_once __DIR__ . '/../helpers/plan-guard.php';
+            if (!canSendWhatsAppMessages($client['reseller_id'])) {
+                error_log("⚠️ Revendedor {$client['reseller_id']} com plano vencido - pulando cliente {$client['name']}");
+                $report['skipped_expired_plans'][] = [
+                    'client_id' => $client['id'],
+                    'client_name' => $client['name'],
+                    'reseller_id' => $client['reseller_id'],
+                    'reason' => 'Plano do revendedor expirado'
+                ];
+                continue;
+            }
+            
             $daysUntilRenewal = $client['days_until_renewal'];
             $templateType = null;
             
