@@ -551,86 +551,84 @@ function runWhatsAppReminderAutomation($resellerId = null) {
                     continue;
                 }
                 
-                // Se o template tem agendamento ativo, pular (será processado por runScheduledTemplates)
-                if ($template['is_scheduled']) {
-                    error_log("Template '{$templateType}' tem agendamento ativo, será processado por runScheduledTemplates()");
-                    continue;
-                }
+                // Se o template tem agendamento ativo, ainda assim processar para garantir
+                // que a mensagem na fila seja atualizada com as variáveis corretas (incluindo payment_link)
+                // O sendTemplateMessage vai cuidar do agendamento correto
                 
-                // Se chegou aqui, é um template SEM agendamento
-                // Verificar se o reseller tem automação de lembretes ativada
-                $settings = Database::fetch(
-                    "SELECT auto_send_reminders FROM whatsapp_settings WHERE reseller_id = ?",
-                    [$client['reseller_id']]
-                );
+                error_log("Template encontrado: ID {$template['id']}" . ($template['is_scheduled'] ? " (com agendamento)" : " (modo automático)"));
                 
-                if (!$settings || !$settings['auto_send_reminders']) {
-                    error_log("Template '{$templateType}' sem agendamento e auto_send_reminders desativado - pulando");
-                    continue;
-                }
-                
-                error_log("Template encontrado: ID {$template['id']} (modo automático)");
-                
-                // Verificar se já foi enviado hoje
-                $alreadySent = Database::fetch(
-                    "SELECT id FROM whatsapp_messages 
-                     WHERE client_id = ? 
-                     AND template_id = ?
-                     AND DATE(created_at) = CURDATE()",
-                    [$client['id'], $template['id']]
-                );
-                
-                if ($alreadySent) {
-                    error_log("Mensagem já enviada hoje para cliente {$client['name']}");
-                }
-                
-                if (!$alreadySent) {
-                    // Buscar template completo
-                    $fullTemplate = Database::fetch(
-                        "SELECT * FROM whatsapp_templates 
-                         WHERE type = ? AND reseller_id = ? AND is_active = 1",
-                        [$templateType, $client['reseller_id']]
+                // Verificar se já foi enviado hoje (apenas para templates sem agendamento)
+                if (!$template['is_scheduled']) {
+                    $alreadySent = Database::fetch(
+                        "SELECT id FROM whatsapp_messages 
+                         WHERE client_id = ? 
+                         AND template_id = ?
+                         AND DATE(created_at) = CURDATE()",
+                        [$client['id'], $template['id']]
                     );
                     
-                    if (!$fullTemplate) {
-                        error_log("Template completo não encontrado para {$templateType}");
+                    if ($alreadySent) {
+                        error_log("Mensagem já enviada hoje para cliente {$client['name']}");
                         continue;
                     }
                     
-                    // Preparar variáveis do template usando prepareTemplateVariables
-                    // Isso garante que payment_link seja incluído se houver fatura pendente
-                    $variables = prepareTemplateVariables($fullTemplate, $client);
-                    
-                    error_log("Enviando mensagem para {$client['name']} ({$client['phone']})");
-                    
-                    // Enviar mensagem
-                    $result = sendTemplateMessage(
-                        $client['reseller_id'], 
-                        $client['phone'], 
-                        $templateType, 
-                        $variables, 
-                        $client['id']
+                    // Verificar se o reseller tem automação de lembretes ativada
+                    $settings = Database::fetch(
+                        "SELECT auto_send_reminders FROM whatsapp_settings WHERE reseller_id = ?",
+                        [$client['reseller_id']]
                     );
                     
-                    error_log("Resultado do envio: " . ($result['success'] ? 'SUCESSO' : 'ERRO - ' . ($result['error'] ?? 'Erro desconhecido')));
-                    
-                    if ($result['success']) {
-                        $report['reminders_sent']++;
-                        $report['clients_processed'][] = [
-                            'client_id' => $client['id'],
-                            'client_name' => $client['name'],
-                            'template_type' => $templateType,
-                            'days_until_renewal' => $daysUntilRenewal,
-                            'message_id' => $result['message_id'] ?? null
-                        ];
-                    } else {
-                        $report['errors'][] = [
-                            'client_id' => $client['id'],
-                            'client_name' => $client['name'],
-                            'template_type' => $templateType,
-                            'error' => $result['error'] ?? 'Erro desconhecido'
-                        ];
+                    if (!$settings || !$settings['auto_send_reminders']) {
+                        error_log("Template '{$templateType}' sem agendamento e auto_send_reminders desativado - pulando");
+                        continue;
                     }
+                }
+                
+                // Buscar template completo
+                $fullTemplate = Database::fetch(
+                    "SELECT * FROM whatsapp_templates 
+                     WHERE type = ? AND reseller_id = ? AND is_active = 1",
+                    [$templateType, $client['reseller_id']]
+                );
+                
+                if (!$fullTemplate) {
+                    error_log("Template completo não encontrado para {$templateType}");
+                    continue;
+                }
+                
+                // Preparar variáveis do template usando prepareTemplateVariables
+                // Isso garante que payment_link seja incluído se houver fatura pendente
+                $variables = prepareTemplateVariables($fullTemplate, $client);
+                
+                error_log("Enviando/Atualizando mensagem para {$client['name']} ({$client['phone']})");
+                
+                // Enviar mensagem (ou atualizar na fila se já existir)
+                $result = sendTemplateMessage(
+                    $client['reseller_id'], 
+                    $client['phone'], 
+                    $templateType, 
+                    $variables, 
+                    $client['id']
+                );
+                
+                error_log("Resultado do envio: " . ($result['success'] ? 'SUCESSO' : 'ERRO - ' . ($result['error'] ?? 'Erro desconhecido')));
+                
+                if ($result['success']) {
+                    $report['reminders_sent']++;
+                    $report['clients_processed'][] = [
+                        'client_id' => $client['id'],
+                        'client_name' => $client['name'],
+                        'template_type' => $templateType,
+                        'days_until_renewal' => $daysUntilRenewal,
+                        'message_id' => $result['message_id'] ?? null
+                    ];
+                } else {
+                    $report['errors'][] = [
+                        'client_id' => $client['id'],
+                        'client_name' => $client['name'],
+                        'template_type' => $templateType,
+                        'error' => $result['error'] ?? 'Erro desconhecido'
+                    ];
                 }
             } else {
                 error_log("Nenhum template type definido para {$daysUntilRenewal} dias");

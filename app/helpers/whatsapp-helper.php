@@ -283,7 +283,9 @@ function processTemplate($templateMessage, $variables) {
     $processedMessage = $templateMessage;
     
     foreach ($variables as $key => $value) {
+        // Substituir tanto {{var}} quanto {var}
         $processedMessage = str_replace('{{' . $key . '}}', $value, $processedMessage);
+        $processedMessage = str_replace('{' . $key . '}', $value, $processedMessage);
     }
     
     return $processedMessage;
@@ -304,8 +306,8 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
             throw new Exception("Template '$templateType' não encontrado");
         }
         
-        // Se as variáveis não incluem payment_link, precisamos buscar do cliente
-        if (!isset($variables['payment_link']) && $clientId) {
+        // Se as variáveis não incluem payment_link ou está vazio, precisamos buscar do cliente
+        if ((!isset($variables['payment_link']) || empty($variables['payment_link'])) && $clientId) {
             // Buscar dados do cliente para gerar payment_link
             require_once __DIR__ . '/whatsapp-automation.php';
             $client = Database::fetch(
@@ -316,8 +318,12 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
             if ($client) {
                 // Usar prepareTemplateVariables para gerar todas as variáveis incluindo payment_link
                 $allVariables = prepareTemplateVariables($template, $client);
-                // Mesclar com as variáveis passadas (as passadas têm prioridade)
-                $variables = array_merge($allVariables, $variables);
+                // Mesclar com as variáveis passadas (as passadas têm prioridade, exceto payment_link vazio)
+                foreach ($allVariables as $key => $value) {
+                    if (!isset($variables[$key]) || (empty($variables[$key]) && !empty($value))) {
+                        $variables[$key] = $value;
+                    }
+                }
             }
         }
         
@@ -393,36 +399,23 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
                 );
                 
                 if ($existingMessage) {
-                    // Se o agendamento mudou, atualizar a mensagem existente
-                    if ($scheduledAt && $existingMessage['scheduled_at'] !== $scheduledAt) {
-                        Database::query(
-                            "UPDATE whatsapp_message_queue 
-                             SET scheduled_at = ?, message = ?, updated_at = NOW() 
-                             WHERE id = ?",
-                            [$scheduledAt, $message, $existingMessage['id']]
-                        );
-                        
-                        error_log("Queue Helper - Mensagem atualizada: ID={$existingMessage['id']}, Novo horário: {$scheduledAt}");
-                        
-                        return [
-                            'success' => true,
-                            'queued' => true,
-                            'queue_id' => $existingMessage['id'],
-                            'updated' => true,
-                            'message' => 'Mensagem atualizada na fila'
-                        ];
-                    } else {
-                        // Já existe e o horário é o mesmo, não fazer nada
-                        error_log("Queue Helper - Mensagem já existe na fila: ID={$existingMessage['id']}");
-                        
-                        return [
-                            'success' => true,
-                            'queued' => true,
-                            'queue_id' => $existingMessage['id'],
-                            'already_exists' => true,
-                            'message' => 'Mensagem já está na fila'
-                        ];
-                    }
+                    // SEMPRE atualizar o conteúdo da mensagem (pode ter mudado as variáveis)
+                    Database::query(
+                        "UPDATE whatsapp_message_queue 
+                         SET scheduled_at = COALESCE(?, scheduled_at), message = ?, updated_at = NOW() 
+                         WHERE id = ?",
+                        [$scheduledAt, $message, $existingMessage['id']]
+                    );
+                    
+                    error_log("Queue Helper - Mensagem atualizada: ID={$existingMessage['id']}, Conteúdo atualizado");
+                    
+                    return [
+                        'success' => true,
+                        'queued' => true,
+                        'queue_id' => $existingMessage['id'],
+                        'updated' => true,
+                        'message' => 'Mensagem atualizada na fila'
+                    ];
                 }
             }
             
