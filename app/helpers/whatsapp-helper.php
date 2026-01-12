@@ -386,35 +386,72 @@ function sendTemplateMessage($resellerId, $phoneNumber, $templateType, $variable
                 }
             }
             
-            // Verificar se já existe mensagem pendente deste template para este cliente
+            // Verificar se já existe mensagem deste template para este cliente HOJE
+            // Isso evita duplicações - só permite 1 mensagem por cliente/template/dia
             if ($clientId && $template['id']) {
-                $existingMessage = Database::fetch(
-                    "SELECT id, scheduled_at FROM whatsapp_message_queue 
+                // 1. Verificar na FILA (pending ou já enviada hoje)
+                $existingInQueue = Database::fetch(
+                    "SELECT id, status, scheduled_at FROM whatsapp_message_queue 
                      WHERE client_id = ? 
                      AND template_id = ? 
-                     AND status = 'pending'
+                     AND DATE(created_at) = CURDATE()
                      ORDER BY created_at DESC 
                      LIMIT 1",
                     [$clientId, $template['id']]
                 );
                 
-                if ($existingMessage) {
-                    // SEMPRE atualizar o conteúdo da mensagem (pode ter mudado as variáveis)
-                    Database::query(
-                        "UPDATE whatsapp_message_queue 
-                         SET scheduled_at = COALESCE(?, scheduled_at), message = ?, updated_at = NOW() 
-                         WHERE id = ?",
-                        [$scheduledAt, $message, $existingMessage['id']]
-                    );
-                    
-                    error_log("Queue Helper - Mensagem atualizada: ID={$existingMessage['id']}, Conteúdo atualizado");
+                if ($existingInQueue) {
+                    // Se está pendente, atualizar conteúdo
+                    if ($existingInQueue['status'] === 'pending') {
+                        Database::query(
+                            "UPDATE whatsapp_message_queue 
+                             SET scheduled_at = COALESCE(?, scheduled_at), message = ?, updated_at = NOW() 
+                             WHERE id = ?",
+                            [$scheduledAt, $message, $existingInQueue['id']]
+                        );
+                        
+                        error_log("Queue Helper - Mensagem ATUALIZADA na fila: ID={$existingInQueue['id']}");
+                        
+                        return [
+                            'success' => true,
+                            'queued' => true,
+                            'queue_id' => $existingInQueue['id'],
+                            'updated' => true,
+                            'message' => 'Mensagem atualizada na fila'
+                        ];
+                    } else {
+                        // Já foi enviada/processada hoje - não duplicar
+                        error_log("Queue Helper - Mensagem já enviada HOJE para cliente {$clientId}, template {$template['id']} - IGNORANDO duplicação");
+                        
+                        return [
+                            'success' => true,
+                            'queued' => false,
+                            'skipped' => true,
+                            'reason' => 'already_sent_today',
+                            'message' => 'Mensagem já enviada hoje para este cliente'
+                        ];
+                    }
+                }
+                
+                // 2. Verificar também na tabela de mensagens enviadas (whatsapp_messages)
+                $alreadySentToday = Database::fetch(
+                    "SELECT id FROM whatsapp_messages 
+                     WHERE client_id = ? 
+                     AND template_id = ? 
+                     AND DATE(created_at) = CURDATE()
+                     LIMIT 1",
+                    [$clientId, $template['id']]
+                );
+                
+                if ($alreadySentToday) {
+                    error_log("Queue Helper - Mensagem já ENVIADA hoje (whatsapp_messages) para cliente {$clientId} - IGNORANDO");
                     
                     return [
                         'success' => true,
-                        'queued' => true,
-                        'queue_id' => $existingMessage['id'],
-                        'updated' => true,
-                        'message' => 'Mensagem atualizada na fila'
+                        'queued' => false,
+                        'skipped' => true,
+                        'reason' => 'already_sent_today',
+                        'message' => 'Mensagem já enviada hoje para este cliente'
                     ];
                 }
             }

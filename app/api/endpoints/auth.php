@@ -254,8 +254,8 @@ function createDefaultTemplates($userId) {
             'type' => 'expired_1d',
             'name' => 'Venceu há 1 dia Padrão',
             'title' => 'Serviço vencido - Renove agora!',
-            'message' => "Olá {{cliente_nome}}! ❌\n\n*Serviço vencido:*\nSeu serviço venceu ontem ({{cliente_vencimento}})\n\n💰 Valor: R$ {{cliente_valor}}\n📋 Plano: {{cliente_plano}}\n\nO acesso pode ser suspenso a qualquer momento.\n\n⚡ Renove *URGENTEMENTE* para manter o serviço ativo!",
-            'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano"]'
+            'message' => "Olá {{cliente_nome}}! ❌\n\n*Serviço vencido:*\nSeu serviço venceu ontem ({{cliente_vencimento}})\n\n💰 Valor: R$ {{cliente_valor}}\n📋 Plano: {{cliente_plano}}\n\nO acesso pode ser suspenso a qualquer momento.\n\n💳 *Pague agora pelo link:*\n{{payment_link}}\n\n⚡ Renove *URGENTEMENTE* para manter o serviço ativo!",
+            'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano", "payment_link"]'
         ]
     ];
     

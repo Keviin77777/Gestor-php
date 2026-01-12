@@ -93,20 +93,25 @@ function runScheduledTemplates($resellerId = null) {
             
             $report['debug'][] = "  ✅ Dentro do horário";
 
-            // Verificar se já foi enviado hoje
-            $alreadySent = Database::fetch(
-                "SELECT id FROM whatsapp_messages 
-                 WHERE template_id = ? 
-                 AND DATE(sent_at) = CURDATE()",
-                [$template['id']]
+            // Verificar se já foi processado hoje (na fila ou enviado)
+            // Nota: A verificação por cliente é feita no sendTemplateMessage
+            // Aqui só verificamos se o template já foi executado hoje para ALGUM cliente
+            $alreadyProcessedToday = Database::fetch(
+                "SELECT COUNT(*) as total FROM (
+                    SELECT id FROM whatsapp_messages 
+                    WHERE template_id = ? AND DATE(created_at) = CURDATE()
+                    UNION ALL
+                    SELECT id FROM whatsapp_message_queue 
+                    WHERE template_id = ? AND DATE(created_at) = CURDATE()
+                ) as combined",
+                [$template['id'], $template['id']]
             );
 
-            if ($alreadySent) {
-                $report['debug'][] = "  ❌ Já foi enviado hoje (ID: {$alreadySent['id']})";
-                continue;
+            if ($alreadyProcessedToday && $alreadyProcessedToday['total'] > 0) {
+                $report['debug'][] = "  ⚠️ Template já processado hoje ({$alreadyProcessedToday['total']} mensagens) - verificação por cliente será feita individualmente";
             }
             
-            $report['debug'][] = "  ✅ Ainda não foi enviado hoje";
+            $report['debug'][] = "  ✅ Processando clientes (duplicações serão evitadas por cliente)";
 
             // Buscar clientes que atendem aos critérios do template
             $clients = getClientsForTemplate($template, $resellerId);
@@ -300,7 +305,35 @@ function prepareTemplateVariables($template, $client) {
         [$client['id']]
     );
     
-    // Se não encontrou fatura pendente/overdue, buscar a mais recente de qualquer status
+    // Se não encontrou fatura pendente/overdue, GERAR UMA AUTOMATICAMENTE
+    // (apenas para templates de lembrete de vencimento)
+    if (!$invoice && in_array($template['type'], ['expires_7d', 'expires_3d', 'expires_today', 'expired_1d', 'expired_3d'])) {
+        error_log("prepareTemplateVariables - Cliente {$client['id']} sem fatura pendente, gerando automaticamente...");
+        
+        try {
+            // Gerar fatura automaticamente
+            $invoiceId = 'inv-' . uniqid();
+            $issueDate = date('Y-m-d');
+            $dueDate = $client['renewal_date'];
+            $value = (float)$client['value'];
+            
+            Database::query(
+                "INSERT INTO invoices (id, reseller_id, client_id, value, discount, final_value, issue_date, due_date, status, created_at)
+                 VALUES (?, ?, ?, ?, 0, ?, ?, ?, 'pending', NOW())",
+                [$invoiceId, $client['reseller_id'], $client['id'], $value, $value, $issueDate, $dueDate]
+            );
+            
+            error_log("prepareTemplateVariables - Fatura gerada automaticamente: {$invoiceId}");
+            
+            // Buscar a fatura recém-criada
+            $invoice = Database::fetch("SELECT * FROM invoices WHERE id = ?", [$invoiceId]);
+            
+        } catch (Exception $e) {
+            error_log("prepareTemplateVariables - Erro ao gerar fatura: " . $e->getMessage());
+        }
+    }
+    
+    // Se ainda não tem fatura, buscar a mais recente de qualquer status
     if (!$invoice) {
         $invoice = Database::fetch(
             "SELECT * FROM invoices 
@@ -340,8 +373,10 @@ function prepareTemplateVariables($template, $client) {
             }
             
             $variables['payment_link'] = rtrim($baseUrl, '/') . '/checkout.php?invoice=' . $invoice['id'];
+            error_log("prepareTemplateVariables - Payment link gerado: " . $variables['payment_link']);
         } else {
             $variables['payment_link'] = '';
+            error_log("prepareTemplateVariables - Fatura não é pending/overdue, payment_link vazio");
         }
     } else {
         // Sem fatura, usar valores do cliente
@@ -359,6 +394,7 @@ function prepareTemplateVariables($template, $client) {
         $year = $renewalDate->format('Y');
         $variables['fatura_periodo'] = $monthNames[$month] . '/' . $year;
         $variables['payment_link'] = '';
+        error_log("prepareTemplateVariables - Nenhuma fatura encontrada para cliente {$client['id']}");
     }
 
     // Adicionar variáveis específicas do template se necessário
