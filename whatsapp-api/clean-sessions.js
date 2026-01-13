@@ -24,15 +24,17 @@ console.log('1️⃣ Matando processos Chrome órfãos...');
 const killChrome = () => {
     return new Promise((resolve) => {
         if (process.platform === 'linux') {
-            exec('pkill -9 -f "chrome.*--disable-gpu" 2>/dev/null; pkill -9 -f "chromium.*--disable-gpu" 2>/dev/null', () => {
-                console.log('   ✅ Processos Chrome/Chromium finalizados (Linux)');
+            // No Linux, matar apenas processos Chrome HEADLESS (Puppeteer)
+            exec('pkill -9 -f "chrome.*--headless" 2>/dev/null; pkill -9 -f "chromium.*--headless" 2>/dev/null', () => {
+                console.log('   ✅ Processos Chrome/Chromium headless finalizados (Linux)');
                 resolve();
             });
         } else if (process.platform === 'win32') {
-            exec('taskkill /F /IM chrome.exe /T 2>nul & taskkill /F /IM chromium.exe /T 2>nul', () => {
-                console.log('   ✅ Processos Chrome finalizados (Windows)');
-                resolve();
-            });
+            // No Windows, NÃO matar processos Chrome para não fechar o navegador do usuário
+            // O script clean-sessions.js deve ser executado apenas quando a API está PARADA
+            console.log('   ⚠️ Windows: NÃO matando processos Chrome (pode fechar seu navegador)');
+            console.log('   💡 Se precisar limpar, feche o Chrome manualmente antes de executar');
+            resolve();
         } else {
             console.log('   ℹ️ Sistema não suportado para kill automático');
             resolve();

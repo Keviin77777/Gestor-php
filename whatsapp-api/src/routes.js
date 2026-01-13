@@ -215,21 +215,30 @@ router.post('/message/send', async (req, res) => {
         
         console.log(`📤 Enviando mensagem para ${chatId} (reseller: ${reseller_id})`);
         
-        // Tentar validar o número (opcional - não bloquear se falhar)
+        // Tentar validar o número com timeout (opcional - não bloquear se falhar)
         try {
-            const numberId = await client.getNumberId(chatId.replace('@c.us', ''));
+            const validatePromise = client.getNumberId(chatId.replace('@c.us', ''));
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout validando número')), 10000)
+            );
+            
+            const numberId = await Promise.race([validatePromise, timeoutPromise]);
             if (numberId && numberId._serialized) {
-                // Usar o ID retornado pelo WhatsApp (mais confiável)
                 chatId = numberId._serialized;
                 console.log(`✅ Número validado: ${chatId}`);
             }
         } catch (validateErr) {
-            // Apenas avisar, mas continuar com o envio
-            console.log(`⚠️ Não foi possível validar número (continuando): ${validateErr.message}`);
+            console.log(`⚠️ Validação de número falhou (continuando): ${validateErr.message}`);
         }
         
-        // Tentar enviar a mensagem
-        const sentMessage = await client.sendMessage(chatId, message);
+        // Enviar mensagem com timeout de 30 segundos
+        console.log(`   📨 Enviando...`);
+        const sendPromise = client.sendMessage(chatId, message);
+        const sendTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout ao enviar mensagem (30s)')), 30000)
+        );
+        
+        const sentMessage = await Promise.race([sendPromise, sendTimeout]);
         
         // Atualizar com ID da mensagem
         await db.updateMessageWithEvolutionId(messageId, sentMessage.id.id);
@@ -258,6 +267,10 @@ router.post('/message/send', async (req, res) => {
             errorMessage = 'Este número não está registrado no WhatsApp.';
         } else if (error.message.includes('Execution context was destroyed')) {
             errorMessage = 'Erro de conexão com WhatsApp. Tente reconectar o WhatsApp.';
+        } else if (error.message.includes('Timeout')) {
+            errorMessage = 'Timeout ao enviar mensagem. O WhatsApp pode estar lento ou desconectado.';
+        } else if (error.message.includes('Target closed')) {
+            errorMessage = 'Conexão com WhatsApp perdida. Reconecte o WhatsApp.';
         }
         
         res.status(500).json({ 

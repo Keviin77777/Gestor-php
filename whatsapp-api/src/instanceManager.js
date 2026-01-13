@@ -54,11 +54,11 @@ class InstanceManager {
             }
         }
         
-        // 2. Limpar processos Chrome órfãos (Linux)
+        // 2. Limpar processos Chrome órfãos (apenas Linux - no Windows não fazemos isso)
         if (process.platform === 'linux') {
             try {
-                // Matar processos Chrome que estão rodando há mais de 2 horas sem parent
-                exec('pkill -f "chrome.*--disable-gpu" -o 7200 2>/dev/null || true');
+                // Matar apenas processos Chrome HEADLESS que estão rodando há mais de 2 horas
+                exec('pkill -f "chrome.*--headless.*--disable-gpu" -o 7200 2>/dev/null || true');
             } catch (err) {
                 // Ignorar erros
             }
@@ -75,39 +75,38 @@ class InstanceManager {
     }
 
     /**
-     * Matar processos Chrome específicos de uma sessão
+     * Matar processos Chrome específicos de uma sessão (apenas Puppeteer headless)
+     * IMPORTANTE: Não mata o navegador do usuário!
      */
     async killChromeProcesses(sessionKey) {
         return new Promise((resolve) => {
-            const commands = [];
-            
+            // No Linux, podemos ser mais específicos
             if (process.platform === 'linux') {
-                // Matar processos Chrome relacionados a esta sessão
-                commands.push(`pkill -9 -f "chrome.*${sessionKey}" 2>/dev/null || true`);
-                commands.push(`pkill -9 -f "chromium.*${sessionKey}" 2>/dev/null || true`);
-                // Matar processos Chrome órfãos (sem parent)
-                commands.push(`pkill -9 -f "chrome.*--user-data-dir.*${sessionKey}" 2>/dev/null || true`);
-            } else if (process.platform === 'win32') {
-                // Windows - matar todos os processos Chrome (mais agressivo)
-                commands.push(`taskkill /F /IM chrome.exe 2>nul || exit 0`);
-            }
-            
-            if (commands.length === 0) {
-                return resolve();
-            }
-            
-            let completed = 0;
-            commands.forEach(cmd => {
-                exec(cmd, () => {
-                    completed++;
-                    if (completed === commands.length) {
-                        resolve();
-                    }
+                const commands = [
+                    // Matar apenas processos com --headless ou --disable-gpu (Puppeteer)
+                    `pkill -9 -f "chrome.*--headless.*${sessionKey}" 2>/dev/null || true`,
+                    `pkill -9 -f "chromium.*--headless.*${sessionKey}" 2>/dev/null || true`,
+                    `pkill -9 -f "chrome.*--disable-gpu.*${sessionKey}" 2>/dev/null || true`
+                ];
+                
+                let completed = 0;
+                commands.forEach(cmd => {
+                    exec(cmd, () => {
+                        completed++;
+                        if (completed === commands.length) {
+                            resolve();
+                        }
+                    });
                 });
-            });
-            
-            // Timeout de segurança
-            setTimeout(resolve, 3000);
+                
+                // Timeout de segurança
+                setTimeout(resolve, 3000);
+            } else {
+                // No Windows, NÃO matar processos Chrome para não fechar o navegador do usuário
+                // O browser do Puppeteer será fechado pelo client.pupBrowser.close()
+                console.log(`   ℹ️ Windows: pulando kill de processos Chrome (evita fechar navegador do usuário)`);
+                resolve();
+            }
         });
     }
 
@@ -490,10 +489,24 @@ class InstanceManager {
         if (!client) return false;
         
         try {
-            return client.info !== undefined && 
-                   client.pupBrowser && 
-                   client.pupBrowser.isConnected();
+            // Verificar se tem info (está autenticado)
+            const hasInfo = client.info !== undefined;
+            
+            // Verificar se o browser está conectado
+            const hasBrowser = client.pupBrowser && client.pupBrowser.isConnected();
+            
+            // Verificar se a página principal existe
+            let hasPage = false;
+            try {
+                const pages = client.pupBrowser?.pages();
+                hasPage = pages && pages.length > 0;
+            } catch (e) {
+                hasPage = false;
+            }
+            
+            return hasInfo && hasBrowser;
         } catch (err) {
+            console.log(`⚠️ Erro ao verificar conexão de ${resellerId}: ${err.message}`);
             return false;
         }
     }
