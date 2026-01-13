@@ -9,8 +9,12 @@ class InstanceManager {
     constructor() {
         this.instances = new Map();
         this.qrCodes = new Map();
-        this.initializingInstances = new Set(); // Evitar inicialização simultânea
+        this.initializingInstances = new Set(); // Rastrear instâncias em inicialização
+        this.initializationQueue = []; // Fila de inicialização
         this.lastCleanup = Date.now();
+        
+        // Configurações
+        this.MAX_CONCURRENT_INITIALIZATIONS = 5; // Máximo de inicializações simultâneas
         
         // Limpar processos Chrome órfãos periodicamente
         this.startCleanupInterval();
@@ -75,16 +79,35 @@ class InstanceManager {
      */
     async killChromeProcesses(sessionKey) {
         return new Promise((resolve) => {
+            const commands = [];
+            
             if (process.platform === 'linux') {
-                exec(`pkill -f "chrome.*${sessionKey}" 2>/dev/null || true`, () => resolve());
+                // Matar processos Chrome relacionados a esta sessão
+                commands.push(`pkill -9 -f "chrome.*${sessionKey}" 2>/dev/null || true`);
+                commands.push(`pkill -9 -f "chromium.*${sessionKey}" 2>/dev/null || true`);
+                // Matar processos Chrome órfãos (sem parent)
+                commands.push(`pkill -9 -f "chrome.*--user-data-dir.*${sessionKey}" 2>/dev/null || true`);
             } else if (process.platform === 'win32') {
-                exec(`taskkill /F /IM chrome.exe /FI "WINDOWTITLE eq *${sessionKey}*" 2>nul || exit 0`, () => resolve());
-            } else {
-                resolve();
+                // Windows - matar todos os processos Chrome (mais agressivo)
+                commands.push(`taskkill /F /IM chrome.exe 2>nul || exit 0`);
             }
             
+            if (commands.length === 0) {
+                return resolve();
+            }
+            
+            let completed = 0;
+            commands.forEach(cmd => {
+                exec(cmd, () => {
+                    completed++;
+                    if (completed === commands.length) {
+                        resolve();
+                    }
+                });
+            });
+            
             // Timeout de segurança
-            setTimeout(resolve, 2000);
+            setTimeout(resolve, 3000);
         });
     }
 
@@ -122,28 +145,41 @@ class InstanceManager {
     }
 
     /**
-     * Criar ou recuperar instância com proteção contra race conditions
+     * Criar ou recuperar instância
+     * Permite múltiplos revendedores conectarem simultaneamente
      */
     async getInstance(resellerId) {
         const sanitizedId = this.sanitizeResellerId(resellerId);
         const key = `reseller_${sanitizedId}`;
         
-        // Verificar se já está inicializando (evitar race condition)
+        // Se ESTE revendedor já está inicializando, aguardar (evita cliques duplos)
         if (this.initializingInstances.has(key)) {
-            console.log(`⏳ Instância ${resellerId} já está sendo inicializada, aguardando...`);
-            // Aguardar até 30 segundos pela inicialização
+            console.log(`⏳ ${resellerId} já está inicializando, aguardando...`);
             for (let i = 0; i < 60; i++) {
                 await new Promise(r => setTimeout(r, 500));
                 if (!this.initializingInstances.has(key)) {
                     if (this.instances.has(key)) {
-                        return this.instances.get(key);
+                        const client = this.instances.get(key);
+                        // Verificar se está funcional
+                        try {
+                            if (client.pupBrowser && client.pupBrowser.isConnected()) {
+                                return client;
+                            }
+                        } catch (e) {
+                            // Instância não funcional
+                        }
                     }
                     break;
                 }
             }
+            // Se ainda está inicializando após 30s, forçar limpeza
+            if (this.initializingInstances.has(key)) {
+                console.log(`⚠️ Timeout aguardando ${resellerId}, forçando limpeza...`);
+                await this.forceCleanup(resellerId);
+            }
         }
         
-        // Se já existe e está funcional, reutilizar
+        // Se já existe, verificar se está funcional
         if (this.instances.has(key)) {
             const client = this.instances.get(key);
             try {
@@ -155,20 +191,22 @@ class InstanceManager {
                     return client;
                 }
                 
-                // Instância existe mas não está funcional
-                console.log(`⚠️ Instância existente não funcional, recriando...`);
+                // Instância existe mas não está funcional - LIMPAR
+                console.log(`⚠️ Instância de ${resellerId} não funcional (browser: ${hasBrowser}, ready: ${isReady}), limpando...`);
                 await this.forceCleanup(resellerId);
             } catch (err) {
-                console.log(`⚠️ Erro ao verificar instância: ${err.message}`);
+                console.log(`⚠️ Erro ao verificar instância de ${resellerId}: ${err.message}`);
                 await this.forceCleanup(resellerId);
             }
         }
 
+        // Criar nova instância
         return await this.createInstance(resellerId);
     }
 
     /**
      * Forçar limpeza completa de uma instância
+     * IMPORTANTE: Esta função garante que tudo seja limpo para permitir reconexão
      */
     async forceCleanup(resellerId) {
         const sanitizedId = this.sanitizeResellerId(resellerId);
@@ -176,36 +214,78 @@ class InstanceManager {
         
         console.log(`🧹 Forçando limpeza completa para ${resellerId}...`);
         
-        // Remover da memória
+        // 1. Remover flags primeiro (evita race conditions)
+        this.initializingInstances.delete(key);
+        this.qrCodes.delete(key);
+        
+        // 2. Fechar cliente e browser
         const client = this.instances.get(key);
         if (client) {
             try {
+                // Remover todos os listeners para evitar eventos durante limpeza
                 client.removeAllListeners();
+                
+                // Tentar logout primeiro (mais limpo)
+                try {
+                    await Promise.race([
+                        client.logout(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Logout timeout')), 5000))
+                    ]);
+                    console.log(`   ✅ Logout realizado: ${resellerId}`);
+                } catch (logoutErr) {
+                    // Logout falhou, continuar com fechamento forçado
+                    console.log(`   ⚠️ Logout falhou, fechando forçadamente...`);
+                }
+                
+                // Fechar browser
                 if (client.pupBrowser) {
-                    await client.pupBrowser.close().catch(() => {});
+                    try {
+                        // Fechar todas as páginas primeiro
+                        const pages = await client.pupBrowser.pages().catch(() => []);
+                        for (const page of pages) {
+                            await page.close().catch(() => {});
+                        }
+                        
+                        // Fechar browser
+                        await client.pupBrowser.close().catch(() => {});
+                        console.log(`   ✅ Browser fechado: ${resellerId}`);
+                    } catch (browserErr) {
+                        console.log(`   ⚠️ Erro ao fechar browser: ${browserErr.message}`);
+                    }
+                }
+                
+                // Tentar destroy
+                try {
+                    await Promise.race([
+                        client.destroy(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Destroy timeout')), 5000))
+                    ]);
+                } catch (destroyErr) {
+                    // Ignorar erros de destroy
                 }
             } catch (err) {
-                // Ignorar
+                console.log(`   ⚠️ Erro durante limpeza do cliente: ${err.message}`);
             }
         }
         
+        // 3. Remover da memória
         this.instances.delete(key);
-        this.qrCodes.delete(key);
-        this.initializingInstances.delete(key);
         
-        // Matar processos Chrome órfãos
+        // 4. Matar processos Chrome órfãos desta sessão
         await this.killChromeProcesses(key);
         
-        // Limpar locks da sessão
+        // 5. Limpar arquivos de lock da sessão
         const sessionPath = path.join(process.env.SESSION_PATH || './sessions', `session-${key}`);
         await this.cleanSessionDirectory(sessionPath);
         
-        // Aguardar liberação de recursos
-        await new Promise(r => setTimeout(r, 2000));
+        // 6. Aguardar liberação completa de recursos
+        await new Promise(r => setTimeout(r, 3000));
+        
+        console.log(`   ✅ Limpeza completa finalizada: ${resellerId}`);
     }
 
     /**
-     * Criar nova instância com proteções
+     * Criar nova instância
      */
     async createInstance(resellerId) {
         const sanitizedId = this.sanitizeResellerId(resellerId);
@@ -214,7 +294,7 @@ class InstanceManager {
         // Marcar como inicializando
         this.initializingInstances.add(key);
         
-        console.log(`📱 Criando instância para reseller: ${resellerId}`);
+        console.log(`📱 Criando nova instância para: ${resellerId}`);
 
         try {
             const client = new Client({
@@ -241,39 +321,47 @@ class InstanceManager {
                         '--mute-audio',
                         '--no-default-browser-check',
                         '--safebrowsing-disable-auto-update',
-                        // Limitar uso de memória
-                        '--js-flags=--max-old-space-size=256',
-                        '--single-process' // Importante para estabilidade em servidores
+                        '--js-flags=--max-old-space-size=256'
                     ],
-                    timeout: 60000 // Timeout de 60 segundos para inicialização
+                    timeout: 60000
                 },
-                qrMaxRetries: 3,
+                qrMaxRetries: 5, // Mais tentativas de QR
                 takeoverOnConflict: true,
                 takeoverTimeoutMs: 10000
             });
 
-            // Configurar eventos
+            // Configurar eventos ANTES de inicializar
             this.setupClientEvents(client, resellerId, key);
 
-            // Armazenar antes de inicializar
+            // Armazenar na memória
             this.instances.set(key, client);
             
             // Inicializar com timeout
+            console.log(`   ⏳ Inicializando cliente...`);
+            
             const initPromise = client.initialize();
             const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout ao inicializar WhatsApp')), 90000)
+                setTimeout(() => reject(new Error('Timeout ao inicializar WhatsApp (90s)')), 90000)
             );
             
             await Promise.race([initPromise, timeoutPromise]);
             
-            console.log(`✅ Instância inicializada: ${resellerId}`);
+            console.log(`   ✅ Instância inicializada com sucesso: ${resellerId}`);
             return client;
             
         } catch (err) {
-            console.error(`❌ Erro ao criar instância ${resellerId}:`, err.message);
+            console.error(`   ❌ Erro ao criar instância ${resellerId}:`, err.message);
             
             // Limpar tudo em caso de erro
-            await this.forceCleanup(resellerId);
+            this.instances.delete(key);
+            this.qrCodes.delete(key);
+            
+            // Tentar matar processos órfãos
+            await this.killChromeProcesses(key);
+            
+            // Limpar locks
+            const sessionPath = path.join(process.env.SESSION_PATH || './sessions', `session-${key}`);
+            await this.cleanSessionDirectory(sessionPath);
             
             // Atualizar status no banco
             try {
@@ -284,7 +372,7 @@ class InstanceManager {
             
             throw err;
         } finally {
-            // Sempre remover flag de inicialização
+            // SEMPRE remover flag de inicialização
             this.initializingInstances.delete(key);
         }
     }
