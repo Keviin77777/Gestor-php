@@ -3,134 +3,164 @@ const qrcode = require('qrcode');
 const db = require('./database');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 class InstanceManager {
     constructor() {
         this.instances = new Map();
         this.qrCodes = new Map();
-        this.cleaningInProgress = new Set(); // Evitar limpeza simultânea
+        this.initializingInstances = new Set(); // Evitar inicialização simultânea
+        this.lastCleanup = Date.now();
+        
+        // Limpar processos Chrome órfãos periodicamente
+        this.startCleanupInterval();
+    }
+
+    /**
+     * Iniciar limpeza periódica de recursos
+     */
+    startCleanupInterval() {
+        // A cada 30 minutos, verificar e limpar recursos
+        setInterval(() => {
+            this.cleanupOrphanedResources();
+        }, 30 * 60 * 1000);
+        
+        console.log('🧹 Limpeza automática de recursos configurada (a cada 30 min)');
+    }
+
+    /**
+     * Limpar processos Chrome órfãos e instâncias mortas
+     */
+    async cleanupOrphanedResources() {
+        console.log('🧹 Executando limpeza de recursos órfãos...');
+        
+        // 1. Verificar instâncias mortas na memória
+        for (const [key, client] of this.instances) {
+            try {
+                const hasBrowser = client.pupBrowser && client.pupBrowser.isConnected();
+                if (!hasBrowser) {
+                    console.log(`🗑️ Removendo instância morta: ${key}`);
+                    this.instances.delete(key);
+                    this.qrCodes.delete(key);
+                }
+            } catch (err) {
+                console.log(`🗑️ Removendo instância com erro: ${key}`);
+                this.instances.delete(key);
+                this.qrCodes.delete(key);
+            }
+        }
+        
+        // 2. Limpar processos Chrome órfãos (Linux)
+        if (process.platform === 'linux') {
+            try {
+                // Matar processos Chrome que estão rodando há mais de 2 horas sem parent
+                exec('pkill -f "chrome.*--disable-gpu" -o 7200 2>/dev/null || true');
+            } catch (err) {
+                // Ignorar erros
+            }
+        }
+        
+        console.log(`✅ Limpeza concluída. Instâncias ativas: ${this.instances.size}`);
     }
 
     /**
      * Sanitizar resellerId para usar como clientId
-     * Remove caracteres não permitidos (apenas alfanuméricos, underscore e hífen)
      */
     sanitizeResellerId(resellerId) {
         return resellerId.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
     }
 
     /**
-     * Limpar arquivo com retry logic (Windows-safe)
+     * Matar processos Chrome específicos de uma sessão
      */
-    async safeUnlink(filePath, retries = 5, delay = 500) {
-        for (let i = 0; i < retries; i++) {
-            try {
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath);
-                    return true;
-                }
-                return true; // Arquivo não existe, considerado limpo
-            } catch (err) {
-                if (i === retries - 1) {
-                    // Última tentativa falhou
-                    return false;
-                }
-                // Aguardar antes de tentar novamente
-                await new Promise(resolve => setTimeout(resolve, delay));
+    async killChromeProcesses(sessionKey) {
+        return new Promise((resolve) => {
+            if (process.platform === 'linux') {
+                exec(`pkill -f "chrome.*${sessionKey}" 2>/dev/null || true`, () => resolve());
+            } else if (process.platform === 'win32') {
+                exec(`taskkill /F /IM chrome.exe /FI "WINDOWTITLE eq *${sessionKey}*" 2>nul || exit 0`, () => resolve());
+            } else {
+                resolve();
             }
-        }
-        return false;
+            
+            // Timeout de segurança
+            setTimeout(resolve, 2000);
+        });
     }
 
     /**
-     * Limpar apenas locks problemáticos (Windows-safe)
-     * NÃO remove arquivos críticos como Local Storage, Session Storage, IndexedDB
-     */
-    async cleanSessionLocks(sessionPath) {
-        if (!fs.existsSync(sessionPath)) {
-            return true;
-        }
-
-        const isWindows = process.platform === 'win32';
-        const baseDelay = isWindows ? 1500 : 800;
-
-        // Apenas limpar locks que causam travamento, NÃO arquivos críticos
-        const lockFiles = [
-            path.join(sessionPath, 'SingletonLock'),
-            path.join(sessionPath, 'SingletonSocket'),
-            path.join(sessionPath, 'lockfile'),
-            path.join(sessionPath, 'Default', 'chrome_debug.log') // Log não é crítico
-        ];
-
-        // Limpar apenas locks problemáticos
-        for (const file of lockFiles) {
-            await this.safeUnlink(file, 3, 300);
-        }
-
-        // Aguardar liberação de recursos
-        await new Promise(resolve => setTimeout(resolve, baseDelay));
-
-        return true;
-    }
-
-    /**
-     * Limpar diretório de sessão completamente (apenas quando necessário)
-     * Usado após desconexão completa ou em caso de erro crítico
+     * Limpar diretório de sessão com retry
      */
     async cleanSessionDirectory(sessionPath, maxRetries = 3) {
         if (!fs.existsSync(sessionPath)) {
             return true;
         }
 
-        const isWindows = process.platform === 'win32';
-        const baseDelay = isWindows ? 2000 : 1000;
+        // Arquivos de lock que podem travar
+        const lockFiles = [
+            'SingletonLock',
+            'SingletonSocket', 
+            'SingletonCookie',
+            'lockfile'
+        ];
 
-        // Primeiro, limpar locks
-        await this.cleanSessionLocks(sessionPath);
+        for (const lockFile of lockFiles) {
+            const lockPath = path.join(sessionPath, lockFile);
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    if (fs.existsSync(lockPath)) {
+                        fs.unlinkSync(lockPath);
+                    }
+                    break;
+                } catch (err) {
+                    await new Promise(r => setTimeout(r, 500));
+                }
+            }
+        }
 
-        // Aguardar liberação de recursos
-        await new Promise(resolve => setTimeout(resolve, baseDelay));
-
-        // Tentar remover diretório completamente apenas se não houver arquivos críticos
-        // Mas na prática, é melhor deixar o LocalAuth gerenciar isso
         return true;
     }
 
     /**
-     * Criar ou recuperar instância
+     * Criar ou recuperar instância com proteção contra race conditions
      */
     async getInstance(resellerId) {
         const sanitizedId = this.sanitizeResellerId(resellerId);
         const key = `reseller_${sanitizedId}`;
         
-        // Se já existe, verificar se está em bom estado
+        // Verificar se já está inicializando (evitar race condition)
+        if (this.initializingInstances.has(key)) {
+            console.log(`⏳ Instância ${resellerId} já está sendo inicializada, aguardando...`);
+            // Aguardar até 30 segundos pela inicialização
+            for (let i = 0; i < 60; i++) {
+                await new Promise(r => setTimeout(r, 500));
+                if (!this.initializingInstances.has(key)) {
+                    if (this.instances.has(key)) {
+                        return this.instances.get(key);
+                    }
+                    break;
+                }
+            }
+        }
+        
+        // Se já existe e está funcional, reutilizar
         if (this.instances.has(key)) {
             const client = this.instances.get(key);
             try {
-                // Verificar se o cliente está funcional
+                const hasBrowser = client.pupBrowser && client.pupBrowser.isConnected();
                 const isReady = client.info !== undefined;
-                let hasBrowser = false;
                 
-                try {
-                    hasBrowser = client.pupBrowser && client.pupBrowser.isConnected();
-                } catch (e) {
-                    hasBrowser = false;
-                }
-                
-                if (isReady && hasBrowser) {
+                if (hasBrowser && isReady) {
                     console.log(`♻️ Reutilizando instância existente para ${resellerId}`);
                     return client;
-                } else {
-                    console.log(`⚠️ Instância existente não está pronta (ready: ${isReady}, browser: ${hasBrowser}), removendo...`);
-                    // Remover instância inválida
-                    this.instances.delete(key);
-                    this.qrCodes.delete(key);
                 }
+                
+                // Instância existe mas não está funcional
+                console.log(`⚠️ Instância existente não funcional, recriando...`);
+                await this.forceCleanup(resellerId);
             } catch (err) {
-                console.log(`⚠️ Instância existente está travada, removendo: ${err.message}`);
-                // Remover instância travada
-                this.instances.delete(key);
-                this.qrCodes.delete(key);
+                console.log(`⚠️ Erro ao verificar instância: ${err.message}`);
+                await this.forceCleanup(resellerId);
             }
         }
 
@@ -138,98 +168,197 @@ class InstanceManager {
     }
 
     /**
-     * Criar nova instância
+     * Forçar limpeza completa de uma instância
+     */
+    async forceCleanup(resellerId) {
+        const sanitizedId = this.sanitizeResellerId(resellerId);
+        const key = `reseller_${sanitizedId}`;
+        
+        console.log(`🧹 Forçando limpeza completa para ${resellerId}...`);
+        
+        // Remover da memória
+        const client = this.instances.get(key);
+        if (client) {
+            try {
+                client.removeAllListeners();
+                if (client.pupBrowser) {
+                    await client.pupBrowser.close().catch(() => {});
+                }
+            } catch (err) {
+                // Ignorar
+            }
+        }
+        
+        this.instances.delete(key);
+        this.qrCodes.delete(key);
+        this.initializingInstances.delete(key);
+        
+        // Matar processos Chrome órfãos
+        await this.killChromeProcesses(key);
+        
+        // Limpar locks da sessão
+        const sessionPath = path.join(process.env.SESSION_PATH || './sessions', `session-${key}`);
+        await this.cleanSessionDirectory(sessionPath);
+        
+        // Aguardar liberação de recursos
+        await new Promise(r => setTimeout(r, 2000));
+    }
+
+    /**
+     * Criar nova instância com proteções
      */
     async createInstance(resellerId) {
         const sanitizedId = this.sanitizeResellerId(resellerId);
         const key = `reseller_${sanitizedId}`;
         
-        console.log(`📱 Criando instância para reseller: ${resellerId} (sanitized: ${sanitizedId})`);
+        // Marcar como inicializando
+        this.initializingInstances.add(key);
+        
+        console.log(`📱 Criando instância para reseller: ${resellerId}`);
 
-        // NÃO limpar sessão antes de criar instância
-        // O LocalAuth do whatsapp-web.js gerencia a sessão automaticamente
-        // Limpar antes pode causar "Execution context was destroyed"
-        // Apenas limpar locks após desconexão completa
+        try {
+            const client = new Client({
+                authStrategy: new LocalAuth({
+                    clientId: key,
+                    dataPath: process.env.SESSION_PATH || './sessions'
+                }),
+                puppeteer: {
+                    headless: true,
+                    args: [
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-accelerated-2d-canvas',
+                        '--no-first-run',
+                        '--no-zygote',
+                        '--disable-gpu',
+                        '--disable-extensions',
+                        '--disable-default-apps',
+                        '--disable-translate',
+                        '--disable-sync',
+                        '--hide-scrollbars',
+                        '--metrics-recording-only',
+                        '--mute-audio',
+                        '--no-default-browser-check',
+                        '--safebrowsing-disable-auto-update',
+                        // Limitar uso de memória
+                        '--js-flags=--max-old-space-size=256',
+                        '--single-process' // Importante para estabilidade em servidores
+                    ],
+                    timeout: 60000 // Timeout de 60 segundos para inicialização
+                },
+                qrMaxRetries: 3,
+                takeoverOnConflict: true,
+                takeoverTimeoutMs: 10000
+            });
 
-        const client = new Client({
-            authStrategy: new LocalAuth({
-                clientId: key,
-                dataPath: process.env.SESSION_PATH || './sessions'
-            }),
-            puppeteer: {
-                headless: true,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--no-first-run',
-                    '--no-zygote',
-                    '--disable-gpu'
-                ]
+            // Configurar eventos
+            this.setupClientEvents(client, resellerId, key);
+
+            // Armazenar antes de inicializar
+            this.instances.set(key, client);
+            
+            // Inicializar com timeout
+            const initPromise = client.initialize();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout ao inicializar WhatsApp')), 90000)
+            );
+            
+            await Promise.race([initPromise, timeoutPromise]);
+            
+            console.log(`✅ Instância inicializada: ${resellerId}`);
+            return client;
+            
+        } catch (err) {
+            console.error(`❌ Erro ao criar instância ${resellerId}:`, err.message);
+            
+            // Limpar tudo em caso de erro
+            await this.forceCleanup(resellerId);
+            
+            // Atualizar status no banco
+            try {
+                await db.updateSession(resellerId, { status: 'error' });
+            } catch (dbErr) {
+                // Ignorar
             }
-        });
+            
+            throw err;
+        } finally {
+            // Sempre remover flag de inicialização
+            this.initializingInstances.delete(key);
+        }
+    }
 
-        // Event: QR Code gerado
+    /**
+     * Configurar eventos do cliente
+     */
+    setupClientEvents(client, resellerId, key) {
+        // QR Code gerado
         client.on('qr', async (qr) => {
             console.log(`📷 QR Code gerado para ${resellerId}`);
             try {
                 const qrBase64 = await qrcode.toDataURL(qr);
                 this.qrCodes.set(key, qrBase64);
                 
-                // Atualizar no banco
                 await db.updateSession(resellerId, {
                     status: 'connecting',
                     qr_code: qrBase64
                 });
             } catch (err) {
-                console.error('Erro ao gerar QR Code:', err);
+                console.error('Erro ao gerar QR Code:', err.message);
             }
         });
 
-        // Event: Cliente pronto
+        // Cliente pronto
         client.on('ready', async () => {
             console.log(`✅ Cliente conectado: ${resellerId}`);
             this.qrCodes.delete(key);
             
-            const info = client.info;
-            await db.updateSession(resellerId, {
-                status: 'connected',
-                qr_code: null,
-                phone_number: info.wid.user,
-                profile_name: info.pushname,
-                connected_at: new Date()
-            });
+            try {
+                const info = client.info;
+                await db.updateSession(resellerId, {
+                    status: 'connected',
+                    qr_code: null,
+                    phone_number: info?.wid?.user || null,
+                    profile_name: info?.pushname || null,
+                    connected_at: new Date()
+                });
+            } catch (err) {
+                console.error('Erro ao atualizar sessão:', err.message);
+            }
         });
 
-        // Event: Autenticação bem-sucedida
+        // Autenticado
         client.on('authenticated', () => {
             console.log(`🔐 Autenticado: ${resellerId}`);
         });
 
-        // Event: Falha na autenticação
+        // Falha na autenticação
         client.on('auth_failure', async (msg) => {
             console.error(`❌ Falha na autenticação ${resellerId}:`, msg);
-            await db.updateSession(resellerId, {
-                status: 'error'
-            });
+            
+            // Limpar sessão corrompida
+            await this.forceCleanup(resellerId);
+            
+            await db.updateSession(resellerId, { status: 'error' });
         });
 
-        // Event: Desconectado
+        // Desconectado
         client.on('disconnected', async (reason) => {
             console.log(`🔌 Desconectado ${resellerId}:`, reason);
             
-            // Fechar browser se ainda estiver aberto
+            // Limpar recursos
+            this.instances.delete(key);
+            this.qrCodes.delete(key);
+            
+            // Fechar browser se ainda existir
             if (client.pupBrowser) {
                 try {
                     await client.pupBrowser.close();
                 } catch (err) {
-                    // Ignorar erro
+                    // Ignorar
                 }
             }
-            
-            this.instances.delete(key);
-            this.qrCodes.delete(key);
             
             await db.updateSession(resellerId, {
                 status: 'disconnected',
@@ -237,53 +366,20 @@ class InstanceManager {
             });
         });
 
-        // Event: Mensagem recebida (para confirmação de leitura)
+        // Atualização de status de mensagem
         client.on('message_ack', async (msg, ack) => {
-            // 1 = enviada, 2 = recebida, 3 = lida
-            const status = ack === 3 ? 'read' : ack === 2 ? 'delivered' : 'sent';
-            await db.updateMessageStatus(msg.id.id, status);
+            try {
+                const status = ack === 3 ? 'read' : ack === 2 ? 'delivered' : 'sent';
+                await db.updateMessageStatus(msg.id.id, status);
+            } catch (err) {
+                // Ignorar erros de atualização de status
+            }
         });
 
-        this.instances.set(key, client);
-        
-        // Inicializar cliente com tratamento de erros robusto
-        try {
-            await client.initialize();
-        } catch (err) {
-            console.error(`❌ Erro ao inicializar ${resellerId}:`, err.message);
-            
-            // Limpar instância da memória
-            this.instances.delete(key);
-            this.qrCodes.delete(key);
-            
-            // Se o erro for relacionado a contexto destruído, pode ser que a sessão esteja corrompida
-            // Tentar limpar locks e aguardar mais tempo antes de retentar
-            if (err.message.includes('Execution context was destroyed') || 
-                err.message.includes('Protocol error')) {
-                console.log(`⚠️ Erro de contexto destruído detectado, limpando locks e aguardando...`);
-                try {
-                    const sessionPath = path.join(process.env.SESSION_PATH || './sessions', `session-${key}`);
-                    await this.cleanSessionLocks(sessionPath);
-                    // Aguardar mais tempo para garantir liberação
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                } catch (cleanErr) {
-                    console.log(`⚠️ Erro ao limpar locks após falha: ${cleanErr.message}`);
-                }
-            }
-            
-            // Atualizar status no banco
-            try {
-                await db.updateSession(resellerId, {
-                    status: 'error'
-                });
-            } catch (dbErr) {
-                console.log(`⚠️ Erro ao atualizar status no banco: ${dbErr.message}`);
-            }
-            
-            throw err;
-        }
-
-        return client;
+        // Erro no cliente
+        client.on('error', (err) => {
+            console.error(`⚠️ Erro no cliente ${resellerId}:`, err.message);
+        });
     }
 
     /**
@@ -302,120 +398,35 @@ class InstanceManager {
         const sanitizedId = this.sanitizeResellerId(resellerId);
         const key = `reseller_${sanitizedId}`;
         const client = this.instances.get(key);
-        return client ? client.info !== undefined : false;
+        
+        if (!client) return false;
+        
+        try {
+            return client.info !== undefined && 
+                   client.pupBrowser && 
+                   client.pupBrowser.isConnected();
+        } catch (err) {
+            return false;
+        }
     }
 
     /**
-     * Desconectar instância de forma segura (Windows-safe)
+     * Desconectar instância
      */
     async disconnect(resellerId) {
         const sanitizedId = this.sanitizeResellerId(resellerId);
         const key = `reseller_${sanitizedId}`;
-        const client = this.instances.get(key);
         
-        if (!client) {
-            console.log(`ℹ️ Nenhuma instância ativa para ${resellerId}`);
-            return;
-        }
-
-        // Evitar limpeza simultânea
-        if (this.cleaningInProgress.has(key)) {
-            console.log(`⏳ Limpeza já em progresso para ${resellerId}, aguardando...`);
-            // Aguardar limpeza anterior terminar
-            while (this.cleaningInProgress.has(key)) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            return;
-        }
-
-        this.cleaningInProgress.add(key);
-
+        console.log(`🔌 Desconectando instância: ${resellerId}`);
+        
+        await this.forceCleanup(resellerId);
+        
+        // Deletar sessão do banco
         try {
-            console.log(`🔌 Desconectando instância: ${resellerId}`);
-            
-            // 1. Remover listeners para evitar eventos durante desconexão
-            client.removeAllListeners();
-            
-            // 2. Fechar todas as páginas primeiro
-            try {
-                const pages = await client.pupBrowser?.pages();
-                if (pages && pages.length > 0) {
-                    await Promise.all(pages.map(page => page.close().catch(() => {})));
-                }
-            } catch (e) {
-                // Ignorar erro
-            }
-
-            // 3. Fechar browser completamente (mais seguro no Windows)
-            if (client.pupBrowser) {
-                try {
-                    await client.pupBrowser.close();
-                    console.log(`🌐 Browser fechado: ${resellerId}`);
-                    
-                    // Aguardar browser liberar arquivos (Windows precisa de mais tempo)
-                    const isWindows = process.platform === 'win32';
-                    const waitTime = isWindows ? 2500 : 1000;
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-                } catch (browserErr) {
-                    console.log(`⚠️ Erro ao fechar browser: ${browserErr.message}`);
-                }
-            }
-            
-            // 4. Tentar destroy (pode falhar no Windows devido a EBUSY, mas tentamos)
-            // NOTA: destroy() pode chamar logout() internamente, causando EBUSY no Windows
-            // Por isso, fechamos o browser primeiro e tratamos o erro graciosamente
-            try {
-                if (client.destroy) {
-                    // Tentar destroy com timeout para evitar travar
-                    const destroyPromise = client.destroy();
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Destroy timeout')), 5000)
-                    );
-                    
-                    await Promise.race([destroyPromise, timeoutPromise]);
-                    console.log(`✅ Cliente destruído: ${resellerId}`);
-                }
-            } catch (destroyErr) {
-                // Se der erro EBUSY, timeout ou qualquer outro, apenas avisar e continuar
-                // O importante é que o browser já foi fechado e a instância será removida da memória
-                if (destroyErr.message.includes('EBUSY') || 
-                    destroyErr.message.includes('resource busy') ||
-                    destroyErr.message.includes('unlink') ||
-                    destroyErr.message.includes('timeout')) {
-                    console.log(`📁 Destroy não pôde completar (arquivos travados/timeout), mas browser foi fechado. Continuando...`);
-                } else {
-                    console.log(`⚠️ Erro ao destruir: ${destroyErr.message}`);
-                }
-            }
-            
+            await db.deleteSession(resellerId);
+            console.log(`✅ Sessão deletada do banco: ${resellerId}`);
         } catch (err) {
-            console.error(`⚠️ Erro ao desconectar ${resellerId}:`, err.message);
-            // Continuar mesmo com erro - forçar limpeza
-        } finally {
-            // SEMPRE remover da memória, mesmo se destroy falhar
-            this.instances.delete(key);
-            this.qrCodes.delete(key);
-            console.log(`✅ Instância removida da memória: ${resellerId}`);
-            
-            // Limpar apenas locks problemáticos (não arquivos críticos)
-            const sessionPath = path.join(process.env.SESSION_PATH || './sessions', `session-${key}`);
-            try {
-                await this.cleanSessionLocks(sessionPath);
-                console.log(`🧹 Locks limpos do sistema de arquivos: ${resellerId}`);
-            } catch (cleanErr) {
-                console.log(`⚠️ Não foi possível limpar locks: ${cleanErr.message}`);
-            }
-            
-            // Deletar sessão do banco completamente
-            try {
-                await db.deleteSession(resellerId);
-                console.log(`✅ Sessão deletada do banco: ${resellerId}`);
-            } catch (err) {
-                console.error(`⚠️ Erro ao deletar sessão do banco:`, err.message);
-            }
-
-            // Remover flag de limpeza em progresso
-            this.cleaningInProgress.delete(key);
+            console.error(`⚠️ Erro ao deletar sessão:`, err.message);
         }
     }
 
@@ -424,24 +435,42 @@ class InstanceManager {
      */
     async destroyAll() {
         console.log('🧹 Destruindo todas as instâncias...');
-        for (const [key, client] of this.instances) {
-            try {
-                await client.destroy();
-            } catch (err) {
-                console.error(`Erro ao destruir ${key}:`, err);
-            }
+        
+        const promises = [];
+        for (const [key] of this.instances) {
+            const resellerId = key.replace('reseller_', '');
+            promises.push(this.forceCleanup(resellerId));
         }
+        
+        await Promise.allSettled(promises);
+        
         this.instances.clear();
         this.qrCodes.clear();
+        this.initializingInstances.clear();
+        
+        console.log('✅ Todas as instâncias destruídas');
     }
 
     /**
      * Obter contagem de instâncias
      */
     getInstancesCount() {
+        let connected = 0;
+        
+        for (const [, client] of this.instances) {
+            try {
+                if (client.info && client.pupBrowser?.isConnected()) {
+                    connected++;
+                }
+            } catch (err) {
+                // Ignorar
+            }
+        }
+        
         return {
             total: this.instances.size,
-            connected: Array.from(this.instances.values()).filter(c => c.info).length
+            connected,
+            initializing: this.initializingInstances.size
         };
     }
 }

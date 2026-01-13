@@ -29,42 +29,39 @@ router.post('/instance/connect', async (req, res) => {
             return res.status(400).json({ success: false, error: 'reseller_id é obrigatório' });
         }
 
-        // IMPORTANTE: SEMPRE desconectar e limpar instância antiga antes de criar nova
-        console.log(`🔄 Verificando instância existente para ${reseller_id}...`);
+        console.log(`🔄 Iniciando conexão para ${reseller_id}...`);
         
-        // Verificar se já existe instância ativa
+        // Verificar se já está conectado
         if (instanceManager.isConnected(reseller_id)) {
-            console.log(`⚠️ Instância ainda ativa, desconectando primeiro...`);
-            await instanceManager.disconnect(reseller_id);
+            console.log(`✅ Já conectado: ${reseller_id}`);
+            const session = await db.getSession(reseller_id);
+            return res.json({ 
+                success: true, 
+                message: 'Já conectado',
+                connected: true,
+                profile_name: session?.profile_name,
+                phone_number: session?.phone_number
+            });
         }
         
+        // Limpar qualquer instância antiga
         try {
-            // Forçar desconexão completa (ignora erros)
             await instanceManager.disconnect(reseller_id);
-            console.log(`✅ Instância antiga removida para ${reseller_id}`);
-            
-            // Aguardar liberação de recursos (Windows precisa de mais tempo)
-            const isWindows = process.platform === 'win32';
-            const delay = isWindows ? 5000 : 2500; // Aumentado para garantir liberação completa de processos Chrome
-            console.log(`⏳ Aguardando ${delay}ms para liberação completa de recursos...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-        } catch (disconnectError) {
-            console.log(`⚠️ Erro ao desconectar (continuando): ${disconnectError.message}`);
-            // Aguardar mesmo com erro para garantir que recursos sejam liberados
-            const isWindows = process.platform === 'win32';
-            const delay = isWindows ? 4000 : 2000;
-            await new Promise(resolve => setTimeout(resolve, delay));
+        } catch (err) {
+            // Ignorar erros de desconexão
         }
+        
+        // Aguardar liberação de recursos
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         // Criar sessão no banco
         const instanceName = `reseller_${reseller_id}`;
         await db.createSession(reseller_id, instanceName);
 
-        // Pequeno delay adicional para garantir que processos foram finalizados
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Criar nova instância no gerenciador
-        await instanceManager.getInstance(reseller_id);
+        // Criar nova instância (não bloquear - QR será gerado assincronamente)
+        instanceManager.getInstance(reseller_id).catch(err => {
+            console.error(`Erro ao criar instância ${reseller_id}:`, err.message);
+        });
         
         res.json({ 
             success: true, 
