@@ -1,12 +1,12 @@
 <?php
 /**
- * Helper para WhatsApp com Evolution API
+ * Helper para WhatsApp com API Nativa
  */
 
 require_once __DIR__ . '/../core/Database.php';
 
 /**
- * Detectar qual API está sendo usada
+ * Detectar qual API está sendo usada - SEMPRE USA API NATIVA
  */
 function getActiveWhatsAppProvider($resellerId) {
     // Verificar qual API está conectada na tabela whatsapp_sessions
@@ -20,43 +20,8 @@ function getActiveWhatsAppProvider($resellerId) {
         throw new Exception('Nenhuma sessão WhatsApp conectada. Conecte o WhatsApp primeiro.');
     }
     
-    // Se a sessão já tem provider definido, usar ele
-    $sessionProvider = $session['provider'] ?? null;
-    
-    if ($sessionProvider === 'native') {
-        // Verificar se a API Premium ainda está online
-        $nativeApiUrl = env('WHATSAPP_NATIVE_API_URL', 'http://localhost:3000');
-        $ch = curl_init($nativeApiUrl . '/health');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($httpCode === 200) {
-            $healthData = json_decode($response, true);
-            if ($healthData && isset($healthData['instances']['connected']) && $healthData['instances']['connected'] > 0) {
-                error_log("WhatsApp Helper - Usando API Premium (native) - Sessão: " . $session['instance_name']);
-                return 'native';
-            }
-        }
-        
-        // API Premium offline, mas sessão diz que é native
-        error_log("WhatsApp Helper - AVISO: Sessão configurada como 'native' mas API Premium está offline!");
-        throw new Exception('API Premium WhatsApp está offline. Reconecte o WhatsApp.');
-    }
-    
-    if ($sessionProvider === 'evolution') {
-        error_log("WhatsApp Helper - Usando Evolution API - Sessão: " . $session['instance_name']);
-        return 'evolution';
-    }
-    
-    // Se não tem provider definido, tentar detectar
-    error_log("WhatsApp Helper - Provider não definido na sessão, tentando detectar...");
-    
-    // Verificar API Premium primeiro
-    $nativeApiUrl = env('WHATSAPP_NATIVE_API_URL', 'http://localhost:3000');
+    // SEMPRE usar API Nativa (Premium)
+    $nativeApiUrl = env('WHATSAPP_NATIVE_API_URL', 'http://localhost:3001');
     $ch = curl_init($nativeApiUrl . '/health');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 2);
@@ -67,24 +32,22 @@ function getActiveWhatsAppProvider($resellerId) {
     
     if ($httpCode === 200) {
         $healthData = json_decode($response, true);
-        if ($healthData && isset($healthData['instances']['connected']) && $healthData['instances']['connected'] > 0) {
-            // Atualizar provider na sessão
-            Database::query(
-                "UPDATE whatsapp_sessions SET provider = 'native' WHERE id = ?",
-                [$session['id']]
-            );
-            error_log("WhatsApp Helper - Detectado e atualizado para 'native' (API Premium)");
+        if ($healthData && isset($healthData['provider']) && $healthData['provider'] === 'native') {
+            // Atualizar provider na sessão se necessário
+            if ($session['provider'] !== 'native') {
+                Database::query(
+                    "UPDATE whatsapp_sessions SET provider = 'native' WHERE id = ?",
+                    [$session['id']]
+                );
+            }
+            error_log("WhatsApp Helper - Usando API Premium (native) - Sessão: " . $session['instance_name']);
             return 'native';
         }
     }
     
-    // Fallback para Evolution
-    Database::query(
-        "UPDATE whatsapp_sessions SET provider = 'evolution' WHERE id = ?",
-        [$session['id']]
-    );
-    error_log("WhatsApp Helper - Detectado e atualizado para 'evolution'");
-    return 'evolution';
+    // API Premium offline
+    error_log("WhatsApp Helper - ERRO: API Premium WhatsApp está offline!");
+    throw new Exception('API Premium WhatsApp está offline. Verifique se o serviço está rodando.');
 }
 
 /**
@@ -95,7 +58,7 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
         // Formatar número de telefone
         $formattedPhone = formatPhoneNumber($phoneNumber);
         
-        // Detectar qual API usar
+        // Detectar qual API usar (sempre será native agora)
         $provider = getActiveWhatsAppProvider($resellerId);
         error_log("WhatsApp Helper - Provider detectado: " . $provider);
         
@@ -110,41 +73,6 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
             throw new Exception('Nenhuma sessão WhatsApp ativa encontrada. Conecte o WhatsApp primeiro.');
         }
         
-        // Buscar configurações
-        $settings = Database::fetch(
-            "SELECT * FROM whatsapp_settings WHERE reseller_id = ?",
-            [$resellerId]
-        );
-        
-        if (!$settings) {
-            error_log("WhatsApp Helper - Criando configurações padrão para reseller: " . $resellerId);
-            // Criar configurações padrão
-            $settingsId = 'ws-' . uniqid();
-            Database::query(
-                "INSERT INTO whatsapp_settings (id, reseller_id, evolution_api_url, evolution_api_key, reminder_days) 
-                 VALUES (?, ?, ?, ?, JSON_ARRAY(3, 7))",
-                [
-                    $settingsId, 
-                    $resellerId, 
-                    env('EVOLUTION_API_URL', 'http://localhost:8081'),
-                    env('EVOLUTION_API_KEY', '')
-                ]
-            );
-            
-            $settings = Database::fetch(
-                "SELECT * FROM whatsapp_settings WHERE id = ?",
-                [$settingsId]
-            );
-        }
-        
-        // Verificar horário comercial se configurado
-        if (isset($settings['send_only_business_hours']) && $settings['send_only_business_hours']) {
-            $currentTime = date('H:i:s');
-            if ($currentTime < $settings['business_hours_start'] || $currentTime > $settings['business_hours_end']) {
-                throw new Exception('Fora do horário comercial configurado');
-            }
-        }
-        
         // Criar registro da mensagem
         $messageId = 'msg-' . uniqid();
         Database::query(
@@ -153,18 +81,11 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
             [$messageId, $resellerId, $session['id'], $templateId, $clientId, $invoiceId, $formattedPhone, $message]
         );
         
-        // Enviar mensagem via API apropriada
-        if ($provider === 'native') {
-            // Usar API Nativa
-            error_log("WhatsApp Helper - Enviando via API Nativa");
-            require_once __DIR__ . '/whatsapp-native-api.php';
-            $nativeApi = new WhatsAppNativeAPI();
-            $result = $nativeApi->sendMessage($resellerId, $formattedPhone, $message, $templateId, $clientId, $invoiceId);
-        } else {
-            // Usar Evolution API
-            error_log("WhatsApp Helper - Enviando via Evolution API");
-            $result = sendMessageToEvolution($settings['evolution_api_url'], $settings['evolution_api_key'], $session['instance_name'], $formattedPhone, $message);
-        }
+        // Enviar mensagem via API Nativa
+        error_log("WhatsApp Helper - Enviando via API Nativa");
+        require_once __DIR__ . '/whatsapp-native-api.php';
+        $nativeApi = new WhatsAppNativeAPI();
+        $result = $nativeApi->sendMessage($resellerId, $formattedPhone, $message, $templateId, $clientId, $invoiceId);
         
         if ($result['success']) {
             // Atualizar status da mensagem
@@ -202,78 +123,6 @@ function sendWhatsAppMessage($resellerId, $phoneNumber, $message, $templateId = 
             'error' => $e->getMessage()
         ];
     }
-}
-
-/**
- * Enviar mensagem para Evolution API
- */
-function sendMessageToEvolution($apiUrl, $apiKey, $instanceName, $phoneNumber, $message) {
-    $headers = [
-        'Content-Type: application/json',
-        'apikey: ' . $apiKey  // Evolution API usa 'apikey' header, não 'Authorization'
-    ];
-    
-    // Log para debug
-    error_log("Evolution API - URL: " . $apiUrl);
-    error_log("Evolution API - Instance: " . $instanceName);
-    error_log("Evolution API - Phone: " . $phoneNumber);
-    error_log("Evolution API - API Key: " . substr($apiKey, 0, 10) . "...");
-    
-    // Formato correto para Evolution API
-    $payload = [
-        'number' => $phoneNumber,
-        'textMessage' => [
-            'text' => $message
-        ]
-    ];
-    
-    // Log do payload
-    error_log("Evolution API - Payload: " . json_encode($payload));
-    
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => rtrim($apiUrl, '/') . '/message/sendText/' . $instanceName,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => json_encode($payload),
-        CURLOPT_TIMEOUT => 30,
-        CURLOPT_HTTPHEADER => $headers,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false
-    ]);
-    
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    curl_close($ch);
-    
-    // Log da resposta
-    error_log("Evolution API - HTTP Code: " . $httpCode);
-    error_log("Evolution API - Response: " . $response);
-    
-    if ($error) {
-        error_log("Evolution API - cURL Error: " . $error);
-        return ['success' => false, 'error' => 'Erro de conexão: ' . $error];
-    }
-    
-    if ($httpCode !== 200 && $httpCode !== 201) {
-        $responseData = json_decode($response, true);
-        $errorMsg = $responseData['message'] ?? $responseData['error'] ?? 'Erro HTTP: ' . $httpCode;
-        error_log("Evolution API - Error Response: " . $errorMsg);
-        return ['success' => false, 'error' => $errorMsg];
-    }
-    
-    $responseData = json_decode($response, true);
-    
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        return ['success' => false, 'error' => 'Resposta inválida da API'];
-    }
-    
-    return [
-        'success' => true,
-        'message_id' => $responseData['key']['id'] ?? null,
-        'data' => $responseData
-    ];
 }
 
 /**

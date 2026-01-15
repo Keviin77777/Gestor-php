@@ -7,12 +7,10 @@ let qrCheckInterval = null;
 let statusCheckInterval = null;
 let currentQRCode = null;
 let isManuallyDisconnecting = false;
-let selectedProvider = null; // 'native' ou 'evolution'
 
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function () {
     loadUserProfile();
-    loadSettings();
     checkConnectionStatus();
 
     // Verificar status a cada 5 segundos (só se não estiver desconectando)
@@ -21,54 +19,6 @@ document.addEventListener('DOMContentLoaded', function () {
             checkConnectionStatus();
         }
     }, 5000);
-
-    // Listener para mudança de provedor
-    const providerNative = document.getElementById('providerNative');
-    const providerEvolution = document.getElementById('providerEvolution');
-    const currentProviderBadge = document.getElementById('currentProvider');
-
-    if (providerNative && providerEvolution && currentProviderBadge) {
-        providerNative.addEventListener('change', function() {
-            if (this.checked) {
-                selectedProvider = 'native';
-                currentProviderBadge.textContent = 'API Premium';
-                currentProviderBadge.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                // Limpar QR Code ao trocar de API
-                hideQRCode();
-                currentQRCode = null;
-                // Parar verificações
-                if (qrCheckInterval) {
-                    clearInterval(qrCheckInterval);
-                    qrCheckInterval = null;
-                }
-                showNotification('API Premium selecionada', 'info');
-            }
-        });
-
-        providerEvolution.addEventListener('change', function() {
-            if (this.checked) {
-                selectedProvider = 'evolution';
-                currentProviderBadge.textContent = 'API Básica';
-                currentProviderBadge.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-                // Limpar QR Code ao trocar de API
-                hideQRCode();
-                currentQRCode = null;
-                // Parar verificações
-                if (qrCheckInterval) {
-                    clearInterval(qrCheckInterval);
-                    qrCheckInterval = null;
-                }
-                showNotification('API Básica selecionada', 'info');
-            }
-        });
-        
-        // Definir provider inicial
-        if (providerNative.checked) {
-            selectedProvider = 'native';
-        } else if (providerEvolution.checked) {
-            selectedProvider = 'evolution';
-        }
-    }
 });
 
 /**
@@ -231,98 +181,42 @@ async function connectWhatsApp() {
         const resellerId = user.id || user.reseller_id || 'admin-001';
         const instanceName = `ultragestor-${resellerId}`;
 
-        // Detectar qual API foi escolhida
-        const providerNative = document.getElementById('providerNative');
-        const providerEvolution = document.getElementById('providerEvolution');
-        const useNativeApi = providerNative && providerNative.checked;
-        
-        // Atualizar provider selecionado
-        selectedProvider = useNativeApi ? 'native' : 'evolution';
-
         await window.LoadingManager.withLoading(async () => {
             updateConnectionStatus('connecting');
+            showNotification('🔄 Conectando via API Premium...', 'info');
             
-            if (useNativeApi) {
-                showNotification('🔄 Conectando via API Premium...', 'info');
-                
-                // Usar API Premium
-                const response = await fetch('/api-whatsapp-native-connect.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        instance_name: instanceName,
-                        reseller_id: resellerId
-                    })
-                });
+            // Usar API Premium (Nativa)
+            const response = await fetch('/api-whatsapp-native-connect.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    instance_name: instanceName,
+                    reseller_id: resellerId
+                })
+            });
 
-                if (!response.ok) {
-                    throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
-                }
+            if (!response.ok) {
+                throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
+            }
 
-                const data = await response.json();
+            const data = await response.json();
 
-                if (data.success) {
-                    showNotification('✅ Instância criada com sucesso!', 'success');
+            if (data.success) {
+                showNotification('✅ Instância criada com sucesso!', 'success');
 
-                    // Mostrar QR Code se disponível
-                    if (data.qr_code) {
-                        showQRCode(data.qr_code);
-                        showNotification('📱 Escaneie o QR Code com seu WhatsApp', 'info');
-                        startQRCheck();
-                    } else {
-                        showNotification('🔍 Buscando QR Code...', 'info');
-                        startQRCheck();
-                    }
+                // Mostrar QR Code se disponível
+                if (data.qr_code) {
+                    showQRCode(data.qr_code);
+                    showNotification('📱 Escaneie o QR Code com seu WhatsApp', 'info');
+                    startQRCheck();
                 } else {
-                    throw new Error(data.error || 'Erro ao criar instância');
+                    showNotification('🔍 Buscando QR Code...', 'info');
+                    startQRCheck();
                 }
             } else {
-                showNotification('🔄 Conectando via API Básica...', 'info');
-                
-                // Usar API Básica (Evolution)
-                const response = await fetch('/api-whatsapp-connect.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        instance_name: instanceName,
-                        reseller_id: resellerId
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showNotification('✅ Instância criada com sucesso!', 'success');
-
-                    // Mostrar QR Code se disponível
-                    if (data.qr_code) {
-                        showQRCode(data.qr_code);
-                        showNotification('📱 Escaneie o QR Code com seu WhatsApp', 'info');
-                        startQRCheck();
-                    } else {
-                        showNotification('🔍 Buscando QR Code...', 'info');
-                        startQRCheck();
-                    }
-                } else {
-                    const errorMsg = data.error || 'Erro ao criar instância';
-                    
-                    // Verificar se é erro de API Key
-                    if (errorMsg.includes('api key') || errorMsg.includes('Forbidden')) {
-                        throw new Error('⚠️ Evolution API Key não configurada. Configure a API Key no arquivo .env');
-                    } else if (errorMsg.includes('não está acessível')) {
-                        throw new Error('⚠️ Evolution API não está rodando. Inicie a Evolution API na porta 8081');
-                    } else {
-                        throw new Error(errorMsg);
-                    }
-                }
+                throw new Error(data.error || 'Erro ao criar instância');
             }
         }, {
             type: 'global',
@@ -331,7 +225,7 @@ async function connectWhatsApp() {
     } catch (error) {
         updateConnectionStatus('error');
         showNotification('❌ Erro ao conectar: ' + error.message, 'error');
-        }
+    }
 }
 
 /**

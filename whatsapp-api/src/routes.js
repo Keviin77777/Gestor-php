@@ -233,7 +233,9 @@ router.post('/message/send', async (req, res) => {
         
         // Enviar mensagem com timeout de 30 segundos
         console.log(`   📨 Enviando...`);
-        const sendPromise = client.sendMessage(chatId, message);
+        const sendPromise = client.sendMessage(chatId, message, {
+            sendSeen: false  // Não marcar como lido automaticamente
+        });
         const sendTimeout = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Timeout ao enviar mensagem (30s)')), 30000)
         );
@@ -319,7 +321,9 @@ router.post('/message/send-bulk', async (req, res) => {
                 const client = await instanceManager.getInstance(reseller_id);
                 const chatId = msg.phone_number.includes('@') ? msg.phone_number : `${msg.phone_number}@c.us`;
                 
-                const sentMessage = await client.sendMessage(chatId, msg.message);
+                const sentMessage = await client.sendMessage(chatId, msg.message, {
+                    sendSeen: false  // Não marcar como lido automaticamente
+                });
                 await db.updateMessageWithEvolutionId(messageId, sentMessage.id.id);
                 
                 results.push({ 

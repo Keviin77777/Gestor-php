@@ -17,9 +17,8 @@ export const whatsappService = {
     return data
   },
 
-  async connect(instanceName: string, resellerId: string, provider: 'native' | 'evolution') {
-    const endpoint = provider === 'native' ? '/api-whatsapp-native-connect.php' : '/api-whatsapp-connect.php'
-    const { data } = await api.post(endpoint, { instance_name: instanceName, reseller_id: resellerId })
+  async connect(instanceName: string, resellerId: string) {
+    const { data } = await api.post('/api-whatsapp-native-connect.php', { instance_name: instanceName, reseller_id: resellerId })
     return data
   },
 

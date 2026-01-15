@@ -59,10 +59,12 @@ function processPendingMessages($resellerId = null) {
             // Tentar enviar a mensagem
             echo "📤 Enviando mensagem para {$message['phone_number']}...\n";
             
-            $result = sendWhatsAppMessageDirect(
+            $result = sendWhatsAppMessage(
                 $message['reseller_id'],
                 $message['phone_number'],
-                $message['message']
+                $message['message'],
+                $message['template_id'],
+                $message['client_id']
             );
             
             if ($result['success']) {

@@ -360,6 +360,7 @@
 }
 
 @media (max-width: 768px) {
+
     /* Container com scroll horizontal */
     .plans-table {
         overflow-x: auto;
@@ -440,5 +441,221 @@
 
     .server-plan-count {
         font-size: 0.8125rem;
+    }
+}
+
+/* ===
+=====================================
+   FILTROS E PESQUISA
+   ======================================== */
+
+.server-filter-section {
+    margin-bottom: 2rem;
+}
+
+.server-filter-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.filter-title-section h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+}
+
+.filter-title-section p {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Search Box */
+.search-box {
+    position: relative;
+    flex: 1;
+    min-width: 250px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 3rem;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    background: var(--bg-primary);
+}
+
+.search-input::placeholder {
+    color: var(--text-secondary);
+}
+
+/* Server Select */
+.server-select {
+    padding: 0.875rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 200px;
+}
+
+.server-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    background: var(--bg-primary);
+}
+
+/* Clear Filters Button */
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.875rem 1.5rem;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-outline:hover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+    color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.btn-outline svg {
+    flex-shrink: 0;
+}
+
+/* ========================================
+   RESPONSIVIDADE MOBILE - FILTROS
+   ======================================== */
+
+@media (max-width: 768px) {
+    .server-filter-section {
+        margin-bottom: 1.5rem !important;
+    }
+
+    .server-filter-section .server-filter-header {
+        gap: 1rem !important;
+    }
+
+    .server-filter-section .filter-title-section h3 {
+        font-size: 1.25rem !important;
+    }
+
+    .server-filter-section .filter-title-section p {
+        font-size: 0.875rem !important;
+    }
+
+    /* Layout em coluna no mobile */
+    .server-filter-section .filter-actions {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+    }
+
+    /* Search box ocupa largura total */
+    .server-filter-section .search-box {
+        width: 100% !important;
+        min-width: unset !important;
+        max-width: none !important;
+        flex: 1 !important;
+    }
+
+    .server-filter-section .search-box .search-input,
+    .server-filter-section .search-box input {
+        padding: 0.75rem 1rem 0.75rem 2.75rem !important;
+        font-size: 0.875rem !important;
+        width: 100% !important;
+    }
+
+    .server-filter-section .search-box .search-icon {
+        left: 0.875rem !important;
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    /* Select ocupa largura total */
+    .server-filter-section .server-select,
+    .server-filter-section select#serverFilter {
+        width: 100% !important;
+        min-width: unset !important;
+        max-width: none !important;
+        padding: 0.75rem 1rem !important;
+        font-size: 0.875rem !important;
+        flex: 1 !important;
+    }
+
+    /* Botão limpar filtros ocupa largura total */
+    .server-filter-section .btn-outline {
+        width: 100% !important;
+        padding: 0.75rem 1rem !important;
+        font-size: 0.875rem !important;
+    }
+}
+
+/* Mobile pequeno (até 480px) */
+@media (max-width: 480px) {
+    .server-filter-section .filter-title-section h3 {
+        font-size: 1.125rem !important;
+    }
+
+    .server-filter-section .filter-title-section p {
+        font-size: 0.8125rem !important;
+    }
+
+    .server-filter-section .search-box .search-input,
+    .server-filter-section .search-box input,
+    .server-filter-section .server-select,
+    .server-filter-section select#serverFilter,
+    .server-filter-section .btn-outline {
+        padding: 0.625rem 0.875rem !important;
+        font-size: 0.8125rem !important;
+    }
+
+    .server-filter-section .search-box .search-input,
+    .server-filter-section .search-box input {
+        padding-left: 2.5rem !important;
     }
 }

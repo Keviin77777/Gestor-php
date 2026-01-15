@@ -48,24 +48,7 @@
                                         <li>✅ Reconexão automática inteligente</li>
                                         <li>✅ Suporte a múltiplas instâncias</li>
                                         <li>✅ Sistema de fila otimizado</li>
-                                    </ul>
-                                </div>
-                            </label>
-                            
-                            <label class="provider-option" for="providerEvolution">
-                                <input type="radio" id="providerEvolution" name="apiProvider" value="evolution">
-                                <div class="provider-card">
-                                    <div class="provider-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                                        </svg>
-                                    </div>
-                                    <h4>API Básica</h4>
-                                    <p>Solução simples e funcional</p>
-                                    <ul class="provider-features">
-                                        <li>⚠️ Requer configuração externa</li>
-                                        <li>⚠️ Estabilidade moderada</li>
-                                        <li>⚠️ Pode apresentar quedas</li>
+                                        <li>✅ Sem necessidade de configuração externa</li>
                                     </ul>
                                 </div>
                             </label>
