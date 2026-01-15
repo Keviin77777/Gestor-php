@@ -215,32 +215,12 @@ router.post('/message/send', async (req, res) => {
         
         console.log(`📤 Enviando mensagem para ${chatId} (reseller: ${reseller_id})`);
         
-        // Tentar validar o número com timeout (opcional - não bloquear se falhar)
-        try {
-            const validatePromise = client.getNumberId(chatId.replace('@c.us', ''));
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout validando número')), 10000)
-            );
-            
-            const numberId = await Promise.race([validatePromise, timeoutPromise]);
-            if (numberId && numberId._serialized) {
-                chatId = numberId._serialized;
-                console.log(`✅ Número validado: ${chatId}`);
-            }
-        } catch (validateErr) {
-            console.log(`⚠️ Validação de número falhou (continuando): ${validateErr.message}`);
-        }
-        
-        // Enviar mensagem com timeout de 30 segundos
+        // Enviar mensagem diretamente (sem validação prévia para melhor performance)
         console.log(`   📨 Enviando...`);
-        const sendPromise = client.sendMessage(chatId, message, {
+        
+        const sentMessage = await client.sendMessage(chatId, message, {
             sendSeen: false  // Não marcar como lido automaticamente
         });
-        const sendTimeout = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout ao enviar mensagem (30s)')), 30000)
-        );
-        
-        const sentMessage = await Promise.race([sendPromise, sendTimeout]);
         
         // Atualizar com ID da mensagem
         await db.updateMessageWithEvolutionId(messageId, sentMessage.id.id);

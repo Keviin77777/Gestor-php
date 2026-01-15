@@ -310,6 +310,7 @@ class InstanceManager {
                         '--disable-accelerated-2d-canvas',
                         '--no-first-run',
                         '--no-zygote',
+                        '--single-process', // Melhor para múltiplas instâncias
                         '--disable-gpu',
                         '--disable-extensions',
                         '--disable-default-apps',
@@ -320,13 +321,15 @@ class InstanceManager {
                         '--mute-audio',
                         '--no-default-browser-check',
                         '--safebrowsing-disable-auto-update',
-                        '--js-flags=--max-old-space-size=256'
+                        '--disable-features=AudioServiceOutOfProcess',
+                        '--js-flags=--max-old-space-size=512' // Aumentado para produção
                     ],
                     timeout: 60000
                 },
-                qrMaxRetries: 5, // Mais tentativas de QR
+                qrMaxRetries: 5,
                 takeoverOnConflict: true,
-                takeoverTimeoutMs: 10000
+                takeoverTimeoutMs: 10000,
+                authTimeoutMs: 60000 // Timeout de autenticação
             });
 
             // Configurar eventos ANTES de inicializar
