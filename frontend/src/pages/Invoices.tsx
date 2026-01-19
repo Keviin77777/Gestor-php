@@ -69,12 +69,22 @@ export default function Invoices() {
       // Recalcular summary com status overdue
       const newSummary = { ...data.summary };
       const overdueInvoices = invoicesWithStatus.filter(inv => inv.status === 'overdue');
+      
+      // Garantir que todos os valores são números válidos
+      const overdueAmount = overdueInvoices.reduce((sum, inv) => {
+        const value = parseFloat(inv.final_value as any);
+        return sum + (isNaN(value) ? 0 : value);
+      }, 0);
+      
       newSummary.overdue = {
         count: overdueInvoices.length,
-        amount: overdueInvoices.reduce((sum, inv) => sum + inv.final_value, 0),
+        amount: overdueAmount,
       };
+      
+      // Garantir que pending.amount é um número válido antes de subtrair
+      const pendingAmount = parseFloat(newSummary.pending.amount as any) || 0;
       newSummary.pending.count -= overdueInvoices.length;
-      newSummary.pending.amount -= newSummary.overdue.amount;
+      newSummary.pending.amount = Math.max(0, pendingAmount - overdueAmount);
       
       setSummary(newSummary);
     } catch (error) {
@@ -96,9 +106,11 @@ export default function Invoices() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
-        inv =>
-          inv.id.toLowerCase().includes(term) ||
-          inv.client_name.toLowerCase().includes(term)
+        inv => {
+          const id = inv.id?.toLowerCase() || '';
+          const clientName = inv.client_name?.toLowerCase() || '';
+          return id.includes(term) || clientName.includes(term);
+        }
       );
     }
 
