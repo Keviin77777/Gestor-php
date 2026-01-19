@@ -23,7 +23,23 @@ export default function ClientsImproved() {
       client.phone?.includes(searchTerm) ||
       client.username?.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesStatus = statusFilter === 'all' || client.status === statusFilter
+    // Verificar se está vencido pela data de renovação
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const renewalDate = new Date(client.renewal_date)
+    renewalDate.setHours(0, 0, 0, 0)
+    const isExpired = renewalDate < today
+    
+    // Filtro de status considerando vencidos
+    let matchesStatus = false
+    if (statusFilter === 'all') {
+      matchesStatus = true
+    } else if (statusFilter === 'expired') {
+      matchesStatus = isExpired || client.status === 'expired'
+    } else {
+      matchesStatus = client.status === statusFilter && !isExpired
+    }
+    
     const matchesPlan = planFilter === 'all' || client.plan === planFilter
 
     return matchesSearch && matchesStatus && matchesPlan
@@ -124,6 +140,7 @@ export default function ClientsImproved() {
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500">
               <option value="all">Todos os status</option>
               <option value="active">Ativos</option>
+              <option value="expired">Vencidos</option>
               <option value="inactive">Inativos</option>
               <option value="suspended">Suspensos</option>
             </select>
@@ -188,8 +205,45 @@ export default function ClientsImproved() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${client.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : client.status === 'suspended' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'}`}>
-                          {client.status === 'active' ? 'Ativo' : client.status === 'suspended' ? 'Suspenso' : 'Inativo'}
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                          (() => {
+                            // Verificar se está vencido pela data de renovação
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            const renewalDate = new Date(client.renewal_date)
+                            renewalDate.setHours(0, 0, 0, 0)
+                            const isExpired = renewalDate < today
+                            
+                            if (isExpired || client.status === 'expired') {
+                              return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
+                            } else if (client.status === 'active') {
+                              return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                            } else if (client.status === 'suspended') {
+                              return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                            } else {
+                              return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                            }
+                          })()
+                        }`}>
+                          {(() => {
+                            // Verificar se está vencido pela data de renovação
+                            const today = new Date()
+                            today.setHours(0, 0, 0, 0)
+                            const renewalDate = new Date(client.renewal_date)
+                            renewalDate.setHours(0, 0, 0, 0)
+                            const isExpired = renewalDate < today
+                            
+                            if (isExpired || client.status === 'expired') {
+                              return 'Vencido'
+                            } else if (client.status === 'active') {
+                              return 'Ativo'
+                            } else if (client.status === 'suspended') {
+                              return 'Suspenso'
+                            } else {
+                              return 'Inativo'
+                            }
+                          })()
+                        }
                         </span>
                       </td>
                       <td className="px-6 py-4">

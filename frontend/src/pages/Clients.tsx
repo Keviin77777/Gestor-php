@@ -192,20 +192,22 @@ export default function Clients() {
     const matchesServer = serverFilter === 'all' || client.server === serverFilter
     const matchesPlan = planFilter === 'all' || client.plan === planFilter
     
-    // Detectar se o cliente está vencido
+    // Detectar se o cliente está vencido pela data de renovação
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const renewalDate = new Date(client.renewal_date)
     renewalDate.setHours(0, 0, 0, 0)
-    const isExpired = renewalDate < today && client.status !== 'inactive'
+    const isExpired = renewalDate < today
     
     // Filtro de status considerando vencidos
     let matchesStatus = false
     if (statusFilter === 'all') {
       matchesStatus = true
     } else if (statusFilter === 'expired') {
-      matchesStatus = isExpired
+      // Mostrar clientes vencidos pela data OU com status 'expired'
+      matchesStatus = isExpired || client.status === 'expired'
     } else {
+      // Para outros filtros, verificar o status E que não esteja vencido pela data
       matchesStatus = client.status === statusFilter && !isExpired
     }
 
@@ -997,14 +999,14 @@ export default function Clients() {
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded ${
                           (() => {
-                            // Verificar se está vencido
+                            // Verificar se está vencido pela data de renovação
                             const today = new Date()
                             today.setHours(0, 0, 0, 0)
                             const renewalDate = new Date(client.renewal_date)
                             renewalDate.setHours(0, 0, 0, 0)
-                            const isExpired = renewalDate < today && client.status !== 'inactive'
+                            const isExpired = renewalDate < today
                             
-                            if (isExpired) {
+                            if (isExpired || client.status === 'expired') {
                               return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
                             } else if (client.status === 'active') {
                               return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
@@ -1017,14 +1019,14 @@ export default function Clients() {
                         }`}
                       >
                         {(() => {
-                          // Verificar se está vencido
+                          // Verificar se está vencido pela data de renovação
                           const today = new Date()
                           today.setHours(0, 0, 0, 0)
                           const renewalDate = new Date(client.renewal_date)
                           renewalDate.setHours(0, 0, 0, 0)
-                          const isExpired = renewalDate < today && client.status !== 'inactive'
+                          const isExpired = renewalDate < today
                           
-                          if (isExpired) {
+                          if (isExpired || client.status === 'expired') {
                             return 'Vencido'
                           } else if (client.status === 'active') {
                             return 'Ativo'

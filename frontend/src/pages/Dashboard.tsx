@@ -59,7 +59,7 @@ export default function Dashboard() {
       const expiredClients = clients.filter(c => {
         const renewalDate = new Date(c.renewal_date)
         renewalDate.setHours(0, 0, 0, 0)
-        return renewalDate < today && c.status !== 'inactive'
+        return renewalDate < today
       })
       
       const inactive = expiredClients.length
@@ -742,7 +742,7 @@ export default function Dashboard() {
                 const today = new Date()
                 today.setHours(0, 0, 0, 0)
                 renewalDate.setHours(0, 0, 0, 0)
-                return renewalDate < today && c.status !== 'inactive'
+                return renewalDate < today
               })
               .slice(0, 5)
               .map(client => (
@@ -766,7 +766,7 @@ export default function Dashboard() {
               const today = new Date()
               today.setHours(0, 0, 0, 0)
               renewalDate.setHours(0, 0, 0, 0)
-              return renewalDate < today && c.status !== 'inactive'
+              return renewalDate < today
             }).length === 0 && (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                 <p className="text-sm">Nenhum cliente com plano vencido</p>
