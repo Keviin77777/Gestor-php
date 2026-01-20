@@ -5,7 +5,7 @@
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, DELETE, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -41,6 +41,10 @@ try {
     switch ($method) {
         case 'GET':
             handleGet($db);
+            break;
+            
+        case 'POST':
+            handlePost($db, $user);
             break;
             
         case 'DELETE':
@@ -147,6 +151,124 @@ function handleGet($db) {
         'payments' => $payments,
         'stats' => $stats
     ]);
+}
+
+/**
+ * POST - Aprovar pagamento
+ */
+function handlePost($db, $user) {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $action = $data['action'] ?? null;
+    $id = $data['id'] ?? null;
+    
+    if ($action !== 'approve') {
+        Response::json(['success' => false, 'error' => 'Ação inválida'], 400);
+        exit;
+    }
+    
+    if (!$id) {
+        Response::json(['success' => false, 'error' => 'ID do pagamento é obrigatório'], 400);
+        exit;
+    }
+    
+    // Buscar pagamento
+    $stmt = $db->prepare("SELECT * FROM renewal_payments WHERE id = ?");
+    $stmt->execute([$id]);
+    $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$payment) {
+        Response::json(['success' => false, 'error' => 'Pagamento não encontrado'], 404);
+        exit;
+    }
+    
+    if ($payment['status'] === 'approved') {
+        Response::json(['success' => false, 'error' => 'Este pagamento já foi aprovado'], 400);
+        exit;
+    }
+    
+    // Buscar plano
+    $stmt = $db->prepare("SELECT * FROM reseller_plans WHERE id = ?");
+    $stmt->execute([$payment['plan_id']]);
+    $plan = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$plan) {
+        Response::json(['success' => false, 'error' => 'Plano não encontrado'], 404);
+        exit;
+    }
+    
+    // Buscar usuário (revendedor)
+    $stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
+    $stmt->execute([$payment['user_id']]);
+    $reseller = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$reseller) {
+        Response::json(['success' => false, 'error' => 'Revendedor não encontrado'], 404);
+        exit;
+    }
+    
+    // Iniciar transação
+    $db->beginTransaction();
+    
+    try {
+        // Calcular nova data de expiração
+        $currentExpiry = $reseller['plan_expires_at'];
+        if ($currentExpiry && strtotime($currentExpiry) > time()) {
+            // Se ainda tem plano ativo, adicionar dias ao vencimento atual
+            $newExpiry = date('Y-m-d H:i:s', strtotime($currentExpiry . ' +' . $plan['duration_days'] . ' days'));
+        } else {
+            // Se expirado ou sem plano, começar de hoje
+            $newExpiry = date('Y-m-d H:i:s', strtotime('+' . $plan['duration_days'] . ' days'));
+        }
+        
+        // Atualizar usuário com novo plano
+        $stmt = $db->prepare("
+            UPDATE users 
+            SET current_plan_id = ?, 
+                plan_expires_at = ?, 
+                plan_status = 'active' 
+            WHERE id = ?
+        ");
+        $stmt->execute([$payment['plan_id'], $newExpiry, $payment['user_id']]);
+        
+        // Atualizar status do pagamento
+        $stmt = $db->prepare("
+            UPDATE renewal_payments 
+            SET status = 'approved', 
+                approved_at = NOW(), 
+                approved_by = ? 
+            WHERE id = ?
+        ");
+        $stmt->execute([$user['id'], $id]);
+        
+        // Registrar no histórico de planos
+        $historyId = 'hist-' . uniqid();
+        $stmt = $db->prepare("
+            INSERT INTO reseller_plan_history 
+            (id, user_id, plan_id, started_at, expires_at, status, payment_amount, payment_method) 
+            VALUES (?, ?, ?, NOW(), ?, 'active', ?, ?)
+        ");
+        $stmt->execute([
+            $historyId,
+            $payment['user_id'],
+            $payment['plan_id'],
+            $newExpiry,
+            $payment['amount'],
+            $payment['payment_method']
+        ]);
+        
+        // Commit da transação
+        $db->commit();
+        
+        Response::json([
+            'success' => true,
+            'message' => 'Pagamento aprovado e plano renovado com sucesso',
+            'new_expiry' => $newExpiry
+        ]);
+        
+    } catch (Exception $e) {
+        $db->rollBack();
+        throw $e;
+    }
 }
 
 /**

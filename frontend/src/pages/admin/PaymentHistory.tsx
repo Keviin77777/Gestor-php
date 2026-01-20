@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { History, Search, Download, Filter, Calendar, CheckCircle, Clock, XCircle, Loader2, CreditCard, Trash2 } from 'lucide-react'
+import { History, Search, Download, Filter, Calendar, CheckCircle, Clock, XCircle, Loader2, CreditCard, Trash2, Check } from 'lucide-react'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
 
@@ -26,6 +26,7 @@ export default function PaymentHistory() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [approving, setApproving] = useState<number | null>(null)
 
   useEffect(() => {
     loadPayments()
@@ -42,6 +43,31 @@ export default function PaymentHistory() {
       toast.error(error.response?.data?.error || 'Erro ao carregar histórico')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleApprove = async (id: number, userName: string) => {
+    if (!confirm(`Tem certeza que deseja aprovar o pagamento de "${userName}"?\n\nIsso irá renovar o plano do revendedor automaticamente.`)) {
+      return
+    }
+
+    try {
+      setApproving(id)
+      const response = await api.post('/api-payment-history.php', {
+        action: 'approve',
+        id: id
+      })
+      
+      if (response.data.success) {
+        toast.success('Pagamento aprovado e plano renovado com sucesso!')
+        loadPayments() // Recarregar lista
+      } else {
+        toast.error(response.data.error || 'Erro ao aprovar pagamento')
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Erro ao aprovar pagamento')
+    } finally {
+      setApproving(null)
     }
   }
 
@@ -321,6 +347,20 @@ export default function PaymentHistory() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
+                        {payment.status === 'pending' && (
+                          <button 
+                            onClick={() => handleApprove(payment.id, payment.user_name)}
+                            disabled={approving === payment.id}
+                            className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Aprovar Pagamento"
+                          >
+                            {approving === payment.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleDelete(payment.id)}
                           className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
