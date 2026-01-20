@@ -132,17 +132,32 @@ function processResellers() {
             continue;
         }
         
-        // Verificar se já existe na fila para hoje
+        // Verificar se já existe na fila para hoje (incluindo mensagens já enviadas)
         $existingInQueue = Database::fetch("
             SELECT id FROM whatsapp_message_queue 
             WHERE phone = ? 
             AND template_id = ? 
+            AND reseller_id = ?
             AND DATE(created_at) = CURDATE()
-            AND status IN ('pending', 'processing')
-        ", [$phone, $template['id']]);
+            AND status IN ('pending', 'processing', 'sent')
+        ", [$phone, $template['id'], $adminResellerId]);
         
         if ($existingInQueue) {
-            logMessage("ℹ️ Já existe na fila para {$reseller['name']} hoje");
+            logMessage("ℹ️ Já existe na fila para {$reseller['name']} hoje (template: {$templateType})");
+            $skipped++;
+            continue;
+        }
+        
+        // Verificar também no log de mensagens enviadas
+        $existingInLog = Database::fetch("
+            SELECT id FROM whatsapp_messages_log 
+            WHERE recipient_phone = ? 
+            AND message_type = 'reseller_renewal'
+            AND DATE(sent_at) = CURDATE()
+        ", [$phone]);
+        
+        if ($existingInLog) {
+            logMessage("ℹ️ Já foi enviado para {$reseller['name']} hoje (verificado no log)");
             $skipped++;
             continue;
         }
