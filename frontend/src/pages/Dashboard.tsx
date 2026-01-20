@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Users, DollarSign, AlertCircle, TrendingUp, Activity } from 'lucide-react'
 import { useClientStore } from '@/stores/useClientStore'
 import { invoiceService } from '@/services/invoiceService'
-import { dashboardService, DashboardMetrics } from '@/services/dashboardService'
 import { Invoice } from '@/types'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -11,7 +10,6 @@ export default function Dashboard() {
   usePageTitle('Dashboard')
   const { clients, fetchClients } = useClientStore()
   const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [apiMetrics, setApiMetrics] = useState<DashboardMetrics | null>(null)
   const [stats, setStats] = useState({
     totalClients: 0,
     activeClients: 0,
