@@ -343,12 +343,13 @@ function sendWelcomeMessageToReseller($resellerId, $resellerName, $resellerPhone
             return;
         }
         
-        // Processar variáveis do template
+        // Processar variáveis do template (ajustadas para corresponder ao template)
         $variables = [
             'revendedor_nome' => $resellerName,
             'revendedor_email' => $resellerEmail,
-            'revendedor_trial_expira' => date('d/m/Y H:i', strtotime($trialExpiry)),
-            'link_painel' => env('APP_URL', 'http://localhost:8000')
+            'revendedor_plano' => 'Trial Gratuito (3 dias)',
+            'revendedor_vencimento' => date('d/m/Y H:i', strtotime($trialExpiry)),
+            'link_renovacao' => env('APP_URL', 'http://localhost:8000')
         ];
         
         $message = $template['message'];
