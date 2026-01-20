@@ -178,6 +178,16 @@ function handleRegister() {
             ]
         );
         
+        // Enviar mensagem de boas-vindas ao revendedor (se tiver WhatsApp)
+        if (!empty($data['whatsapp'])) {
+            try {
+                sendWelcomeMessageToReseller($userId, $data['name'], $data['whatsapp'], $data['email'], $trialExpiry);
+            } catch (Exception $e) {
+                // Log error mas não falha o registro
+                logError('Erro ao enviar boas-vindas ao revendedor: ' . $e->getMessage());
+            }
+        }
+        
         Response::json([
             'success' => true,
             'message' => 'Conta criada com sucesso! Trial de 3 dias ativado.',
@@ -285,10 +295,13 @@ function createDefaultTemplates($userId) {
  */
 function createDefaultWhatsAppSettings($userId) {
     try {
+        // Gerar ID único para evitar colisões
+        $settingsId = 'ws-' . uniqid();
+        
         Database::query(
             "INSERT INTO whatsapp_settings (id, reseller_id, evolution_api_url, evolution_api_key, auto_send_welcome, auto_send_invoice, auto_send_renewal, auto_send_reminders, reminder_days) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
-                'ws-' . substr($userId, 0, 8),
+                $settingsId,
                 $userId,
                 'http://localhost:8081',
                 'gestplay-whatsapp-2024',
@@ -301,6 +314,80 @@ function createDefaultWhatsAppSettings($userId) {
         );
     } catch (Exception $e) {
         logError('Error creating WhatsApp settings: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Enviar mensagem de boas-vindas ao novo revendedor
+ */
+function sendWelcomeMessageToReseller($resellerId, $resellerName, $resellerPhone, $resellerEmail, $trialExpiry) {
+    try {
+        require_once __DIR__ . '/../../helpers/queue-helper.php';
+        
+        // Admin que vai enviar as mensagens
+        $adminResellerId = 'admin-001';
+        
+        // Buscar template de boas-vindas para revendedor do admin
+        $template = Database::fetch(
+            "SELECT * FROM whatsapp_templates 
+             WHERE reseller_id = ? 
+             AND type = 'reseller_welcome' 
+             AND is_active = 1 
+             ORDER BY is_default DESC, created_at DESC 
+             LIMIT 1",
+            [$adminResellerId]
+        );
+        
+        if (!$template) {
+            logError('Template reseller_welcome não encontrado para admin-001');
+            return;
+        }
+        
+        // Processar variáveis do template
+        $variables = [
+            'revendedor_nome' => $resellerName,
+            'revendedor_email' => $resellerEmail,
+            'revendedor_trial_expira' => date('d/m/Y H:i', strtotime($trialExpiry)),
+            'link_painel' => env('APP_URL', 'http://localhost:8000')
+        ];
+        
+        $message = $template['message'];
+        foreach ($variables as $key => $value) {
+            $message = str_replace('{{' . $key . '}}', $value, $message);
+        }
+        
+        // Adicionar à fila com prioridade alta
+        $result = addMessageToQueue(
+            $adminResellerId,
+            $resellerPhone,
+            $message,
+            $template['id'],
+            null, // Não é cliente
+            2, // Prioridade alta
+            null // Enviar imediatamente
+        );
+        
+        if ($result['success']) {
+            logError("Mensagem de boas-vindas adicionada à fila para revendedor: {$resellerName}");
+            
+            // Registrar no log
+            Database::query(
+                "INSERT INTO whatsapp_messages_log 
+                (recipient_id, recipient_phone, message, message_type, sent_at, status)
+                VALUES (?, ?, ?, ?, NOW(), 'queued')",
+                [
+                    $resellerId,
+                    $resellerPhone,
+                    $message,
+                    'reseller_welcome'
+                ]
+            );
+        } else {
+            logError("Erro ao adicionar mensagem de boas-vindas à fila: " . ($result['error'] ?? 'Erro desconhecido'));
+        }
+        
+    } catch (Exception $e) {
+        logError('Erro em sendWelcomeMessageToReseller: ' . $e->getMessage());
     }
 }/*
 *
