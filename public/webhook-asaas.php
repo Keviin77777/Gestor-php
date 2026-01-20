@@ -55,30 +55,42 @@ try {
         exit;
     }
     
-    // Inicializar Asaas
-    $asaas = new AsaasHelper();
+    logWebhookAsaas("📦 Dados recebidos: " . json_encode($data));
     
-    if (!$asaas->isEnabled()) {
-        logWebhookAsaas("Asaas não está habilitado");
+    // Processar webhook SEM inicializar AsaasHelper (não precisa de credenciais)
+    // Extrair dados diretamente do payload
+    $event = $data['event'] ?? null;
+    $paymentData = $data['payment'] ?? null;
+    
+    if (!$event || !$paymentData) {
+        logWebhookAsaas("Erro: Evento ou dados de pagamento ausentes");
         http_response_code(200);
         exit;
     }
     
-    // Processar webhook
-    $result = $asaas->processWebhook($data);
+    $paymentId = $paymentData['id'] ?? null;
+    $externalRef = $paymentData['externalReference'] ?? '';
     
-    if (!$result['success']) {
-        logWebhookAsaas("Erro ao processar: {$result['error']}");
-        http_response_code(200); // Retornar 200 mesmo com erro para não reenviar
+    if (!$paymentId) {
+        logWebhookAsaas("Erro: Payment ID não encontrado");
+        http_response_code(200);
         exit;
     }
     
-    $paymentId = $result['payment_id'];
-    $status = $result['status'];
-    $event = $result['event'];
-    $externalRef = $result['external_reference'] ?? '';
+    // Mapear status do Asaas
+    $statusMap = [
+        'PAYMENT_RECEIVED' => 'approved',
+        'PAYMENT_CONFIRMED' => 'approved',
+        'PAYMENT_OVERDUE' => 'overdue',
+        'PAYMENT_DELETED' => 'cancelled',
+        'PAYMENT_REFUNDED' => 'refunded',
+        'PAYMENT_RECEIVED_IN_CASH' => 'approved',
+        'PAYMENT_ANTICIPATED' => 'approved'
+    ];
     
-    logWebhookAsaas("Payment ID: $paymentId | Status: $status | Event: $event | Ref: $externalRef");
+    $status = $statusMap[$event] ?? 'pending';
+    
+    logWebhookAsaas("✅ Webhook processado - Payment ID: $paymentId | Status: $status | Event: $event | Ref: $externalRef");
     
     $db = Database::connect();
     

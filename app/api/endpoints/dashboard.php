@@ -58,14 +58,66 @@ function getMetrics() {
             $params
         )['total'] ?? 0;
         
+        // Custos do mês atual
+        // 1. Custos fixos dos servidores
+        $serverCosts = Database::fetch(
+            "SELECT COALESCE(SUM(cost), 0) as total 
+             FROM servers 
+             WHERE user_id = ? 
+             AND status = 'active' 
+             AND billing_type = 'fixed'",
+            [$userId]
+        )['total'] ?? 0;
+        
+        // 2. Custos variáveis (por cliente ativo)
+        $variableServerCosts = Database::fetch(
+            "SELECT COALESCE(SUM(s.cost * 
+                (SELECT COUNT(*) FROM clients c 
+                 WHERE c.reseller_id = s.user_id 
+                 AND c.status = 'active')), 0) as total
+             FROM servers s
+             WHERE s.user_id = ?
+             AND s.status = 'active'
+             AND s.billing_type = 'per_active'",
+            [$userId]
+        )['total'] ?? 0;
+        
+        // 3. Despesas do mês
+        $monthExpenses = Database::fetch(
+            "SELECT COALESCE(SUM(amount), 0) as total 
+             FROM expenses 
+             WHERE MONTH(expense_date) = MONTH(NOW()) 
+             AND YEAR(expense_date) = YEAR(NOW())",
+            []
+        )['total'] ?? 0;
+        
+        // Calcular lucro líquido real
+        $totalCosts = $serverCosts + $variableServerCosts + $monthExpenses;
+        $netProfit = $monthRevenue - $totalCosts;
+        
         // Receita do mês anterior
         $lastMonthRevenue = Database::fetch(
             "SELECT COALESCE(SUM(final_value), 0) as total FROM invoices WHERE reseller_id = ? AND status = 'paid' AND MONTH(payment_date) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(payment_date) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))",
             [$userId]
         )['total'] ?? 1;
         
+        // Custos do mês anterior
+        $lastMonthExpenses = Database::fetch(
+            "SELECT COALESCE(SUM(amount), 0) as total 
+             FROM expenses 
+             WHERE MONTH(expense_date) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) 
+             AND YEAR(expense_date) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))",
+            []
+        )['total'] ?? 0;
+        
+        $lastMonthNetProfit = $lastMonthRevenue - ($serverCosts + $variableServerCosts + $lastMonthExpenses);
+        
         $revenueGrowth = $lastMonthRevenue > 0 
             ? round((($monthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100, 1)
+            : 0;
+        
+        $profitGrowth = $lastMonthNetProfit > 0 
+            ? round((($netProfit - $lastMonthNetProfit) / abs($lastMonthNetProfit)) * 100, 1)
             : 0;
         
         // Faturas pendentes
@@ -129,6 +181,12 @@ function getMetrics() {
             'clientsGrowth' => (float)$clientsGrowth,
             'monthRevenue' => (float)$monthRevenue,
             'revenueGrowth' => (float)$revenueGrowth,
+            'netProfit' => (float)$netProfit,
+            'profitGrowth' => (float)$profitGrowth,
+            'totalCosts' => (float)$totalCosts,
+            'serverCosts' => (float)$serverCosts,
+            'variableServerCosts' => (float)$variableServerCosts,
+            'monthExpenses' => (float)$monthExpenses,
             'pendingInvoices' => (int)$pendingInvoices,
             'pendingValue' => (float)$pendingValue,
             'expiringClients' => (int)$expiringClients,

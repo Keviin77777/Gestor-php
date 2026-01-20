@@ -114,12 +114,6 @@ class AsaasHelper {
     private function makeRequest($endpoint, $method = 'GET', $data = null) {
         $url = $this->baseUrl . $endpoint;
         
-        // Log para debug
-        error_log("Asaas Request - URL: {$url}");
-        error_log("Asaas Request - Method: {$method}");
-        error_log("Asaas Request - API Key: " . substr($this->apiKey, 0, 30) . "...");
-        error_log("Asaas Request - Environment: " . ($this->sandbox ? 'Sandbox' : 'Production'));
-        
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -158,12 +152,7 @@ class AsaasHelper {
         $error = curl_error($ch);
         curl_close($ch);
         
-        // Log da resposta
-        error_log("Asaas Response - HTTP Code: {$httpCode}");
-        error_log("Asaas Response - Body: " . substr($response, 0, 500));
-        
         if ($error) {
-            error_log("Asaas cURL Error: {$error}");
             return [
                 'success' => false,
                 'error' => 'Erro de conexão: ' . $error
@@ -171,11 +160,6 @@ class AsaasHelper {
         }
         
         $result = json_decode($response, true);
-        
-        // Se houver erro de autenticação, logar detalhes
-        if ($httpCode === 401 || $httpCode === 403) {
-            error_log("Asaas Auth Error - Details: " . json_encode($result));
-        }
         
         return [
             'success' => $httpCode >= 200 && $httpCode < 300,
