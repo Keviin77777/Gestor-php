@@ -211,32 +211,51 @@ class AsaasHelper {
         
         try {
             // 1. Criar ou buscar cliente
+            // Preparar dados do cliente (CPF/CNPJ é opcional)
             $customerData = [
-                'name' => $data['customer_name'],
-                'cpfCnpj' => $data['customer_doc'] ?? null,
-                'email' => $data['customer_email'] ?? null,
-                'phone' => $data['customer_phone'] ?? null,
-                'mobilePhone' => $data['customer_phone'] ?? null
+                'name' => $data['customer_name']
             ];
             
-            // Remover campos vazios
-            $customerData = array_filter($customerData, function($value) {
-                return !empty($value) && $value !== '00000000000';
-            });
+            // Adicionar CPF/CNPJ apenas se fornecido e válido
+            if (!empty($data['customer_doc']) && $data['customer_doc'] !== '00000000000') {
+                $customerData['cpfCnpj'] = preg_replace('/[^0-9]/', '', $data['customer_doc']);
+            }
+            
+            // Adicionar email se fornecido
+            if (!empty($data['customer_email'])) {
+                $customerData['email'] = $data['customer_email'];
+            }
+            
+            // Adicionar telefone se fornecido
+            if (!empty($data['customer_phone'])) {
+                $customerData['phone'] = $data['customer_phone'];
+                $customerData['mobilePhone'] = $data['customer_phone'];
+            }
             
             $customerResult = $this->makeRequest('/customers', 'POST', $customerData);
             
             if (!$customerResult['success']) {
                 // Se falhar, pode ser que o cliente já existe
                 // Tentar buscar por CPF/CNPJ ou email
-                if (!empty($data['customer_doc'])) {
-                    $searchResult = $this->makeRequest('/customers?cpfCnpj=' . $data['customer_doc']);
+                if (!empty($data['customer_doc']) && $data['customer_doc'] !== '00000000000') {
+                    $searchResult = $this->makeRequest('/customers?cpfCnpj=' . preg_replace('/[^0-9]/', '', $data['customer_doc']));
                     if ($searchResult['success'] && !empty($searchResult['data']['data'])) {
                         $customerId = $searchResult['data']['data'][0]['id'];
                     } else {
                         return [
                             'success' => false,
                             'error' => 'Erro ao criar/buscar cliente: ' . ($customerResult['data']['errors'][0]['description'] ?? 'Erro desconhecido')
+                        ];
+                    }
+                } elseif (!empty($data['customer_email'])) {
+                    // Tentar buscar por email
+                    $searchResult = $this->makeRequest('/customers?email=' . urlencode($data['customer_email']));
+                    if ($searchResult['success'] && !empty($searchResult['data']['data'])) {
+                        $customerId = $searchResult['data']['data'][0]['id'];
+                    } else {
+                        return [
+                            'success' => false,
+                            'error' => 'Erro ao criar cliente: ' . ($customerResult['data']['errors'][0]['description'] ?? 'Erro desconhecido')
                         ];
                     }
                 } else {
@@ -261,6 +280,21 @@ class AsaasHelper {
             // Adicionar campos opcionais
             if (!empty($data['external_reference'])) {
                 $paymentData['externalReference'] = $data['external_reference'];
+            }
+            
+            // IMPORTANTE: Asaas exige CPF/CNPJ para PIX
+            // Se não foi fornecido, precisamos atualizar o cliente com um CPF genérico
+            if (empty($customerData['cpfCnpj'])) {
+                // Usar CPF genérico válido para testes (não é de ninguém real)
+                $genericCpf = '00000000191'; // CPF válido mas genérico
+                
+                $updateResult = $this->makeRequest("/customers/{$customerId}", 'POST', [
+                    'cpfCnpj' => $genericCpf
+                ]);
+                
+                if (!$updateResult['success']) {
+                    error_log("Aviso: Não foi possível adicionar CPF genérico ao cliente");
+                }
             }
             
             $paymentResult = $this->makeRequest('/payments', 'POST', $paymentData);

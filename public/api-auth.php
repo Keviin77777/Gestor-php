@@ -192,41 +192,62 @@ try {
             // Definir expiração para o final do 3º dia (23:59:59)
             $trialExpiry = date('Y-m-d 23:59:59', strtotime('+3 days'));
             
-            Database::query(
-                "INSERT INTO users (id, email, name, password_hash, role, account_status, subscription_expiry_date, whatsapp, current_plan_id, plan_expires_at, plan_status, is_admin, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [
-                    $userId,
-                    $data['email'],
-                    $data['name'],
-                    password_hash($data['password'], PASSWORD_DEFAULT),
-                    'reseller',
-                    'trial',
-                    $trialExpiry,
-                    $data['whatsapp'] ?? null,
-                    'plan-trial',
-                    $trialExpiry,
-                    'active',
-                    0,
-                    1
-                ]
-            );
-            
-            // Registrar no histórico de planos
-            $historyId = uniqid('hist-', true);
-            Database::query(
-                "INSERT INTO reseller_plan_history (id, user_id, plan_id, started_at, expires_at, status, payment_amount) 
-                 VALUES (?, ?, ?, NOW(), ?, 'active', 0.00)",
-                [$historyId, $userId, 'plan-trial', $trialExpiry]
-            );
-            
-            // Criar templates padrão para o novo usuário
-            createDefaultTemplates($userId);
-            
-            // Criar configurações WhatsApp padrão
-            createDefaultWhatsAppSettings($userId);
-            
-            // Criar métodos de pagamento padrão (vazios)
-            createDefaultPaymentMethods($userId);
+            try {
+                // Iniciar transação para garantir atomicidade
+                Database::query("START TRANSACTION");
+                
+                Database::query(
+                    "INSERT INTO users (id, email, name, password_hash, role, account_status, subscription_expiry_date, whatsapp, current_plan_id, plan_expires_at, plan_status, is_admin, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [
+                        $userId,
+                        $data['email'],
+                        $data['name'],
+                        password_hash($data['password'], PASSWORD_DEFAULT),
+                        'reseller',
+                        'trial',
+                        $trialExpiry,
+                        $data['whatsapp'] ?? null,
+                        'plan-trial',
+                        $trialExpiry,
+                        'active',
+                        0,
+                        1
+                    ]
+                );
+                
+                // Registrar no histórico de planos
+                $historyId = uniqid('hist-', true);
+                Database::query(
+                    "INSERT INTO reseller_plan_history (id, user_id, plan_id, started_at, expires_at, status, payment_amount) 
+                     VALUES (?, ?, ?, NOW(), ?, 'active', 0.00)",
+                    [$historyId, $userId, 'plan-trial', $trialExpiry]
+                );
+                
+                // Criar templates padrão para o novo usuário (CRÍTICO - lança exceção se falhar)
+                createDefaultTemplates($userId);
+                
+                // Criar configurações WhatsApp padrão
+                createDefaultWhatsAppSettings($userId);
+                
+                // Criar métodos de pagamento padrão (vazios)
+                createDefaultPaymentMethods($userId);
+                
+                // Commit da transação
+                Database::query("COMMIT");
+                
+            } catch (Exception $e) {
+                // Rollback em caso de erro
+                Database::query("ROLLBACK");
+                error_log("Erro ao criar conta: " . $e->getMessage());
+                
+                ob_clean();
+                http_response_code(500);
+                echo json_encode([
+                    'error' => 'Erro ao criar conta. Por favor, tente novamente.',
+                    'details' => $e->getMessage()
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                exit;
+            }
             
             // Iniciar sessão
             session_start();
@@ -405,13 +426,14 @@ try {
 
 /**
  * Criar templates padrão para novo usuário
+ * @throws Exception se houver erro ao criar templates
  */
 function createDefaultTemplates($userId) {
     error_log("Criando templates padrão para usuário: $userId");
     
     $templates = [
         [
-            'id' => 'tpl-welcome-' . substr($userId, 0, 8),
+            'id' => 'tpl-welcome-' . substr($userId, 0, 8) . '-' . uniqid(),
             'type' => 'welcome',
             'name' => 'Boas Vindas Padrão',
             'title' => 'Bem-vindo ao nosso serviço!',
@@ -419,7 +441,7 @@ function createDefaultTemplates($userId) {
             'variables' => '["cliente_nome", "cliente_usuario", "cliente_senha", "cliente_servidor", "cliente_plano", "cliente_vencimento", "cliente_valor"]'
         ],
         [
-            'id' => 'tpl-invoice-' . substr($userId, 0, 8),
+            'id' => 'tpl-invoice-' . substr($userId, 0, 8) . '-' . uniqid(),
             'type' => 'invoice_generated',
             'name' => 'Fatura Gerada Padrão',
             'title' => 'Nova fatura disponível',
@@ -427,7 +449,7 @@ function createDefaultTemplates($userId) {
             'variables' => '["cliente_nome", "fatura_valor", "fatura_vencimento", "fatura_periodo", "payment_link"]'
         ],
         [
-            'id' => 'tpl-renewed-' . substr($userId, 0, 8),
+            'id' => 'tpl-renewed-' . substr($userId, 0, 8) . '-' . uniqid(),
             'type' => 'renewed',
             'name' => 'Renovado Padrão',
             'title' => 'Pagamento confirmado - Serviço renovado!',
@@ -435,7 +457,7 @@ function createDefaultTemplates($userId) {
             'variables' => '["cliente_nome", "cliente_vencimento", "fatura_valor"]'
         ],
         [
-            'id' => 'tpl-expires-3d-' . substr($userId, 0, 8),
+            'id' => 'tpl-expires-3d-' . substr($userId, 0, 8) . '-' . uniqid(),
             'type' => 'expires_3d',
             'name' => 'Vence em 3 dias Padrão',
             'title' => 'Seu serviço vence em 3 dias',
@@ -443,7 +465,7 @@ function createDefaultTemplates($userId) {
             'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano", "payment_link"]'
         ],
         [
-            'id' => 'tpl-expires-7d-' . substr($userId, 0, 8),
+            'id' => 'tpl-expires-7d-' . substr($userId, 0, 8) . '-' . uniqid(),
             'type' => 'expires_7d',
             'name' => 'Vence em 7 dias Padrão',
             'title' => 'Seu serviço vence em 7 dias',
@@ -451,7 +473,7 @@ function createDefaultTemplates($userId) {
             'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano", "payment_link"]'
         ],
         [
-            'id' => 'tpl-expires-today-' . substr($userId, 0, 8),
+            'id' => 'tpl-expires-today-' . substr($userId, 0, 8) . '-' . uniqid(),
             'type' => 'expires_today',
             'name' => 'Vence hoje Padrão',
             'title' => 'Seu serviço vence hoje!',
@@ -459,7 +481,7 @@ function createDefaultTemplates($userId) {
             'variables' => '["cliente_nome", "cliente_vencimento", "cliente_valor", "cliente_plano", "payment_link"]'
         ],
         [
-            'id' => 'tpl-expired-1d-' . substr($userId, 0, 8),
+            'id' => 'tpl-expired-1d-' . substr($userId, 0, 8) . '-' . uniqid(),
             'type' => 'expired_1d',
             'name' => 'Venceu há 1 dia Padrão',
             'title' => 'Serviço vencido - Renove agora!',
@@ -468,12 +490,15 @@ function createDefaultTemplates($userId) {
         ]
     ];
     
+    $createdCount = 0;
+    $errors = [];
+    
     foreach ($templates as $template) {
         try {
             error_log("Criando template: " . $template['name'] . " para usuário: $userId");
             
             Database::query(
-                "INSERT INTO whatsapp_templates (id, reseller_id, name, type, title, message, variables, is_active, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)",
+                "INSERT INTO whatsapp_templates (id, reseller_id, name, type, title, message, variables, is_active, is_default, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, NOW())",
                 [
                     $template['id'],
                     $userId,
@@ -485,14 +510,26 @@ function createDefaultTemplates($userId) {
                 ]
             );
             
+            $createdCount++;
             error_log("Template criado com sucesso: " . $template['name']);
         } catch (Exception $e) {
-            // Log error but continue with other templates
-            error_log('Error creating template ' . $template['name'] . ': ' . $e->getMessage());
+            $errorMsg = 'Erro ao criar template ' . $template['name'] . ': ' . $e->getMessage();
+            error_log($errorMsg);
+            $errors[] = $errorMsg;
         }
     }
     
-    error_log("Finalizada criação de templates para usuário: $userId");
+    // Se não conseguiu criar todos os templates, lançar exceção
+    if ($createdCount < count($templates)) {
+        $errorMessage = "Falha ao criar templates padrão. Criados: $createdCount de " . count($templates);
+        if (!empty($errors)) {
+            $errorMessage .= ". Erros: " . implode("; ", $errors);
+        }
+        error_log($errorMessage);
+        throw new Exception($errorMessage);
+    }
+    
+    error_log("Finalizada criação de templates para usuário: $userId - Total: $createdCount templates");
 }
 
 /**

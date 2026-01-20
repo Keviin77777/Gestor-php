@@ -83,10 +83,17 @@ try {
     $db = Database::connect();
     
     // Processar pagamento de fatura
-    if (preg_match('/INVOICE_(\d+)/', $externalRef, $matches)) {
+    // Aceitar tanto INVOICE_123 quanto inv-123 ou qualquer formato
+    $invoiceId = null;
+    
+    if (preg_match('/INVOICE[_-](.+)/', $externalRef, $matches)) {
         $invoiceId = $matches[1];
-        
-        logWebhookAsaas("Pagamento de fatura detectado - Invoice: $invoiceId");
+    } elseif (preg_match('/^(inv[_-].+)$/', $externalRef, $matches)) {
+        $invoiceId = $matches[1];
+    }
+    
+    if ($invoiceId) {
+        logWebhookAsaas("Pagamento de fatura detectado - Invoice: $invoiceId | External Ref: $externalRef");
         
         // Atualizar status do pagamento na tabela invoice_payments
         $stmt = $db->prepare("
@@ -97,16 +104,18 @@ try {
             WHERE payment_id = ?
         ");
         $approvedAt = $status === 'approved' ? date('Y-m-d H:i:s') : null;
-        $stmt->execute([$status, $approvedAt, $paymentId]);
+        $affected = $stmt->execute([$status, $approvedAt, $paymentId]);
+        
+        logWebhookAsaas("Atualização invoice_payments - Affected rows: " . $stmt->rowCount() . " | Status: $status | Payment ID: $paymentId");
         
         if ($status === 'approved') {
+            logWebhookAsaas("💰 Pagamento APROVADO - Processando renovação do cliente...");
             // Marcar fatura como paga
             $stmt = $db->prepare("
                 UPDATE invoices 
                 SET 
                     status = 'paid',
                     payment_date = NOW(),
-                    payment_method = 'pix_asaas',
                     updated_at = NOW()
                 WHERE id = ?
             ");
