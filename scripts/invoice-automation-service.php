@@ -36,7 +36,8 @@ if (!is_dir($logDir)) {
 }
 
 // Função para escrever log
-function writeServiceLog($message, $level = 'INFO') {
+function writeServiceLog($message, $level = 'INFO')
+{
     global $logFile;
     $timestamp = date('Y-m-d H:i:s');
     $pid = getmypid();
@@ -44,21 +45,23 @@ function writeServiceLog($message, $level = 'INFO') {
 }
 
 // Função para verificar se deve parar o serviço
-function shouldStopService() {
+function shouldStopService()
+{
     global $serviceControlFile;
-    
+
     if (file_exists($serviceControlFile)) {
         $control = json_decode(file_get_contents($serviceControlFile), true);
         return isset($control['stop']) && $control['stop'] === true;
     }
-    
+
     return false;
 }
 
 // Função para salvar status do serviço
-function saveServiceStatus($status, $data = []) {
+function saveServiceStatus($status, $data = [])
+{
     global $serviceControlFile;
-    
+
     $statusData = array_merge([
         'status' => $status,
         'pid' => getmypid(),
@@ -66,22 +69,23 @@ function saveServiceStatus($status, $data = []) {
         'memory_usage' => memory_get_usage(true),
         'uptime' => time() - $_SERVER['REQUEST_TIME']
     ], $data);
-    
+
     file_put_contents($serviceControlFile, json_encode($statusData, JSON_PRETTY_PRINT));
 }
 
 // Função para verificar se é hora de executar
-function isExecutionTime($executionTimes) {
+function isExecutionTime($executionTimes)
+{
     $currentTime = date('H:i:s');
     $currentMinute = date('H:i');
-    
+
     foreach ($executionTimes as $execTime) {
         $execMinute = substr($execTime, 0, 5); // HH:MM
         if ($currentMinute === $execMinute) {
             return true;
         }
     }
-    
+
     return false;
 }
 
@@ -89,23 +93,29 @@ function isExecutionTime($executionTimes) {
 file_put_contents($pidFile, getmypid());
 
 // Registrar handlers para parada limpa
-register_shutdown_function(function() use ($pidFile, $serviceControlFile) {
+register_shutdown_function(function () use ($pidFile, $serviceControlFile) {
     if (file_exists($pidFile)) {
         unlink($pidFile);
     }
-    
+
     saveServiceStatus('stopped', ['stopped_at' => date('Y-m-d H:i:s')]);
     writeServiceLog("Serviço finalizado");
 });
 
 // Handler para sinais (Linux/Unix)
+// Definir constantes para evitar erros em ambiente Windows onde pcntl não existe
+if (!defined('SIGTERM'))
+    define('SIGTERM', 15);
+if (!defined('SIGINT'))
+    define('SIGINT', 2);
+
 if (function_exists('pcntl_signal')) {
-    pcntl_signal(SIGTERM, function() {
+    pcntl_signal(SIGTERM, function () {
         writeServiceLog("Recebido sinal SIGTERM, finalizando...");
         exit(0);
     });
-    
-    pcntl_signal(SIGINT, function() {
+
+    pcntl_signal(SIGINT, function () {
         writeServiceLog("Recebido sinal SIGINT, finalizando...");
         exit(0);
     });
@@ -115,17 +125,17 @@ try {
     writeServiceLog("=== INICIANDO SERVIÇO DE AUTOMAÇÃO DE FATURAS ===");
     writeServiceLog("PID: " . getmypid());
     writeServiceLog("Configuração carregada: " . json_encode($config));
-    
+
     if (!$config['enabled']) {
         writeServiceLog("Automação desabilitada via configuração", 'WARNING');
         exit(0);
     }
-    
+
     saveServiceStatus('running', ['started_at' => date('Y-m-d H:i:s')]);
-    
+
     $lastExecution = null;
     $executionCount = 0;
-    
+
     // Loop principal do serviço
     while (true) {
         try {
@@ -134,35 +144,35 @@ try {
                 writeServiceLog("Comando de parada recebido");
                 break;
             }
-            
+
             // Processar sinais (Linux/Unix)
             if (function_exists('pcntl_signal_dispatch')) {
                 pcntl_signal_dispatch();
             }
-            
+
             // Verificar se é hora de executar
             if (isExecutionTime($config['execution_times'])) {
                 $currentMinute = date('H:i');
-                
+
                 // Evitar execução dupla no mesmo minuto
                 if ($lastExecution !== $currentMinute) {
                     writeServiceLog("Iniciando execução automática às {$currentMinute}");
-                    
+
                     $startTime = microtime(true);
                     $report = runInvoiceAutomation();
                     $executionTime = round(microtime(true) - $startTime, 2);
-                    
+
                     $executionCount++;
                     $lastExecution = $currentMinute;
-                    
+
                     writeServiceLog("Execução #{$executionCount} concluída em {$executionTime}s");
                     writeServiceLog("Clientes verificados: " . $report['total_clients_checked']);
                     writeServiceLog("Faturas geradas: " . $report['invoices_generated']);
-                    
+
                     if (isset($report['error'])) {
                         writeServiceLog("ERRO: " . $report['error'], 'ERROR');
                     }
-                    
+
                     // Salvar status da última execução
                     saveServiceStatus('running', [
                         'last_execution' => $currentMinute,
@@ -170,14 +180,14 @@ try {
                         'last_report' => $report,
                         'execution_time_seconds' => $executionTime
                     ]);
-                    
+
                     // Limpeza de memória
                     if (function_exists('gc_collect_cycles')) {
                         gc_collect_cycles();
                     }
                 }
             }
-            
+
             // Atualizar status periodicamente (a cada 5 minutos)
             if (time() % 300 === 0) {
                 saveServiceStatus('running', [
@@ -185,19 +195,22 @@ try {
                     'last_execution' => $lastExecution
                 ]);
             }
-            
+
             // Aguardar 30 segundos antes da próxima verificação
             sleep(30);
-            
-        } catch (Exception $e) {
+
+        }
+        catch (Exception $e) {
             writeServiceLog("Erro no loop principal: " . $e->getMessage(), 'ERROR');
-            
+
             // Aguardar mais tempo em caso de erro
             sleep(60);
         }
     }
-    
-} catch (Exception $e) {
+
+
+}
+catch (Exception $e) {
     writeServiceLog("ERRO CRÍTICO no serviço: " . $e->getMessage(), 'ERROR');
     saveServiceStatus('error', ['error' => $e->getMessage()]);
     exit(1);
